@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+<body>
+<script>
+(async () => {
+  try {
+    const resp = await fetch('http://localhost:8765/www/expert.js');
+    const code = await resp.text();
+    document.body.innerText = 'Fetched ' + code.length + ' bytes\n';
+    (0, eval)(code);
+    document.body.innerText += 'After eval - Expert type: ' + typeof Expert + ', window.Expert: ' + typeof window.Expert + '\n';
+    if (typeof Expert === 'object' && Expert !== null) {
+      document.body.innerText += 'Expert has keys: ' + Object.keys(Expert).slice(0, 5).join(', ') + '\n';
+    }
+  } catch(e) {
+    document.body.innerText = 'Error: ' + e.message;
+  }
+})();
+</script>
+</body>
+</html>

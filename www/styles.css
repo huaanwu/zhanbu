@@ -1,0 +1,404 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap");
+:root {
+  --bg-primary: #1a1612;
+  --bg-secondary: #25201a;
+  --bg-card: #2d2520;
+  --bg-inner: #1e1915;
+  --accent-gold: #c9a84c;
+  --accent-gold-light: #e8d5a3;
+  --accent-red: #c94c4c;
+  --accent-green: #5a9a5a;
+  --accent-purple: #9a5a9a;
+  --text-primary: #e8e0d5;
+  --text-secondary: #a09888;
+  --text-muted: #6b6358;
+  --border: #3d3528;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-tap-highlight-color: transparent;
+}
+.container { max-width: 960px; margin: 0 auto; padding: 1rem; }
+
+/* 底部导航 */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: flex-start;
+  overflow-x: auto;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  padding: 0.5rem 0;
+  z-index: 100;
+  scrollbar-width: none;
+}
+.bottom-nav::-webkit-scrollbar { display: none; }
+.bottom-nav button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  flex: 0 0 auto;
+  min-width: 64px;
+}
+.bottom-nav button.active { color: var(--accent-gold); }
+.bottom-nav button .icon { font-size: 1.3rem; pointer-events: none; }
+.bottom-nav button { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+
+/* ========== 响应式屏幕适配 ========== */
+html { font-size: 16px; }
+
+/* 小屏手机 (≤380px) */
+@media (max-width: 380px) {
+  html { font-size: 13px; }
+  .container { padding: 0.5rem; }
+  .header h1 { font-size: 1.4rem; letter-spacing: 0.1em; }
+  .header .subtitle { font-size: 0.7rem; }
+  .input-section { padding: 1rem; }
+  .bottom-nav { padding: 0.3rem 0; }
+  .bottom-nav button { font-size: 0.7rem; padding: 0.2rem 0.5rem; }
+  .bottom-nav button .icon { font-size: 1.1rem; }
+  #sxPreviewLeft, #sxPreviewRight { max-height: 120px; }
+  .gua-area { grid-template-columns: 1fr; gap: 1rem; }
+}
+
+/* 中屏手机 (381px–540px) */
+@media (min-width: 381px) and (max-width: 540px) {
+  html { font-size: 14.5px; }
+  .container { padding: 0.75rem; }
+  .header h1 { font-size: 1.5rem; }
+  #sxPreviewLeft, #sxPreviewRight { max-height: 140px; }
+}
+
+/* 大屏手机/平板 (≥768px) */
+@media (min-width: 768px) {
+  html { font-size: 17px; }
+  .container { max-width: 720px; }
+  .header h1 { font-size: 1.8rem; }
+  #sxPreviewLeft, #sxPreviewRight { max-height: 200px; }
+}
+
+/* 根据设备像素比微调 */
+@media (-webkit-min-device-pixel-ratio: 2) and (max-width: 400px) {
+  html { font-size: 14px; }
+}
+@media (-webkit-min-device-pixel-ratio: 3) and (max-width: 450px) {
+  html { font-size: 15px; }
+}
+
+/* 安全区域适配（刘海屏） */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .bottom-nav {
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+  }
+  .page {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+}
+/* ========== 响应式结束 ========== */
+.page { display: none; padding-bottom: 4rem; }
+.page.active { display: block; }
+
+.header { text-align: center; margin-bottom: 1.5rem; padding-top: 0.5rem; }
+.header h1 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  letter-spacing: 0.2em;
+}
+.header .subtitle { color: var(--text-secondary); font-size: 0.8rem; }
+
+/* 输入区 */
+.input-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+.input-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
+}
+.input-group label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  margin-bottom: 0.3rem;
+}
+.input-group input, .input-group select {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.7rem 0.8rem;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+.input-group input:focus, .input-group select:focus {
+  outline: none;
+  border-color: var(--accent-gold);
+}
+.btn-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.toggle-btn {
+  flex: 1;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 0.7rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: all 0.3s;
+}
+.toggle-btn.active {
+  background: rgba(201,168,76,0.15);
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+.divine-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #c9a84c 0%, #a08030 100%);
+  border: none;
+  color: #1a1612;
+  padding: 0.9rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.2em;
+  font-family: 'Noto Serif SC', serif;
+  margin-top: 0.8rem;
+}
+.divine-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 结果区 */
+.result-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: none;
+}
+.result-section.visible { display: block; }
+.result-title {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.1rem;
+  color: var(--accent-gold);
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+/* 八字四柱 */
+.pillars-table {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.pillar-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem;
+  text-align: center;
+}
+.pillar-label { font-size: 0.7rem; color: var(--text-muted); }
+.pillar-ganzhi {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+}
+.pillar-info { font-size: 0.7rem; color: var(--text-secondary); }
+
+/* 九宫格 */
+.jiugong-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+}
+.gong-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem;
+  text-align: center;
+  min-height: 100px;
+  font-size: 0.75rem;
+  position: relative;
+}
+.gong-card.zhifu { border-color: var(--accent-gold); }
+.gong-card.zhishi { border-color: var(--accent-green); }
+.gong-name { font-family: 'Noto Serif SC', serif; font-weight: 600; color: var(--accent-gold-light); }
+.gong-direction { font-size: 0.65rem; color: var(--text-muted); }
+.gong-item { margin: 0.15rem 0; }
+.gong-item .label { color: var(--text-muted); font-size: 0.65rem; }
+.gong-item .value { color: var(--text-primary); font-family: 'Noto Serif SC', serif; }
+.gong-item .star { color: var(--accent-gold); }
+.gong-item .door { color: var(--accent-green); }
+.gong-item .god { color: var(--accent-red); }
+.mark {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  font-size: 0.6rem;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--accent-gold);
+  color: #1a1612;
+  font-weight: 700;
+}
+
+/* 十二宫 */
+.palaces-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+}
+.palace-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem;
+  text-align: center;
+  min-height: 80px;
+  font-size: 0.75rem;
+}
+.palace-card.ming { border-color: var(--accent-gold); }
+
+/* AI解读 */
+.ai-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+.ai-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  line-height: 1.8;
+  font-family: 'Noto Serif SC', serif;
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+}
+.loading { text-align: center; color: var(--accent-gold); padding: 1.5rem; }
+.error { color: var(--accent-red); text-align: center; padding: 1rem; }
+.ai-actions {
+  display: none;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+.ai-actions.visible { display: flex; }
+.ai-actions button {
+  background: var(--bg-inner);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.ai-actions button:hover {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+/* 设置面板 */
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.setting-item:last-child { border-bottom: none; }
+.setting-label { color: var(--text-secondary); font-size: 0.85rem; }
+.api-input {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.7rem;
+  color: var(--text-primary);
+  font-family: inherit;
+  margin-top: 0.5rem;
+}
+.save-btn {
+  background: var(--accent-green);
+  color: #1a1612;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.3rem;
+}
+.status-ok { background: var(--accent-green); }
+.status-fail { background: var(--accent-red); }
+
+/* 六爻 */
+.yao-list { margin-top: 0.5rem; }
+.yao-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+.yao-item:last-child { border-bottom: none; }
+.yao-item .dong { color: var(--accent-red); font-weight: 700; }
+.gua-info {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.gua-info strong { color: var(--accent-gold); font-family: 'Noto Serif SC', serif; }
+
+/* v1.2.17 灵签摇签动画 */
+@keyframes shake {
+  0%, 100% { transform: rotate(-8deg); }
+  25% { transform: rotate(8deg); }
+  50% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+<body>
+<script>
+window.onerror = function(msg, url, line, col, err) {
+  document.body.innerText += '\nError: ' + msg + ' at line ' + line;
+  return true;
+};
+</script>
+<script src="http://localhost:8765/www/expert.js"></script>
+<script>
+document.body.innerText = 'Expert type: ' + typeof Expert + ', window.Expert: ' + typeof window.Expert;
+</script>
+</body>
+</html>

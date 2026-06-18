@@ -1,0 +1,14 @@
+{
+  "appId": "com.divination.master",
+  "appName": "AI占卜大师",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "http"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#1a1612"
+    }
+  }
+}

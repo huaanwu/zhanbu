@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Test Inline</title></head>
+<body>
+<script>
+// rag.js inline
+/**
+ * RAG 知识库检索引擎 v2
+ * BM25 + 三元组 + 语义加权
+ * 目标：按需检索最相关的知识片段，减少对 LLM 的干扰
+ */
+
+const STOP_WORDS = new Set([
+  '的', '了', '是', '在', '我', '有', '和', '就', '不', '人', '都', '一', '上', '也', '很', '到',
+  '说', '要', '去', '你', '会', '着', '没', '看', '好', '自己', '这', '那', '里', '什么',
+  '之', '的', '地', '得', '而', '其', '此', '与', '及', '或', '若', '如'
+]);
+
+function tokenize(text) {
+  if (!text) return [];
+  const cleaned = text.replace(/[，。！？、；：""''（）()【】\[\]…—\-]/g, ' ');
+  const tokens = [];
+  // 一元字（去除停用词）
+  for (let i = 0; i < cleaned.length; i++) {
+    const c = cleaned[i];
+    if (/[一-鿿]/.test(c) && !STOP_WORDS.has(c)) {
+      tokens.push({ t: c, n: 1 });
+    }
+  }
+  // 二元组（语义更强）
+  for (let i = 0; i < cleaned.length - 1; i++) {
+    const c1 = cleaned[i], c2 = cleaned[i + 1];
+    if (/[一-鿿]/.test(c1) && /[一-鿿]/.test(c2)) {
+      if (!STOP_WORDS.has(c1) || !STOP_WORDS.has(c2)) {
+        tokens.push({ t: c1 + c2, n: 2 });
+      }
+    }
+  }
+  // 三元组（专有名词命中率大幅提升，如"伤官见官"、"身强木弱"等）
+  for (let i = 0; i < cleaned.length - 2; i++) {
+    const c1 = cleaned[i], c2 = cleaned[i + 1], c3 = cleaned[i + 2];
+    if (/[一-鿿]/.test(c1) && /[一-鿿]/.test(c2) && /[一-鿿]/.test(c3)) {
+      tokens.push({ t: c1 + c2 + c3, n: 3 });
+    }
+  }
+  return tokens;
+}
+
+// 文档切分器（增加标签系统）
+function flattenKB(kb, sourceName) {
+  const docs = [];
+  // 标签映射：根据来源自动打标签
+  const sourceTags = {
+    '八字': ['命理', '八字', '五行'],
+    '紫微': ['命理', '紫微', '星曜'],
+    '六爻': ['占卜', '六爻', '周易'],
+    '奇门': ['占卜', '奇门', '遁甲'],
+    '姓名': ['命理', '姓名', '数理'],
+    '手相': ['相术', '手相'],
+    '面相': ['相术', '面相'],
+    '风水': ['风水', '环境'],
+    '择日': ['择吉', '时辰'],
+    '周易': ['经典', '周易'],
+    '中医': ['中医', '养生'],
+    '倪海厦': ['经验', '实战'],
+    '哲学': ['理论', '哲学']
+  };
+  // 提取标签
+  let tags = [];
+  for (const [key, vals] of Object.entries(sourceTags)) {
+    if (sourceName.includes(key)) tags.push(...vals);
+  }
+  tags = [...new Set(tags)]; // 去重
+  
+  function walk(obj, path) {
+    if (typeof obj === 'string') {
+      if (obj.length < 4) return;
+      docs.push({ text: obj, path: path.join('.'), source: sourceName, tags, tokens: tokenize(obj) });
+    } else if (Array.isArray(obj)) {
+      obj.forEach((v, i) => walk(v, [...path, i]));
+    } else if (obj && typeof obj === 'object') {
+      for (const [k, v] of Object.entries(obj)) {
+        if (k === 'meta') continue;
+        walk(v, [...path, k]);
+      }
+    }
+  }
+  walk(kb, []);
+  return docs;
+}
+
+// BM25 索引（比 TF-IDF 鲁棒，更好处理长短文档）
+class BM25Index {
+  constructor(k1 = 1.5, b = 0.75) {
+    this.k1 = k1;
+    this.b = b;
+    this.docs = [];
+    this.docLens = [];
+    this.avgDocLen = 0;
+    this.df = new Map();
+    this.N = 0;
+  }
+
+  add(docs) {
+    for (const d of docs) {
+      this.docs.push(d);
+      this.docLens.push(d.tokens.length || 1);
+      const seen = new Set();
+      for (const t of d.tokens) {
+        if (!seen.has(t.t)) {
+          this.df.set(t.t, (this.df.get(t.t) || 0) + 1);
+          seen.add(t.t);
+        }
+      }
+    }
+    this.N = this.docs.length || 1;
+    this.avgDocLen = this.docLens.reduce((a, b) => a + b, 0) / this.N || 1;
+  }
+
+  // IDF（BM25 公式）
+  idf(term) {
+    const df = this.df.get(term) || 0;
+    return Math.log((this.N - df + 0.5) / (df + 0.5) + 1);
+  }
+
+  // 单文档评分（增加来源权重）
+  score(doc, docLen, qTokens) {
+    const tf = new Map();
+    for (const t of doc.tokens) tf.set(t.t, (tf.get(t.t) || 0) + 1);
+    let s = 0;
+    for (const q of qTokens) {
+      const df = tf.get(q.t) || 0;
+      if (!df) continue;
+      const idf = this.idf(q.t);
+      const denom = df + this.k1 * (1 - this.b + this.b * docLen / this.avgDocLen);
+      s += idf * (df * (this.k1 + 1)) / denom;
+    }
+    // 核心经典权重提升
+    const sourceBoost = {
+      '增删卜易': 1.5,
+      '奇门统宗': 1.5,
+      '周易爻辞': 1.3,
+      '周易爻辞2': 1.3,
+      '周易爻辞3': 1.3,
+      '周易爻辞4': 1.3,
+      '周易爻辞5': 1.3,
+      '周易爻辞6': 1.3,
+      '周易爻辞7': 1.3,
+      '周易爻辞8': 1.3,
+      '周易爻辞9': 1.3,
+      '周易爻辞10': 1.3,
+      '周易爻辞11': 1.3,
+      '周易爻辞12': 1.3,
+      '周易爻辞13': 1.3,
+      '周易爻辞14': 1.3,
+      '周易爻辞15': 1.3,
+      '倪海厦': 1.4,
+      '易经哲学': 1.2,
+      '命理哲学': 1.2
+    };
+    const boost = sourceBoost[doc.source] || 1.0;
+    return s * boost;
+  }
+
+  search(query, topK = 5) {
+    const qTokens = tokenize(query);
+    if (qTokens.length === 0) return [];
+    // 三元组加权
+    const qWeight = qTokens.map(t => ({ ...t, weight: t.n }));
+    const scores = [];
+    for (let i = 0; i < this.docs.length; i++) {
+      const s = this.score(this.docs[i], this.docLens[i], qWeight);
+      if (s > 0) scores.push({ doc: this.docs[i], score: s });
+    }
+    scores.sort((a, b) => b.score - a.score);
+    return scores.slice(0, topK);
+  }
+}
+
+// 全局 RAG 引擎
+const RAG = {
+  index: null,
+  ready: false,
+
+  async build() {
+    if (this.ready) return;
+    const paths = [
+      { path: 'kb_data/bazi_kb.json', name: '八字' },
+      { path: 'kb_data/bazi_ext_kb.json', name: '八字扩展' },
+      { path: 'kb_data/bazi_shen_sha_kb.json', name: '八字神煞' },
+      { path: 'kb_data/bazi_shen_sha_2_kb.json', name: '八字神煞2' },
+      { path: 'kb_data/bazi_dayun_kb.json', name: '八字大运' },
+      { path: 'kb_data/gua_kb.json', name: '六爻' },
+      { path: 'kb_data/liuyao_kb.json', name: '六爻扩展' },
+      { path: 'kb_data/liuyao_ext_kb.json', name: '六爻高级' },
+      { path: 'kb_data/liuyao_gaoji_kb.json', name: '六爻高级断法' },
+      { path: 'kb_data/liuyao_gaoji_2_kb.json', name: '六爻高级断法2' },
+      { path: 'kb_data/zeng_shan_bo_yi_kb.json', name: '增删卜易' },
+      { path: 'kb_data/qimen_kb.json', name: '奇门' },
+      { path: 'kb_data/qimen_ext_kb.json', name: '奇门扩展' },
+      { path: 'kb_data/qimen_ext2_kb.json', name: '奇门高级' },
+      { path: 'kb_data/qimen_tong_zong_kb.json', name: '奇门统宗' },
+      { path: 'kb_data/qimen_gaoji_kb.json', name: '奇门高级格局' },
+      { path: 'kb_data/qimen_gaoji_2_kb.json', name: '奇门高级格局2' },
+      { path: 'kb_data/ziwei_kb.json', name: '紫微' },
+      { path: 'kb_data/ziwei_ext_kb.json', name: '紫微扩展' },
+      { path: 'kb_data/ziwei_ge_ju_kb.json', name: '紫微格局' },
+      { path: 'kb_data/ziwei_dayun_kb.json', name: '紫微大运' },
+      { path: 'kb_data/ziwei_xingyao_zuhe_kb.json', name: '紫微星曜组合' },
+      { path: 'kb_data/ziwei_xingyao_zuhe_2_kb.json', name: '紫微星曜组合2' },
+      { path: 'kb_data/shouxiang_kb.json', name: '手相' },
+      { path: 'kb_data/shouxiang_ext_kb.json', name: '手相扩展' },
+      { path: 'kb_data/shouxiang_shizhan_kb.json', name: '手相实战' },
+      { path: 'kb_data/mianxiang_shizhan_kb.json', name: '面相实战' },
+      { path: 'kb_data/xingshi_kb.json', name: '姓名' },
+      { path: 'kb_data/xingshi_ext_kb.json', name: '姓名扩展' },
+      { path: 'kb_data/xingshi_81_shuli_kb.json', name: '姓名81数理' },
+      { path: 'kb_data/xingshi_81_shuli_2_kb.json', name: '姓名81数理2' },
+      { path: 'kb_data/xingshi_81_shuli_3_kb.json', name: '姓名81数理3' },
+      { path: 'kb_data/xingshi_81_shuli_4_kb.json', name: '姓名81数理4' },
+      { path: 'kb_data/fengshui_kb.json', name: '风水' },
+      { path: 'kb_data/fengshui_huajie_kb.json', name: '风水化解' },
+      { path: 'kb_data/fengshui_huajie_2_kb.json', name: '风水化解2' },
+      { path: 'kb_data/nihai_xia_kb.json', name: '倪海厦' },
+      { path: 'kb_data/yi_jing_zhe_xue_kb.json', name: '易经哲学' },
+      { path: 'kb_data/zhou_yi_yao_ci_kb.json', name: '周易爻辞' },
+      { path: 'kb_data/zhou_yi_yao_ci_2_kb.json', name: '周易爻辞2' },
+      { path: 'kb_data/zhou_yi_yao_ci_3_kb.json', name: '周易爻辞3' },
+      { path: 'kb_data/zhou_yi_yao_ci_4_kb.json', name: '周易爻辞4' },
+      { path: 'kb_data/zhou_yi_yao_ci_5_kb.json', name: '周易爻辞5' },
+      { path: 'kb_data/zhou_yi_yao_ci_6_kb.json', name: '周易爻辞6' },
+      { path: 'kb_data/zhou_yi_yao_ci_7_kb.json', name: '周易爻辞7' },
+      { path: 'kb_data/zhou_yi_yao_ci_8_kb.json', name: '周易爻辞8' },
+      { path: 'kb_data/zhou_yi_yao_ci_9_kb.json', name: '周易爻辞9' },
+      { path: 'kb_data/zhou_yi_yao_ci_10_kb.json', name: '周易爻辞10' },
+      { path: 'kb_data/zhou_yi_yao_ci_11_kb.json', name: '周易爻辞11' },
+      { path: 'kb_data/zhou_yi_yao_ci_12_kb.json', name: '周易爻辞12' },
+      { path: 'kb_data/zhou_yi_yao_ci_13_kb.json', name: '周易爻辞13' },
+      { path: 'kb_data/zhou_yi_yao_ci_14_kb.json', name: '周易爻辞14' },
+      { path: 'kb_data/zhou_yi_yao_ci_15_kb.json', name: '周易爻辞15' },
+      { path: 'kb_data/ming_li_zhe_xue_kb.json', name: '命理哲学' },
+      { path: 'kb_data/mianxiang_kb.json', name: '面相' },
+      { path: 'kb_data/ze_ri_kb.json', name: '择日' },
+      { path: 'kb_data/ze_ri_shizhan_kb.json', name: '择日实战' },
+      { path: 'kb_data/bazi_shi_shen_zu_he_kb.json', name: '八字十神组合' },
+      { path: 'kb_data/bazi_shi_shen_zu_he_2_kb.json', name: '八字十神组合2' },
+      { path: 'kb_data/bazi_shi_shen_zu_he_3_kb.json', name: '八字十神组合3' },
+      { path: 'kb_data/bazi_shi_shen_zu_he_4_kb.json', name: '八字十神组合4' },
+      { path: 'kb_data/bazi_tcm_kb.json', name: '八字中医养生' },
+      { path: 'kb_data/bazi_tcm_2_kb.json', name: '八字中医养生2' }
+    ];
+    const all = [];
+    await Promise.all(paths.map(async ({ path, name }) => {
+      try {
+        const r = await fetch(path);
+        const kb = await r.json();
+        all.push(...flattenKB(kb, name));
+      } catch (e) { console.warn('KB load fail:', path, e); }
+    }));
+    this.index = new BM25Index();
+    this.index.add(all);
+    this.ready = true;
+    console.log(`RAG BM25 索引建立: ${all.length} 个文档片段`);
+  },
+
+  // 从查询和排盘结果中提取信号词
+  extractSignals(pan, question) {
+    const signals = [];
+    if (question) {
+      signals.push(question);
+      // 提取问题中的关键词（去除停用词）
+      const qTokens = tokenize(question);
+      const keyTokens = qTokens.filter(t => t.n >= 2).map(t => t.t);
+      if (keyTokens.length > 0) signals.push(...keyTokens);
+    }
+    if (pan) {
+      // 八字
+      if (pan.gz) {
+        signals.push(pan.gz.day, pan.gz.year, pan.gz.month, pan.gz.hour);
+        if (pan.tenGods) {
+          Object.values(pan.tenGods).forEach(v => v && signals.push(v));
+        }
+        // 新增：日主五行+旺衰
+        const dayGan = pan.gz.day[0];
+        if (dayGan) {
+          const wxMap = { '甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水' };
+          if (wxMap[dayGan]) signals.push(wxMap[dayGan] + pan.wangShuai);
+        }
+      }
+      // 紫微
+      if (pan.mingGong) {
+        signals.push(pan.mingGong.name, pan.mingGong.ganzhi);
+        if (pan.mingGong.stars) {
+          pan.mingGong.stars.forEach(s => signals.push(s.name));
+        }
+        // 新增：四化
+        if (pan.siHua) {
+          Object.entries(pan.siHua).forEach(([k,v]) => signals.push(v + k));
+        }
+      }
+      // 六爻
+      if (pan.gua) {
+        signals.push(pan.gua.name);
+        if (pan.yaoList) {
+          pan.yaoList.forEach(y => {
+            signals.push(y.gan + y.zhi, y.liuqin, y.liushen, y.wuxing);
+          });
+        }
+        // 新增：动爻信息
+        if (pan.gua.dongYaoList && pan.gua.dongYaoList.length > 0) {
+          signals.push('动爻' + pan.gua.dongYaoList.length + '个');
+          if (pan.gua.dongYaoList.length > 3) signals.push('多动爻');
+        }
+        if (pan.huGua) signals.push('互卦' + pan.huGua);
+      }
+      // 奇门
+      if (pan.gong9) {
+        pan.gong9.forEach(g => {
+          signals.push(g.dipan, g.tianpan, g.jiuxing, g.renpan, g.shenpan);
+        });
+        // 新增：值符值使
+        const zf = pan.gong9.find(g => g.is_dipan_zhifu);
+        const zs = pan.gong9.find(g => g.is_renpan_zhishi);
+        if (zf) signals.push('值符' + zf.dipan);
+        if (zs) signals.push('值使' + zs.renpan);
+        // 新增：吉门凶门
+        const sheng = pan.gong9.find(g => g.renpan === '生门');
+        const si = pan.gong9.find(g => g.renpan === '死门');
+        if (sheng) signals.push('生门' + sheng.name);
+        if (si) signals.push('死门' + si.name);
+      }
+      // 姓名学
+      if (pan.sancai) {
+        signals.push(pan.sancai.tian + pan.sancai.ren + pan.sancai.di + '三才');
+      }
+      if (pan.wuge) {
+        signals.push('人格' + pan.wuge.renge + '总格' + pan.wuge.zongge);
+      }
+    }
+    return signals.join(' ');
+  },
+
+  search(pan, question, opts = {}) {
+    if (!this.ready) return '';
+    const { topK = 8, maxChars = 2500, source = null, minScore = 1.0, tags = null } = opts;
+    const query = this.extractSignals(pan, question);
+    let results = this.index.search(query, topK * 3);
+    if (source) {
+      results = results.filter(r => r.doc.source === source);
+    }
+    // 标签过滤
+    if (tags && tags.length > 0) {
+      results = results.filter(r => r.doc.tags && tags.some(t => r.doc.tags.includes(t)));
+    }
+    results = results.slice(0, topK).filter(r => r.score >= minScore);
+
+    if (results.length === 0) {
+      // fallback: 用问题直接检索
+      results = this.index.search(question || '吉凶', topK).filter(r => r.score >= minScore * 0.4);
+    }
+
+    if (results.length === 0) return '';
+
+    const lines = ['【知识库相关片段（BM25语义检索）】'];
+    let totalLen = 0;
+    for (const r of results) {
+      const tagStr = r.doc.tags ? `(${r.doc.tags.join('/')})` : '';
+      const line = `· [${r.doc.source}]${tagStr} ${r.doc.text}`;
+      if (totalLen + line.length > maxChars) break;
+      lines.push(line);
+      totalLen += line.length;
+    }
+    return '\n' + lines.join('\n') + '\n';
+  }
+};
+
+window.RAG = RAG;
+
+</script>
+<script>
+// expert.js inline
+/**
+ * 命理专家系统层
+ * 算"确定事实"，让 AI 只负责解读而非推算
+ * 100% 准确的命理事实由代码给出，AI 不允许在此基础上"创作"
+ */
+
+const Expert = {};
+
+// 64卦世应表（京房易八宫卦序）
+// 来源：京房八宫卦序世应定位
+// 世爻定位规则：八纯卦世在上爻(6)，一世卦世在初爻(1)，二世卦世在二爻(2)，
+//               三世卦世在三爻(3)，四世卦世在四爻(4)，五世卦世在五爻(5)，
+//               游魂卦世在四爻(4)，归魂卦世在三爻(3)
+// 应爻 = 世爻 ± 3（隔两位相对）
+const SHI_YING = {
+  // 乾宫（金）— 乾为天
+  '乾': { shi: 6, ying: 3 }, '姤': { shi: 1, ying: 4 }, '遁': { shi: 2, ying: 5 },
+  '否': { shi: 3, ying: 6 }, '观': { shi: 4, ying: 1 }, '剥': { shi: 5, ying: 2 },
+  '晋': { shi: 4, ying: 1 }, '大有': { shi: 3, ying: 6 },
+  // 坎宫（水）— 坎为水
+  '坎': { shi: 6, ying: 3 }, '节': { shi: 1, ying: 4 }, '屯': { shi: 2, ying: 5 },
+  '既济': { shi: 3, ying: 6 }, '革': { shi: 4, ying: 1 }, '丰': { shi: 5, ying: 2 },
+  '明夷': { shi: 4, ying: 1 }, '师': { shi: 3, ying: 6 },
+  // 艮宫（土）— 艮为山
+  '艮': { shi: 6, ying: 3 }, '贲': { shi: 1, ying: 4 }, '大畜': { shi: 2, ying: 5 },
+  '损': { shi: 3, ying: 6 }, '睽': { shi: 4, ying: 1 }, '履': { shi: 5, ying: 2 },
+  '中孚': { shi: 4, ying: 1 }, '渐': { shi: 3, ying: 6 },
+  // 震宫（木）— 震为雷
+  '震': { shi: 6, ying: 3 }, '豫': { shi: 1, ying: 4 }, '解': { shi: 2, ying: 5 },
+  '恒': { shi: 3, ying: 6 }, '升': { shi: 4, ying: 1 }, '井': { shi: 5, ying: 2 },
+  '大过': { shi: 4, ying: 1 }, '随': { shi: 3, ying: 6 },
+  // 巽宫（木）— 巽为风
+  '巽': { shi: 6, ying: 3 }, '小畜': { shi: 1, ying: 4 }, '家人': { shi: 2, ying: 5 },
+  '益': { shi: 3, ying: 6 }, '无妄': { shi: 4, ying: 1 }, '噬嗑': { shi: 5, ying: 2 },
+  '颐': { shi: 4, ying: 1 }, '蛊': { shi: 3, ying: 6 },
+  // 离宫（火）— 离为火
+  '离': { shi: 6, ying: 3 }, '旅': { shi: 1, ying: 4 }, '鼎': { shi: 2, ying: 5 },
+  '未济': { shi: 3, ying: 6 }, '蒙': { shi: 4, ying: 1 }, '涣': { shi: 5, ying: 2 },
+  '讼': { shi: 4, ying: 1 }, '同人': { shi: 3, ying: 6 },
+  // 坤宫（土）— 坤为地
+  '坤': { shi: 6, ying: 3 }, '复': { shi: 1, ying: 4 }, '临': { shi: 2, ying: 5 },
+  '泰': { shi: 3, ying: 6 }, '大壮': { shi: 4, ying: 1 }, '夬': { shi: 5, ying: 2 },
+  '需': { shi: 4, ying: 1 }, '比': { shi: 3, ying: 6 },
+  // 兑宫（金）— 兑为泽
+  '兑': { shi: 6, ying: 3 }, '困': { shi: 1, ying: 4 }, '萃': { shi: 2, ying: 5 },
+  '咸': { shi: 3, ying: 6 }, '蹇': { shi: 4, ying: 1 }, '谦': { shi: 5, ying: 2 },
+  '小过': { shi: 4, ying: 1 }, '归妹': { shi: 3, ying: 6 }
+};
+
+// 64卦全名→单字卦名映射（liuyao.js 返回 '水雷屯' 这种全名）
+const GUA_FULL_TO_SHORT = {
+  '乾为天':'乾','坤为地':'坤','水雷屯':'屯','山水蒙':'蒙','水天需':'需','天水讼':'讼',
+  '地水师':'师','水地比':'比','风天小畜':'小畜','天泽履':'履','地天泰':'泰','天地否':'否',
+  '天火同人':'同人','火天大有':'大有','地山谦':'谦','雷地豫':'豫','泽雷随':'随','山风蛊':'蛊',
+  '地泽临':'临','风地观':'观','火雷噬嗑':'噬嗑','山火贲':'贲','山地剥':'剥','地雷复':'复',
+  '天雷无妄':'无妄','山天大畜':'大畜','山雷颐':'颐','泽风大过':'大过','坎为水':'坎','离为火':'离',
+  '泽山咸':'咸','雷风恒':'恒','天山遁':'遁','雷天大壮':'大壮','火地晋':'晋','地火明夷':'明夷',
+  '风火家人':'家人','火泽睽':'睽','水山蹇':'蹇','雷水解':'解','山泽损':'损','风雷益':'益',
+  '泽天夬':'夬','天风姤':'姤','泽地萃':'萃','地风升':'升','泽水困':'困','水风井':'井',
+  '泽火革':'革','火风鼎':'鼎','震为雷':'震','艮为山':'艮','风山渐':'渐','雷泽归妹':'归妹',
+  '雷火丰':'丰','火山旅':'旅','巽为风':'巽','兑为泽':'兑','风水涣':'涣','水泽节':'节',
+  '风泽中孚':'中孚','雷山小过':'小过','水火既济':'既济','火水未济':'未济'
+};
+
+// ============= 八字专家系统 =============
+const BRANCH_HIDE_GAN = {
+  '子': ['癸'], '丑': ['己','癸','辛'], '寅': ['甲','丙','戊'], '卯': ['乙'],
+  '辰': ['戊','乙','癸'], '巳': ['丙','庚','戊'], '午': ['丁','己'], '未': ['己','丁','乙'],
+  '申': ['庚','壬','戊'], '酉': ['辛'], '戌': ['戊','辛','丁'], '亥': ['壬','甲']
+};
+
+// 天干五行
+const TG_WX = { '甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水' };
+// 地支五行
+const DZ_WX = { '子':'水','丑':'土','寅':'木','卯':'木','辰':'土','巳':'火','午':'火','未':'土','申':'金','酉':'金','戌':'土','亥':'水' };
+// 地支阴阳
+const DZ_YY = { '子':'阳', '丑':'阴', '寅':'阳', '卯':'阴', '辰':'阳', '巳':'阴', '午':'阳', '未':'阴', '申':'阳', '酉':'阴', '戌':'阳', '亥':'阴' };
+// 天干阴阳
+const TG_YY = { '甲':'阳','乙':'阴','丙':'阳','丁':'阴','戊':'阳','己':'阴','庚':'阳','辛':'阴','壬':'阳','癸':'阴' };
+
+// 五行生克
+const SHENG = { '木':'火','火':'土','土':'金','金':'水','水':'木' }; // 生
+const KE = { '木':'土','土':'水','水':'火','火':'金','金':'木' };     // 克
+const SHENGED = { '木':'水','火':'木','土':'火','金':'土','水':'金' }; // 被生（印）
+const KEED = { '木':'金','火':'水','土':'木','金':'火','水':'土' };     // 被克（官杀）
+
+// 纳音（60甲子 → 纳音五行）
+const NAYIN_60JIAZI = {};
+(function buildNayin() {
+  // 简化算法：按60甲子位置查表
+  // 第1位甲子=海中金、第2位乙丑=海中金、第3位丙寅=炉中火...等
+  // 由于篇幅，只列常用的甲子序列
+  const nayinList = [
+    '海中金','海中金','炉中火','炉中火','大林木','大林木',
+    '路旁土','路旁土','剑锋金','剑锋金','山头火','山头火',
+    '涧下水','涧下水','城头土','城头土','白蜡金','白蜡金',
+    '杨柳木','杨柳木','泉中水','泉中水','屋上土','屋上土',
+    '霹雳火','霹雳火','松柏木','松柏木','长流水','长流水',
+    '砂中金','砂中金','山下火','山下火','平地木','平地木',
+    '壁上土','壁上土','金箔金','金箔金','覆灯火','覆灯火',
+    '天河水','天河水','大驿土','大驿土','钗钏金','钗钏金',
+    '桑柘木','桑柘木','大溪水','大溪水','砂中土','砂中土',
+    '天上火','天上火','石榴木','石榴木','大海水','大海水'
+  ];
+  const TG = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+  const DZ = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  for (let i = 0; i < 60; i++) {
+    NAYIN_60JIAZI[TG[i % 10] + DZ[i % 12]] = nayinList[i];
+  }
+})();
+
+// 旬空（按日柱旬查空亡）—— 覆盖全部60甲子
+const XUNKONG = {
+  // 甲子旬（1-10）
+  '甲子': ['戌','亥'], '乙丑': ['戌','亥'], '丙寅': ['戌','亥'], '丁卯': ['戌','亥'],
+  '戊辰': ['戌','亥'], '己巳': ['戌','亥'], '庚午': ['戌','亥'], '辛未': ['戌','亥'],
+  '壬申': ['戌','亥'], '癸酉': ['戌','亥'],
+  // 甲戌旬（11-20）
+  '甲戌': ['申','酉'], '乙亥': ['申','酉'], '丙子': ['申','酉'], '丁丑': ['申','酉'],
+  '戊寅': ['申','酉'], '己卯': ['申','酉'], '庚辰': ['申','酉'], '辛巳': ['申','酉'],
+  '壬午': ['申','酉'], '癸未': ['申','酉'],
+  // 甲申旬（21-30）
+  '甲申': ['午','未'], '乙酉': ['午','未'], '丙戌': ['午','未'], '丁亥': ['午','未'],
+  '戊子': ['午','未'], '己丑': ['午','未'], '庚寅': ['午','未'], '辛卯': ['午','未'],
+  '壬辰': ['午','未'], '癸巳': ['午','未'],
+  // 甲午旬（31-40）
+  '甲午': ['辰','巳'], '乙未': ['辰','巳'], '丙申': ['辰','巳'], '丁酉': ['辰','巳'],
+  '戊戌': ['辰','巳'], '己亥': ['辰','巳'], '庚子': ['辰','巳'], '辛丑': ['辰','巳'],
+  '壬寅': ['辰','巳'], '癸卯': ['辰','巳'],
+  // 甲辰旬（41-50）
+  '甲辰': ['寅','卯'], '乙巳': ['寅','卯'], '丙午': ['寅','卯'], '丁未': ['寅','卯'],
+  '戊申': ['寅','卯'], '己酉': ['寅','卯'], '庚戌': ['寅','卯'], '辛亥': ['寅','卯'],
+  '壬子': ['寅','卯'], '癸丑': ['寅','卯'],
+  // 甲寅旬（51-60）
+  '甲寅': ['子','丑'], '乙卯': ['子','丑'], '丙辰': ['子','丑'], '丁巳': ['子','丑'],
+  '戊午': ['子','丑'], '己未': ['子','丑'], '庚申': ['子','丑'], '辛酉': ['子','丑'],
+  '壬戌': ['子','丑'], '癸亥': ['子','丑']
+};
+
+Expert.bazi = function(pan) {
+  const facts = [];
+  const gz = pan.gz;
+  const tg = gz.day[0]; // 日干
+  const wx = TG_WX[tg];
+
+  // 旺衰（已有）
+  if (pan.wangShuai) {
+    facts.push(`【事实·旺衰】日主${tg}为${wx}，在${pan.wangShuai === '身强' ? '身强' : '身弱'}状态`);
+  }
+
+  // 用神喜忌（基于知识库）
+  if (pan.wangShuai && window._kb?.bazi?.useful_god) {
+    const key = pan.wangShuai + wx;
+    const ux = window._kb.bazi.useful_god[key];
+    if (ux) facts.push(`【事实·用神】${key}用神喜忌：${ux}`);
+  }
+
+  // 【新增】纳音
+  for (const col of ['year','month','day','hour']) {
+    if (gz[col] && NAYIN_60JIAZI[gz[col]]) {
+      facts.push(`【事实·纳音】${col === 'year' ? '年柱' : col === 'month' ? '月柱' : col === 'day' ? '日柱' : '时柱'}纳音：${NAYIN_60JIAZI[gz[col]]}`);
+    }
+  }
+
+  // 【新增】旬空
+  const dayGZ = gz.day;
+  if (dayGZ && XUNKONG[dayGZ]) {
+    facts.push(`【事实·旬空】日柱${dayGZ}属某旬，空亡：${XUNKONG[dayGZ].join('、')}（逢此两支力量减半）`);
+  }
+
+  // 格局（基于月支）
+  const monthZhi = gz.month[1];
+  const monthGan = gz.month[0];
+  const tgMap = { '甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水' };
+  const monthGanWx = tgMap[monthGan];
+  // 月支本气
+  const zhiMain = { '寅':'甲','卯':'乙','巳':'丙','午':'丁','申':'庚','酉':'辛','亥':'壬','子':'癸','辰':'戊','戌':'戊','丑':'己','未':'己' };
+  const geMap = { '甲':'木', '乙':'木', '丙':'火', '丁':'火', '戊':'土', '己':'土', '庚':'金', '辛':'金', '壬':'水', '癸':'水' };
+  if (zhiMain[monthZhi]) {
+    const geZhiGan = zhiMain[monthZhi];
+    const geZhiWx = geMap[geZhiGan];
+    // 简单判断：月支本气五行与日主同→比肩格
+    if (geZhiWx === wx) {
+      facts.push(`【事实·月令】月支${monthZhi}本气${geZhiGan}，与日主同属${wx}，得月令之助`);
+    } else {
+      // 五行生克
+      const sheng = { '木':'火','火':'土','土':'金','金':'水','水':'木' };
+      const ke = { '木':'土','土':'水','水':'火','火':'金','金':'木' };
+      if (sheng[wx] === geZhiWx) {
+        facts.push(`【事实·月令】日主${wx}生月支${geZhiWx}，泄气于月令`);
+      } else if (sheng[geZhiWx] === wx) {
+        facts.push(`【事实·月令】月支${geZhiWx}生日主${wx}，得月令之生`);
+      } else if (ke[wx] === geZhiWx) {
+        facts.push(`【事实·月令】日主${wx}克月支${geZhiWx}，耗力于月令`);
+      } else {
+        facts.push(`【事实·月令】月支${geZhiWx}克日主${wx}，受月令之克`);
+      }
+    }
+  }
+
+  // 神煞（基于日干/年支/日支）
+  // 天乙贵人：甲戊庚→丑未，乙己→子申，丙丁→亥酉，壬癸→巳卯，辛→午寅
+  const tianYiMap = { '甲':'丑未','戊':'丑未','庚':'丑未','乙':'子申','己':'子申','丙':'亥酉','丁':'亥酉','壬':'巳卯','癸':'巳卯','辛':'午寅' };
+  const tianYiZhi = tianYiMap[gz.day[0]] || '';
+  if (tianYiZhi) {
+    const tianYiHits = [];
+    for (const k of ['year','month','day','hour']) {
+      if (tianYiZhi.includes(gz[k][1])) tianYiHits.push((k==='year'?'年':k==='month'?'月':k==='day'?'日':'时') + '支' + gz[k][1]);
+    }
+    if (tianYiHits.length > 0) facts.push(`【事实·天乙贵人】日干${gz.day[0]}贵人为${tianYiZhi}，见于${tianYiHits.join('、')}（逢凶化吉，遇难成祥）`);
+  }
+
+  // 桃花：申子辰→酉，寅午戌→卯，巳酉丑→午，亥卯未→子
+  const taohuaMap = { '亥':'子','卯':'子','未':'子','寅':'卯','午':'卯','戌':'卯','巳':'午','酉':'午','丑':'午','申':'酉','子':'酉','辰':'酉' };
+  for (const k of ['year','day']) {
+    const zhi = gz[k][1];
+    if (taohuaMap[zhi]) {
+      const thHits = [];
+      for (const k2 of ['year','month','day','hour']) {
+        if (gz[k2][1] === taohuaMap[zhi] && k2 !== k) {
+          thHits.push((k2==='year'?'年':k2==='month'?'月':k2==='day'?'日':'时') + '支' + gz[k2][1]);
+        }
+      }
+      if (thHits.length > 0) {
+        facts.push(`【事实·桃花】${k==='year'?'年支':'日支'}${zhi}桃花在${taohuaMap[zhi]}，见于${thHits.join('、')}`);
+      }
+    }
+  }
+
+  // 驿马：申子辰→寅，寅午戌→申，巳酉丑→亥，亥卯未→巳
+  const yiMaMap = { '申':'寅','子':'寅','辰':'寅','寅':'申','午':'申','戌':'申','巳':'亥','酉':'亥','丑':'亥','亥':'巳','卯':'巳','未':'巳' };
+  for (const k of ['year','day']) {
+    const zhi = gz[k][1];
+    if (yiMaMap[zhi]) {
+      const ymHits = [];
+      for (const k2 of ['year','month','day','hour']) {
+        if (gz[k2][1] === yiMaMap[zhi] && k2 !== k) ymHits.push((k2==='year'?'年':k2==='month'?'月':k2==='day'?'日':'时') + '支' + gz[k2][1]);
+      }
+      if (ymHits.length > 0) facts.push(`【事实·驿马】${k==='year'?'年支':'日支'}${zhi}驿马在${yiMaMap[zhi]}，见于${ymHits.join('、')}（主奔波、变动、远行）`);
+    }
+  }
+
+  // 华盖：申子辰→辰，寅午戌→戌，巳酉丑→丑，亥卯未→未
+  const huaGaiMap = { '申':'辰','子':'辰','辰':'辰','寅':'戌','午':'戌','戌':'戌','巳':'丑','酉':'丑','丑':'丑','亥':'未','卯':'未','未':'未' };
+  for (const k of ['year','day']) {
+    const zhi = gz[k][1];
+    if (huaGaiMap[zhi]) {
+      const hgHits = [];
+      for (const k2 of ['year','month','day','hour']) {
+        if (gz[k2][1] === huaGaiMap[zhi] && k2 !== k) hgHits.push((k2==='year'?'年':k2==='month'?'月':k2==='day'?'日':'时') + '支' + gz[k2][1]);
+      }
+      if (hgHits.length > 0) facts.push(`【事实·华盖】${k==='year'?'年支':'日支'}${zhi}华盖在${huaGaiMap[zhi]}，见于${hgHits.join('、')}（主孤独、才华、玄学缘）`);
+    }
+  }
+
+  // 羊刃（禄前一位）：甲→卯，乙→寅，丙戊→午，丁己→巳，庚→酉，辛→申，壬→子，癸→亥
+  const yangRenMap = { '甲':'卯','乙':'寅','丙':'午','戊':'午','丁':'巳','己':'巳','庚':'酉','辛':'申','壬':'子','癸':'亥' };
+  const yrZhi = yangRenMap[gz.day[0]];
+  if (yrZhi) {
+    const yrHits = [];
+    for (const k of ['year','month','day','hour']) { if (gz[k][1] === yrZhi) yrHits.push((k==='year'?'年':k==='month'?'月':k==='day'?'日':'时') + '支' + yrZhi); }
+    if (yrHits.length > 0) facts.push(`【事实·羊刃】日干${gz.day[0]}羊刃在${yrZhi}，见于${yrHits.join('、')}（性情刚烈，有魄力，防冲动）`);
+  }
+
+  // 禄神（本气根）：甲→寅，乙→卯，丙戊→巳，丁己→午，庚→申，辛→酉，壬→亥，癸→子
+  const luShenMap = { '甲':'寅','乙':'卯','丙':'巳','戊':'巳','丁':'午','己':'午','庚':'申','辛':'酉','壬':'亥','癸':'子' };
+  const lsZhi = luShenMap[gz.day[0]];
+  if (lsZhi) {
+    const lsHits = [];
+    for (const k of ['year','month','day','hour']) { if (gz[k][1] === lsZhi) lsHits.push((k==='year'?'年':k==='month'?'月':k==='day'?'日':'时') + '支' + lsZhi); }
+    if (lsHits.length > 0) facts.push(`【事实·禄神】日干${gz.day[0]}禄在${lsZhi}，见于${lsHits.join('、')}（主福禄、衣食丰足）`);
+  }
+
+  // 五行统计
+  if (pan.tenGods) {
+    const godCount = {};
+    for (const v of Object.values(pan.tenGods)) {
+      if (!v) continue;
+      const gods = ['比肩','劫财','食神','伤官','偏财','正财','七杀','正官','偏印','正印'];
+      for (const g of gods) if (v.includes(g)) godCount[g] = (godCount[g] || 0) + 1;
+    }
+    const topGods = Object.entries(godCount).sort((a,b) => b[1] - a[1]).slice(0, 3);
+    if (topGods.length > 0) {
+      facts.push(`【事实·十神分布】最显著的十神为：${topGods.map(([g,c]) => `${g}(${c}处)`).join('、')}`);
+    }
+  }
+
+  // 【新增】地支六合（子丑合、寅亥合等）
+  const LIU_HE = { '子':'丑', '丑':'子', '寅':'亥', '亥':'寅', '卯':'戌', '戌':'卯', '辰':'酉', '酉':'辰', '巳':'申', '申':'巳', '午':'未', '未':'午' };
+  const zhis = ['year', 'month', 'day', 'hour'].map(k => ({ k, z: gz[k][1] }));
+  for (let i = 0; i < zhis.length; i++) {
+    for (let j = i + 1; j < zhis.length; j++) {
+      if (LIU_HE[zhis[i].z] === zhis[j].z) {
+        facts.push(`【事实·六合】${zhis[i].k === 'year' ? '年' : zhis[i].k === 'month' ? '月' : zhis[i].k === 'day' ? '日' : '时'}支${zhis[i].z}与${zhis[j].k === 'year' ? '年' : zhis[j].k === 'month' ? '月' : zhis[j].k === 'day' ? '日' : '时'}支${zhis[j].z}六合`);
+      }
+    }
+  }
+
+  // 【新增】地支六冲（子午冲、丑未冲等）
+  const LIU_CHONG = { '子':'午', '午':'子', '丑':'未', '未':'丑', '寅':'申', '申':'寅', '卯':'酉', '酉':'卯', '辰':'戌', '戌':'辰', '巳':'亥', '亥':'巳' };
+  for (let i = 0; i < zhis.length; i++) {
+    for (let j = i + 1; j < zhis.length; j++) {
+      if (LIU_CHONG[zhis[i].z] === zhis[j].z) {
+        facts.push(`【事实·六冲】${zhis[i].k === 'year' ? '年' : zhis[i].k === 'month' ? '月' : zhis[i].k === 'day' ? '日' : zhis[i].k === 'hour' ? '时' : ''}支${zhis[i].z}与${zhis[j].k === 'year' ? '年' : zhis[j].k === 'month' ? '月' : zhis[j].k === 'day' ? '日' : zhis[j].k === 'hour' ? '时' : ''}支${zhis[j].z}相冲`);
+      }
+    }
+  }
+
+  // 【新增】地支三合局（申子辰合水、寅午戌合火、巳酉丑合金、亥卯未合木）
+  const SAN_HE = [
+    { wx: '水', group: ['申', '子', '辰'] },
+    { wx: '火', group: ['寅', '午', '戌'] },
+    { wx: '金', group: ['巳', '酉', '丑'] },
+    { wx: '木', group: ['亥', '卯', '未'] }
+  ];
+  const zhiSet = new Set(zhis.map(z => z.z));
+  for (const { wx: w, group } of SAN_HE) {
+    const hits = group.filter(g => zhiSet.has(g));
+    if (hits.length === 3) {
+      facts.push(`【事实·三合局】四柱全${hits.join('、')}，合${w}局成`);
+    } else if (hits.length === 2) {
+      facts.push(`【事实·半合】四柱见${hits.join('、')}，半合${w}局`);
+    }
+  }
+
+  // 【新增】十二长生（按日主查各支位）
+  const CHANG_SHENG = {
+    '木': { '亥':'长生', '子':'沐浴', '丑':'冠带', '寅':'临官', '卯':'帝旺', '辰':'衰', '巳':'病', '午':'死', '未':'墓', '申':'绝', '酉':'胎', '戌':'养' },
+    '火': { '寅':'长生', '卯':'沐浴', '辰':'冠带', '巳':'临官', '午':'帝旺', '未':'衰', '申':'病', '酉':'死', '戌':'墓', '亥':'绝', '子':'胎', '丑':'养' },
+    '土': { '寅':'长生', '卯':'沐浴', '辰':'冠带', '巳':'临官', '午':'帝旺', '未':'衰', '申':'病', '酉':'死', '戌':'墓', '亥':'绝', '子':'胎', '丑':'养' },
+    '金': { '巳':'长生', '午':'沐浴', '未':'冠带', '申':'临官', '酉':'帝旺', '戌':'衰', '亥':'病', '子':'死', '丑':'墓', '寅':'绝', '卯':'胎', '辰':'养' },
+    '水': { '申':'长生', '酉':'沐浴', '戌':'冠带', '亥':'临官', '子':'帝旺', '丑':'衰', '寅':'病', '卯':'死', '辰':'墓', '巳':'绝', '午':'胎', '未':'养' }
+  };
+  const cs = CHANG_SHENG[wx];
+  if (cs) {
+    for (const k of ['year','month','day','hour']) {
+      const z = gz[k][1];
+      const kName = k === 'year' ? '年支' : k === 'month' ? '月支' : k === 'day' ? '日支' : '时支';
+      if (cs[z]) {
+        facts.push(`【事实·十二长生】日主${wx}在${kName}${z}处于${cs[z]}状态`);
+      }
+    }
+  }
+
+  // 【新增】当前大运（按当前年）天干对日主十神
+  if (pan.daYun) {
+    const now = new Date();
+    const y = now.getFullYear();
+    const cur = pan.daYun.find(d => y >= d.startYear && y <= d.endYear);
+    if (cur && window.tenGodRelation) {
+      const daYunGan = cur.ganZhi[0];
+      const daYunZhi = cur.ganZhi[1];
+      const tgs = window.tenGodRelation(tg, daYunGan);
+      facts.push(`【事实·当前大运】${cur.startYear}-${cur.endYear}年：${cur.ganZhi}（天干对日主为${tgs || '同我'}，地支${daYunZhi}属${DZ_WX[daYunZhi] || ''}）`);
+    }
+  }
+
+  // 【新增】流年分析（当前年份与命局互动）
+  if (pan.liuNian) {
+    const ln = pan.liuNian;
+    facts.push(`【事实·流年】${new Date().getFullYear()}年：${ln.ganZhi}（流年天干对日主为${ln.shiShen || '同我'}）`);
+
+    const lnZhi = ln.ganZhi[1];
+    const lnGan = ln.ganZhi[0];
+    const lnWx = DZ_WX[lnZhi];
+
+    // 流年地支与命局地支的刑冲合会
+    const zhiList = ['year','month','day','hour'].map(k => ({ k, z: gz[k][1] }));
+
+    // 冲
+    if (LIU_CHONG[lnZhi]) {
+      for (const { k, z } of zhiList) {
+        if (LIU_CHONG[lnZhi] === z) {
+          facts.push(`【事实·流年冲】流年${lnZhi}冲${k==='year'?'年':k==='month'?'月':k==='day'?'日':'时'}支${z}（冲动该柱，主变动）`);
+        }
+      }
+    }
+    // 合
+    if (LIU_HE[lnZhi]) {
+      for (const { k, z } of zhiList) {
+        if (LIU_HE[lnZhi] === z && z !== lnZhi) {
+          facts.push(`【事实·流年合】流年${lnZhi}合${k==='year'?'年':k==='month'?'月':k==='day'?'日':'时'}支${z}（合绊该柱，主牵绊）`);
+        }
+      }
+    }
+    // 刑（寅巳申、丑戌未、子卯）
+    const SAN_XING = [['寅','巳','申'], ['丑','戌','未'], ['子','卯']];
+    for (const xingGroup of SAN_XING) {
+      if (xingGroup.includes(lnZhi)) {
+        for (const { k, z } of zhiList) {
+          if (xingGroup.includes(z) && z !== lnZhi) {
+            facts.push(`【事实·流年刑】流年${lnZhi}刑${k==='year'?'年':k==='month'?'月':k==='day'?'日':'时'}支${z}（刑伤，主是非病灾）`);
+          }
+        }
+      }
+    }
+    // 害
+    const LIU_HAI = { '子':'未','未':'子','丑':'午','午':'丑','寅':'巳','巳':'寅','卯':'辰','辰':'卯','申':'亥','亥':'申','酉':'戌','戌':'酉' };
+    for (const { k, z } of zhiList) {
+      if (LIU_HAI[lnZhi] === z) {
+        facts.push(`【事实·流年害】流年${lnZhi}害${k==='year'?'年':k==='month'?'月':k==='day'?'日':'时'}支${z}（暗害，主小人暗算）`);
+      }
+    }
+
+    // 太岁临日支（犯太岁/日值太岁）
+    if (lnZhi === gz.day[1]) {
+      facts.push(`【事实·日值太岁】流年地支${lnZhi}与日支相同（日值太岁，吉凶加倍）`);
+    }
+    // 太岁冲日支（冲太岁）
+    if (LIU_CHONG[lnZhi] === gz.day[1]) {
+      facts.push(`【事实·冲太岁】流年${lnZhi}冲日支${gz.day[1]}（冲太岁，主变动、动荡）`);
+    }
+
+    // 流年五行与日主旺衰的关系
+    if (pan.wangShuai) {
+      const shengWo = SHENGED[wx]; // 被生（印）
+      const woSheng = SHENG[wx];   // 生（食伤）
+      const keWo = KEED[wx];       // 被克（官杀）
+      const woKe = KE[wx];         // 克（财）
+      if (lnWx === shengWo) facts.push(`【事实·流年生助】流年${lnZhi}属${lnWx}，生助日主${wx}（印星流年，利学习、贵人）`);
+      else if (lnWx === woSheng) facts.push(`【事实·流年泄耗】流年${lnZhi}属${lnWx}，日主${wx}生之（食伤流年，利才华发挥）`);
+      else if (lnWx === keWo) facts.push(`【事实·流年克制】流年${lnZhi}属${lnWx}，克日主${wx}（官杀流年，主压力、变动）`);
+      else if (lnWx === woKe) facts.push(`【事实·流年耗身】流年${lnZhi}属${lnWx}，日主${wx}克之（财星流年，利求财）`);
+      else facts.push(`【事实·流年比和】流年${lnZhi}属${lnWx}，与日主${wx}同类（比劫流年，主竞争、合作）`);
+    }
+
+    // 大运+流年双重作用
+    if (pan.daYun) {
+      const now = new Date();
+      const curDaYun = pan.daYun.find(d => now.getFullYear() >= d.startYear && now.getFullYear() <= d.endYear);
+      if (curDaYun) {
+        const dyGan = curDaYun.ganZhi[0];
+        const dyZhi = curDaYun.ganZhi[1];
+        // 大运地支与流年地支的关系
+        if (LIU_CHONG[dyZhi] === lnZhi) facts.push(`【事实·运岁冲】大运${dyZhi}冲流年${lnZhi}（运岁相冲，该年变动大）`);
+        else if (LIU_HE[dyZhi] === lnZhi) facts.push(`【事实·运岁合】大运${dyZhi}合流年${lnZhi}（运岁相合，该年有合绊之事）`);
+        else if (dyZhi === lnZhi) facts.push(`【事实·运岁同】大运与流年地支同为${dyZhi}（伏吟，主反复、拖延）`);
+      }
+    }
+  }
+
+  return facts.length > 0 ? facts.join('\n') + '\n' : '';
+};
+
+// ============= 六爻专家系统 =============
+// 辅助函数和常量（liuyao.js 中的定义，专家系统独立加载时需自备）
+function arraysEqual(a, b) { return a.length === b.length && a.every((v, i) => v === b[i]); }
+const GUA_NAME = {
+  1: ["乾", "☰", [1,1,1]], 2: ["兑", "☱", [0,1,1]], 3: ["离", "☲", [1,0,1]], 4: ["震", "☳", [0,0,1]],
+  5: ["巽", "☴", [1,1,0]], 6: ["坎", "☵", [0,1,0]], 7: ["艮", "☶", [1,0,0]], 8: ["坤", "☷", [0,0,0]]
+};
+const LIUSHISIGUA = {
+  "1,1": "乾为天", "1,2": "天泽履", "1,3": "天火同人", "1,4": "天雷无妄", "1,5": "天风姤", "1,6": "天水讼", "1,7": "天山遁", "1,8": "天地否",
+  "2,1": "泽天夬", "2,2": "兑为泽", "2,3": "泽火革", "2,4": "泽雷随", "2,5": "泽风大过", "2,6": "泽水困", "2,7": "泽山咸", "2,8": "泽地萃",
+  "3,1": "火天大有", "3,2": "火泽睽", "3,3": "离为火", "3,4": "火雷噬嗑", "3,5": "火风鼎", "3,6": "火水未济", "3,7": "火山旅", "3,8": "火地晋",
+  "4,1": "雷天大壮", "4,2": "雷泽归妹", "4,3": "雷火丰", "4,4": "震为雷", "4,5": "雷风恒", "4,6": "雷水解", "4,7": "雷山小过", "4,8": "雷地豫",
+  "5,1": "风天小畜", "5,2": "风泽中孚", "5,3": "风火家人", "5,4": "风雷益", "5,5": "巽为风", "5,6": "风水涣", "5,7": "风山渐", "5,8": "风地观",
+  "6,1": "水天需", "6,2": "水泽节", "6,3": "水火既济", "6,4": "水雷屯", "6,5": "水风井", "6,6": "坎为水", "6,7": "水山蹇", "6,8": "水地比",
+  "7,1": "山天大畜", "7,2": "山泽损", "7,3": "山火贲", "7,4": "山雷颐", "7,5": "山风蛊", "7,6": "山水蒙", "7,7": "艮为山", "7,8": "山地剥",
+  "8,1": "地天泰", "8,2": "地泽临", "8,3": "地火明夷", "8,4": "地雷复", "8,5": "地风升", "8,6": "地水师", "8,7": "地山谦", "8,8": "坤为地"
+};
+
+Expert.liuyao = function(pan) {
+  const facts = [];
+  // 卦名+世应
+  facts.push(`【事实·卦象】本卦：${pan.gua.name}`);
+
+  // 动爻数量
+  if (pan.gua.dongYaoList && pan.gua.dongYaoList.length > 0) {
+    facts.push(`【事实·动爻】共${pan.gua.dongYaoList.length}个动爻：第${pan.gua.dongYaoList.join('、')}爻`);
+  } else {
+    facts.push(`【事实·动爻】无动爻，卦象静守`);
+  }
+
+  // 互卦
+  if (pan.huGua) facts.push(`【事实·互卦】互卦为${pan.huGua}`);
+
+  // 用神（六亲吉凶看旺衰）
+  if (pan.yaoList) {
+    const dongList = pan.yaoList.filter(y => y.isDong);
+    if (dongList.length > 0) {
+      facts.push(`【事实·动爻六亲】${dongList.map(y => `${y.name}${y.gan}${y.zhi}(${y.liuqin})`).join('、')}`);
+    }
+
+    // 妻财爻统计（求财关键）
+    const caiYao = pan.yaoList.filter(y => y.liuqin === '妻财');
+    if (caiYao.length > 0) {
+      facts.push(`【事实·妻财爻】本卦有${caiYao.length}个妻财爻：${caiYao.map(y => `${y.name}(${y.isDong ? '动' : '静'})`).join('、')}`);
+    }
+    // 官鬼爻
+    const guanYao = pan.yaoList.filter(y => y.liuqin === '官鬼');
+    if (guanYao.length > 0) {
+      facts.push(`【事实·官鬼爻】本卦有${guanYao.length}个官鬼爻：${guanYao.map(y => `${y.name}(${y.isDong ? '动' : '静'})`).join('、')}`);
+    }
+
+    // 【新增】世爻应爻（按64卦世应固定表）
+    if (pan.gua.lines) {
+      const shortName = GUA_FULL_TO_SHORT[pan.gua.name] || pan.gua.name?.[0] || pan.gua.name;
+      const shiIdx = SHI_YING[shortName];
+      if (shiIdx) {
+        const shiYao = pan.yaoList[shiIdx.shi - 1];
+        const yingYao = pan.yaoList[shiIdx.ying - 1];
+        if (shiYao) facts.push(`【事实·世爻】第${shiIdx.shi}爻${shiYao.name}${shiYao.gan}${shiYao.zhi}（${shiYao.liuqin}）持世${shiYao.isDong ? '且发动' : ''}`);
+        if (yingYao) facts.push(`【事实·应爻】第${shiIdx.ying}爻${yingYao.name}${yingYao.gan}${yingYao.zhi}（${yingYao.liuqin}）应爻${yingYao.isDong ? '且发动' : ''}`);
+        // 世应关系
+        if (shiYao && yingYao) {
+          const shiWx = shiYao.wuxing, yingWx = yingYao.wuxing;
+          const SHENG = { '木':'火','火':'土','土':'金','金':'水','水':'木' };
+          const KE = { '木':'土','土':'水','水':'火','火':'金','金':'木' };
+          if (SHENG[shiWx] === yingWx) facts.push(`【事实·世应生克】世爻${shiWx}生应爻${yingWx}（我生对方，主耗）`);
+          else if (SHENG[yingWx] === shiWx) facts.push(`【事实·世应生克】应爻${yingWx}生世爻${shiWx}（对方生我，主吉）`);
+          else if (KE[shiWx] === yingWx) facts.push(`【事实·世应生克】世爻${shiWx}克应爻${yingWx}（我克对方，主胜）`);
+          else if (KE[yingWx] === shiWx) facts.push(`【事实·世应生克】应爻${yingWx}克世爻${shiWx}（对方克我，主凶）`);
+          else facts.push(`【事实·世应生克】世应五行同为${shiWx}（比和，主平稳）`);
+        }
+      }
+    }
+
+    // 【新增】用神月令旺衰（按"问测类型"找用神爻，再看其在月令是否得令）
+    if (pan.yaoList && pan.timeGanzhi) {
+      const monthZhi = pan.timeGanzhi.month[1];
+      const WX = { '木':'木','火':'火','土':'土','金':'金','水':'水','子':'水','丑':'土','寅':'木','卯':'木','辰':'土','巳':'火','午':'火','未':'土','申':'金','酉':'金','戌':'土','亥':'水' };
+      // 通用用神判定（无具体问测类型时，按"妻财"看财运）
+      // 用户没传 question 类别，做一个简化版：列出各六亲在月令的旺衰
+      const liuQinList = ['妻财', '官鬼', '父母', '兄弟', '子孙'];
+      const zhiMain = { '寅':'木','卯':'木','巳':'火','午':'火','申':'金','酉':'金','亥':'水','子':'水','辰':'土','戌':'土','丑':'土','未':'土' };
+      const monthMain = zhiMain[monthZhi];
+      const SHENG = { '木':'火','火':'土','土':'金','金':'水','水':'木' };
+      const SHENGED = { '木':'水','火':'木','土':'火','金':'土','水':'金' };
+      for (const lq of liuQinList) {
+        const yls = pan.yaoList.filter(y => y.liuqin === lq);
+        if (yls.length === 0) continue;
+        const ylWx = yls[0].wuxing;
+        // 真正的"得令"判定：同/生旺月令为得令
+        let status;
+        if (ylWx === monthMain) status = '旺（与月令比和）';
+        else if (SHENGED[ylWx] === monthMain) status = '得令（月令生）';
+        else if (SHENG[monthMain] === ylWx) status = '失令（生月令，泄）';
+        else status = '受克（月令克）';
+        facts.push(`【事实·月令】${lq}爻五行${ylWx}在月支${monthZhi}（本气${monthMain}）：${status}`);
+      }
+    }
+
+    // 【新增】卦变分析（本卦 → 变卦）—— 输出变卦具体爻象
+    if (pan.gua.dongYaoList && pan.gua.dongYaoList.length > 0) {
+      const dongList = pan.gua.dongYaoList;
+      // 获取变卦信息（liuyao.js 的 getGuaImage 已计算 bianGuaLines）
+      // 需要重新计算变卦名称
+      const benLines = pan.gua.lines || [];
+      const bianLines = benLines.map((v, i) => {
+        const yaoIdx = [3, 2, 1, 6, 5, 4][i]; // lineIdx → 爻位
+        return dongList.includes(yaoIdx) ? 1 - v : v;
+      });
+      // 变卦上下卦
+      const bianLower = [bianLines[2], bianLines[1], bianLines[0]];
+      const bianUpper = [bianLines[5], bianLines[4], bianLines[3]];
+      let bianLowerNum, bianUpperNum;
+      for (let n = 1; n <= 8; n++) {
+        if (arraysEqual(GUA_NAME[n][2], bianLower)) bianLowerNum = n;
+        if (arraysEqual(GUA_NAME[n][2], bianUpper)) bianUpperNum = n;
+      }
+      const bianGuaName = bianLowerNum && bianUpperNum ? LIUSHISIGUA[`${bianUpperNum},${bianLowerNum}`] : '未知';
+      
+      facts.push(`【事实·变卦】动爻${dongList.length}个（第${dongList.join('、')}爻），本卦${pan.gua.name} → 变卦${bianGuaName}`);
+      
+      // 变爻具体信息（含变卦六亲）
+      const bianYaoDetails = dongList.map(d => {
+        const yao = pan.yaoList[d - 1];
+        // 变出之爻的六亲：从变卦纳甲中获取
+        let bianLiuQin = '未知';
+        if (pan.bianYaoList && pan.bianYaoList[d - 1]) {
+          bianLiuQin = pan.bianYaoList[d - 1].liuqin;
+        }
+        // 变出之爻：阳动变阴，阴动变阳
+        const bianYaoType = yao.name.includes('阳') ? '阴' : '阳';
+        return `${yao.name}${yao.gan}${yao.zhi}(${yao.liuqin}) → 变${bianYaoType}(${bianLiuQin})`;
+      });
+      facts.push(`【事实·变爻详情】${bianYaoDetails.join('；')}`);
+
+      // 变卦整体六亲分布（供AI参考变卦趋势）
+      if (pan.bianYaoList) {
+        const bianLiuQinCount = {};
+        for (const by of pan.bianYaoList) {
+          bianLiuQinCount[by.liuqin] = (bianLiuQinCount[by.liuqin] || 0) + 1;
+        }
+        const bianLiuQinDist = Object.entries(bianLiuQinCount)
+          .sort((a, b) => b[1] - a[1])
+          .map(([lq, c]) => `${lq}${c}个`)
+          .join('、');
+        facts.push(`【事实·变卦六亲分布】${bianGuaName}：${bianLiuQinDist}`);
+      }
+    }
+  }
+
+  return facts.join('\n') + '\n';
+};
+
+// ============= 奇门专家系统 =============
+Expert.qimen = function(pan) {
+  const facts = [];
+  facts.push(`【事实·局数】${pan.jushu_text}（${pan.jieqi}节气，已过${pan.days_in_jq}天）`);
+  facts.push(`【事实·四柱】${pan.bazi.join(' ')}`);
+  facts.push(`【事实·旬首】${pan.xunshou}`);
+
+  // 值符值使
+  if (pan.gong9) {
+    const zf = pan.gong9.find(g => g.is_dipan_zhifu);
+    const zs = pan.gong9.find(g => g.is_renpan_zhishi);
+    if (zf) facts.push(`【事实·值符】地盘值符在${zf.name}（${zf.dipan}）`);
+    if (zs) {
+      const step = zs.zhishi_step != null ? zs.zhishi_step : 0;
+      let stage = '';
+      if (step === 0) stage = '起点，事情刚启动';
+      else if (step <= 2) stage = '初期，正在发展';
+      else if (step <= 5) stage = '中期，关键阶段';
+      else stage = '后期，接近尾声';
+      facts.push(`【事实·值使】人盘值使${zs.renpan}在${zs.name}（${pan.yang_dun ? '阳遁顺行' : '阴遁逆行'}第${step}步，${stage}）`);
+    }
+
+    // 生门/死门方位
+    const sheng = pan.gong9.find(g => g.renpan === '生门');
+    const si = pan.gong9.find(g => g.renpan === '死门');
+    if (sheng) facts.push(`【事实·生门】生门在${sheng.name}（${sheng.direction}），主财位`);
+    if (si) facts.push(`【事实·死门】死门在${si.name}（${si.direction}），主凶位`);
+
+    // 【新增】吉格/凶格识别
+    const jiGeList = [], xiongGeList = [];
+    for (const g of pan.gong9) {
+      const tianPan = g.tianpan; // 天盘
+      const diPan = g.dipan;     // 地盘
+      if (!tianPan || !diPan) continue;
+      
+      // 吉格检查
+      if (tianPan === '戊' && diPan === '丙') jiGeList.push(`青龙返首（${g.name}）`);
+      if (tianPan === '丙' && diPan === '戊') jiGeList.push(`飞鸟跌穴（${g.name}）`);
+      if (tianPan === '乙' && diPan === '丙') jiGeList.push(`日月并行（${g.name}）`);
+      if (tianPan === '丙' && diPan === '乙') jiGeList.push(`三奇得使（${g.name}）`);
+      
+      // 凶格检查
+      if (tianPan === '辛' && diPan === '乙') xiongGeList.push(`白虎猖狂（${g.name}）`);
+      if (tianPan === '乙' && diPan === '辛') xiongGeList.push(`青龙逃走（${g.name}）`);
+      if (tianPan === '丁' && diPan === '癸') xiongGeList.push(`朱雀投江（${g.name}）`);
+      if (tianPan === '癸' && diPan === '丁') xiongGeList.push(`螣蛇夭矫（${g.name}）`);
+      if (tianPan === '丙' && diPan === '庚') xiongGeList.push(`荧惑入白（${g.name}）`);
+      if (tianPan === '庚' && diPan === '丙') xiongGeList.push(`白入荧惑（${g.name}）`);
+      if (tianPan === '庚') {
+        // 庚加年/月/日/时干为悖格
+        const yearGan = pan.bazi[0][0];
+        const monthGan = pan.bazi[1][0];
+        const dayGan = pan.bazi[2][0];
+        const hourGan = pan.bazi[3][0];
+        if (diPan === yearGan) xiongGeList.push(`岁悖格（${g.name}）`);
+        if (diPan === monthGan) xiongGeList.push(`月悖格（${g.name}）`);
+        if (diPan === dayGan) xiongGeList.push(`日悖格（${g.name}）`);
+        if (diPan === hourGan) xiongGeList.push(`时悖格（${g.name}）`);
+      }
+    }
+    
+    if (jiGeList.length > 0) facts.push(`【事实·吉格】${jiGeList.join('、')}`);
+    if (xiongGeList.length > 0) facts.push(`【事实·凶格】${xiongGeList.join('、')}`);
+    
+    // 【新增】门迫检查（门克宫）
+    const MEN_WX = { '开门':'金','休门':'水','生门':'土','伤门':'木','杜门':'木','景门':'火','死门':'土','惊门':'金' };
+    const GONG_WX = { '坎一宫':'水','坤二宫':'土','震三宫':'木','巽四宫':'木','中五宫':'土','乾六宫':'金','兑七宫':'金','艮八宫':'土','离九宫':'火' };
+    const KE = { '金':'木','木':'土','土':'水','水':'火','火':'金' };
+    const menPoList = [];
+    for (const g of pan.gong9) {
+      if (!g.renpan || !g.name) continue;
+      const menWx = MEN_WX[g.renpan];
+      const gongWx = GONG_WX[g.name];
+      if (menWx && gongWx && KE[menWx] === gongWx) {
+        menPoList.push(`${g.renpan}克${g.name}（${menWx}克${gongWx}）`);
+      }
+    }
+    if (menPoList.length > 0) facts.push(`【事实·门迫】${menPoList.join('、')}—— 门克宫，力量受制`);
+    
+    // 【新增】入墓检查
+    const RU_MU = { '乙':'乾六宫','丙':'乾六宫','丁':'艮八宫','戊':'乾六宫','己':'艮八宫','庚':'艮八宫','辛':'巽四宫','壬':'巽四宫','癸':'坤二宫' };
+    const ruMuList = [];
+    for (const g of pan.gong9) {
+      if (!g.tianpan) continue;
+      const muGong = RU_MU[g.tianpan];
+      if (muGong && g.name === muGong) {
+        ruMuList.push(`${g.tianpan}入墓于${g.name}`);
+      }
+    }
+    if (ruMuList.length > 0) facts.push(`【事实·入墓】${ruMuList.join('、')}—— 力量潜藏不出`);
+  }
+
+  return facts.join('\n') + '\n';
+};
+
+// ============= 紫微专家系统 =============
+// 紫微四化表（按生年天干查四化）
+const ZIWEI_SIHUA = {
+  '甲': { 化禄: '廉贞', 化权: '破军', 化科: '武曲', 化忌: '太阳' },
+  '乙': { 化禄: '天机', 化权: '天梁', 化科: '紫微', 化忌: '太阴' },
+  '丙': { 化禄: '天同', 化权: '天机', 化科: '文昌', 化忌: '廉贞' },
+  '丁': { 化禄: '太阴', 化权: '天同', 化科: '天机', 化忌: '巨门' },
+  '戊': { 化禄: '贪狼', 化权: '太阴', 化科: '右弼', 化忌: '天机' },
+  '己': { 化禄: '武曲', 化权: '贪狼', 化科: '天梁', 化忌: '文曲' },
+  '庚': { 化禄: '太阳', 化权: '武曲', 化科: '太阴', 化忌: '天同' },
+  '辛': { 化禄: '巨门', 化权: '太阳', 化科: '文曲', 化忌: '文昌' },
+  '壬': { 化禄: '天梁', 化权: '紫微', 化科: '左辅', 化忌: '武曲' },
+  '癸': { 化禄: '破军', 化权: '巨门', 化科: '太阴', 化忌: '贪狼' }
+};
+
+Expert.ziwei = function(chart) {
+  const facts = [];
+  if (chart.mingGong && chart.mingGong.name) {
+    facts.push(`【事实·命宫】命宫在${chart.mingGong.name}（${chart.mingGong.ganzhi}）`);
+    const mainStars = chart.mingGong.stars?.filter(s => s.type === 'main').map(s => s.name) || [];
+    if (mainStars.length > 0) {
+      facts.push(`【事实·命宫主星】${mainStars.join('、')}`);
+    }
+  }
+  if (chart.siHua && Object.keys(chart.siHua).length > 0) {
+    const siHuaStr = Object.entries(chart.siHua).map(([k,v]) => `${v}${k}`).join(' ');
+    facts.push(`【事实·四化】${siHuaStr}`);
+  }
+
+  // 【新增】按生年天干查四化（事实层校对）
+  if (chart.mingGong && chart.mingGong.ganzhi) {
+    const yearGan = chart.mingGong.ganzhi ? null : null; // chart没有年干信息
+    // 跳过：chart 实际是从 iztro 适配的，siHua 字段已经由 iztro 算好
+  }
+
+  // 【新增】三方四正（命宫+对宫+三合宫）吉星密度
+  if (chart.palaces && Array.isArray(chart.palaces) && chart.mingGong) {
+    const SAN_HE_GONG = {
+      '命宫': ['命宫'],
+      '兄弟': ['兄弟宫'],
+      '夫妻': ['夫妻宫'],
+      '子女': ['子女宫'],
+      '财帛': ['财帛宫'],
+      '疾厄': ['疾厄宫'],
+      '迁移': ['迁移宫'],
+      '交友': ['交友宫','奴仆宫'],
+      '事业': ['官禄宫'],
+      '田宅': ['田宅宫'],
+      '福德': ['福德宫'],
+      '父母': ['父母宫']
+    };
+    // 找命宫索引
+    const mingIdx = chart.palaces.findIndex(p => p.isMing);
+    if (mingIdx >= 0) {
+      // 三方四正 = 命宫+对宫(隔6位)+三合(隔4位)
+      const oppIdx = (mingIdx + 6) % 12;
+      const triIdx1 = (mingIdx + 4) % 12;
+      const triIdx2 = (mingIdx + 8) % 12;
+      const sifang = [chart.palaces[mingIdx], chart.palaces[oppIdx], chart.palaces[triIdx1], chart.palaces[triIdx2]];
+      const allStars = sifang.flatMap(p => (p.stars || []).map(s => s.name));
+      const jiStars = ['紫微','天府','太阳','太阴','天同','天梁','左辅','右弼','文昌','文曲','天魁','天钺'];
+      const xiongStars = ['擎羊','陀罗','火星','铃星','地空','地劫'];
+      const jiCount = allStars.filter(s => jiStars.includes(s)).length;
+      const xiongCount = allStars.filter(s => xiongStars.includes(s)).length;
+      facts.push(`【事实·三方四正】命宫三方四正(${sifang.map(p => p.name).join('、')})，吉星${jiCount}颗，煞星${xiongCount}颗。${xiongCount > jiCount ? '煞星偏多，需化煞' : jiCount >= 3 ? '吉星汇聚，格局清奇' : '吉煞参半'}`);
+    }
+  }
+
+  // 【新增】大限流年
+  if (chart.horoscope) {
+    const hs = chart.horoscope;
+    if (hs.decadal) {
+      const d = hs.decadal;
+      const mutagenStr = d.mutagen?.length === 4 ? `${d.mutagen[0]}化禄 ${d.mutagen[1]}化权 ${d.mutagen[2]}化科 ${d.mutagen[3]}化忌` : '';
+      facts.push(`【事实·大限】当前行${d.name}，在${d.palace}（${d.ganzhi}）${mutagenStr ? '，大限四化：' + mutagenStr : ''}`);
+      // 大限与命宫关系
+      if (d.palace === chart.mingGong?.name) {
+        facts.push(`【事实·大限命宫重叠】大限命宫与原命宫重叠，十年运势与先天格局共振，吉凶加倍`);
+      }
+    }
+    if (hs.age) {
+      facts.push(`【事实·小限】当前${hs.age.nominalAge}岁，小限在${hs.age.palace}（${hs.age.ganzhi}）`);
+    }
+    if (hs.yearly) {
+      const y = hs.yearly;
+      const mutagenStr = y.mutagen?.length === 4 ? `${y.mutagen[0]}化禄 ${y.mutagen[1]}化权 ${y.mutagen[2]}化科 ${y.mutagen[3]}化忌` : '';
+      facts.push(`【事实·流年】当前${y.name}，在${y.palace}（${y.ganzhi}）${mutagenStr ? '，流年四化：' + mutagenStr : ''}`);
+      // 流年与大限关系
+      if (hs.decadal && y.palace === hs.decadal.palace) {
+        facts.push(`【事实·流年大限重叠】流年命宫与大限命宫重叠，该年运势为十年峰值`);
+      }
+    }
+  }
+
+  return facts.join('\n') + '\n';
+};
+
+// ============= 思维链 Prompt =============
+Expert.chainOfThought = function(domain) {
+  const domainRules = {
+    bazi: '八字分析重点：日主旺衰决定格局高低，用神取法需看月令+全局五行流通，忌见用神被冲克、闲神混杂。大运流年与命局形成刑冲合会时需特别关注。',
+    liuyao: '六爻分析重点：用神选取看问测类型（财/官/父/子/兄），用神旺衰看月令+日辰+动爻生克，世爻代表自己、应爻代表对方/事情。动爻变出之爻为变卦，变爻对动爻有生克作用。',
+    qimen: '奇门分析重点：值符为事体、值使为执行，日干为求测人、时干为所问之事。吉格（如青龙返首、飞鸟跌穴）主吉，凶格（如白虎猖狂、青龙逃走）主凶。生门/开门/休门为吉门，死门/惊门/伤门为凶门。',
+    ziwei: '紫微分析重点：命宫主星决定基本性格，三方四正看格局高低，四化（禄权科忌）决定运势起伏。吉星（紫微天府日月同梁左右昌曲魁钺）多则格局清，煞星（羊陀火铃空劫）多则波折多。',
+    xingshi: '姓名学分析重点：五格中人格为核心（主一生运势），地格主青年、总格主晚年。三才配置（天格人格地格的五行关系）需相生忌相克。数理吉凶看1-81数理的固定属性。',
+    shouxiang: '手相分析重点：三大主线（生命线/智慧线/感情线）为骨架，辅助纹路（太阳线/命运线/婚姻线）为细节。掌丘饱满主该领域能力强，纹路深长清晰主运势稳定。'
+  };
+
+  return `【解读要求·思维链】
+你是一位精通传统命理的资深专家。请严格按以下步骤推理，不要跳步：
+1. 【提取关键信号】从排盘中提取3-5个最重要的事实（用神/动爻/格局/四化/节气等）
+2. 【匹配知识库】对每个信号引用上方知识库片段进行验证，必须标注引用来源（如"根据[周易爻辞·乾卦]"）
+3. 【综合推理】基于信号+知识库得出具体结论，避免模糊表述（如"可能""也许"），给出明确判断
+4. 【置信度自评】给出本次解读的置信度（高/中/低）和理由
+5. 【行动建议】给出2-3条具体可行的建议
+
+【${domain}专项规则】
+${domainRules[domain] || '请基于传统命理知识进行严谨分析。'}
+
+【写作格式】
+## 关键信号
+1. ...
+## 推理过程
+- 信号1：...（引用：[知识库来源]）
+- 信号2：...（引用：[知识库来源]）
+...
+## 结论
+...
+## 置信度
+高/中/低，理由：...
+## 行动建议
+- ...
+- ...
+
+【重要约束】
+- 严格基于知识库片段和上面"事实"清单进行推理
+- 每个关键论断必须标注知识库来源
+- 禁止编造传统命理中不存在的说法
+- 禁止给出模棱两可的预测，必须给出明确判断
+- 涉及健康/投资等重大决策时，必须提醒"仅供参考，请结合实际情况判断"`;
+};
+
+// ============= Few-shot 案例 =============
+Expert.fewshot = function(domain) {
+  return `【Few-shot 标准示范】
+
+示范案例（问事业）：
+排盘：乾卦，五爻动（兄弟持世），妻财爻动，官鬼静。
+提问："问近期事业发展"
+
+## 关键信号
+1. 五爻动是兄弟爻（耗财之象）
+2. 妻财爻动，财有动向
+3. 官鬼静：暂无官职/升迁变动
+4. 兄弟持世：竞争者多，需防争夺
+
+## 推理过程
+兄弟动则劫财，说明有同行竞争、朋友争夺资源。妻财动说明近期有财机，但动财不生世（兄弟克财反劫）。官鬼静说明事业升迁尚无明确信号。
+
+## 结论
+近期事业有竞争压力，财运虽有动向但易被他人分走。不宜冒进扩张，宜守不宜攻。
+
+## 置信度
+中，动爻信息明确但具体应期需结合流年。
+
+## 行动建议
+- 守正出奇，专注主业，不宜分心副业
+- 防小人暗算，重要决策多与长辈商议
+- 待官鬼动时再考虑主动求变
+
+---
+
+请参照上述风格进行本次解读。`;
+};
+
+// ============= 量化评分系统 =============
+Expert.score = function(domain, pan) {
+  const scores = {};
+  
+  if (domain === 'bazi') {
+    // 八字评分：五行平衡度、十神配置、大运配合
+    const wuxing = pan.wuxing || {};
+    const total = Object.values(wuxing).reduce((a, b) => a + b, 0) || 1;
+    const balance = 100 - Math.max(...Object.values(wuxing)) / total * 100;
+    scores.balance = Math.round(balance);
+    scores.career = pan.shiShen?.['正官'] || pan.shiShen?.['七杀'] ? 75 : 50;
+    scores.wealth = pan.shiShen?.['正财'] || pan.shiShen?.['偏财'] ? 70 : 45;
+    scores.marriage = pan.shiShen?.['正财'] || pan.shiShen?.['正官'] ? 72 : 48;
+    scores.health = balance > 70 ? 75 : 55;
+  }
+  
+  if (domain === 'ziwei') {
+    // 紫微评分：格局高低、吉星数量、煞星数量
+    const stars = pan.stars || [];
+    const goodStars = stars.filter(s => ['紫微','天府','太阳','太阴','天同','天梁','左辅','右弼','文昌','文曲','天魁','天钺'].includes(s)).length;
+    const badStars = stars.filter(s => ['擎羊','陀罗','火星','铃星','地空','地劫'].includes(s)).length;
+    scores.pattern = Math.min(95, 60 + goodStars * 5 - badStars * 3);
+    scores.career = goodStars >= 3 ? 78 : 52;
+    scores.wealth = stars.includes('武曲') || stars.includes('天府') ? 80 : 50;
+    scores.marriage = stars.includes('太阳') || stars.includes('太阴') ? 75 : 48;
+    scores.health = badStars <= 2 ? 72 : 45;
+  }
+  
+  if (domain === 'liuyao') {
+    // 六爻评分：用神旺衰、动爻数量、世应关系
+    const yaoList = pan.yaoList || [];
+    const dongYao = yaoList.filter(y => y.isDong).length;
+    const shiYao = yaoList.find(y => y.isShi);
+    const yingYao = yaoList.find(y => y.isYing);
+    scores.accuracy = dongYao >= 1 && dongYao <= 3 ? 80 : 55;
+    scores.timing = dongYao > 0 ? 75 : 40;
+    scores.outcome = shiYao && yingYao ? 70 : 45;
+  }
+  
+  if (domain === 'qimen') {
+    // 奇门评分：吉格凶格、吉门吉星、值符值使
+    const gong9 = pan.gong9 || [];
+    const goodMen = ['休门','生门','开门'];
+    const badMen = ['死门','惊门','伤门'];
+    const goodCount = gong9.filter(g => goodMen.includes(g.renpan)).length;
+    const badCount = gong9.filter(g => badMen.includes(g.renpan)).length;
+    scores.opportunity = goodCount >= 2 ? 78 : 50;
+    scores.risk = badCount <= 2 ? 72 : 40;
+    scores.timing = pan.zhishi ? 75 : 45;
+  }
+  
+  if (domain === 'xingshi') {
+    // 姓名评分：五格吉凶、三才配置、数理得分
+    const ge = pan.wuge || {};
+    const goodGe = [1,3,5,6,7,8,11,13,15,16,17,18,21,23,24,25,31,32,33,35,37,39,41,45,47,48,52,57,61,63,65,67,68,81];
+    const scores_list = [ge.tiange, ge.renge, ge.dige, ge.waige, ge.zongge].map(g => goodGe.includes(g) ? 80 : 50);
+    scores.overall = Math.round(scores_list.reduce((a,b)=>a+b,0) / 5);
+    scores.career = scores_list[1]; // 人格
+    scores.wealth = scores_list[0]; // 天格
+    scores.health = scores_list[2]; // 地格
+  }
+  
+  // 统一格式
+  const result = [];
+  for (const [k, v] of Object.entries(scores)) {
+    result.push(`${k === 'balance' ? '五行平衡' : k === 'pattern' ? '格局高低' : k === 'accuracy' ? '准确度' : k === 'timing' ? '时机把握' : k === 'outcome' ? '结果预测' : k === 'opportunity' ? '机遇指数' : k === 'risk' ? '风险指数' : k === 'overall' ? '综合评分' : k === 'career' ? '事业运' : k === 'wealth' ? '财运' : k === 'marriage' ? '婚姻运' : k === 'health' ? '健康运' : k}: ${v}分`);
+  }
+  return result.join(' | ');
+};
+
+window.Expert = Expert;
+
+</script>
+<script>
+document.title = 'Expert:' + (typeof window.Expert) + ' RAG:' + (typeof window.RAG);
+console.log('Expert keys:', window.Expert ? Object.keys(window.Expert).join(',') : 'MISSING');
+console.log('RAG keys:', window.RAG ? Object.keys(window.RAG).join(',') : 'MISSING');
+</script>
+</body>
+</html>
