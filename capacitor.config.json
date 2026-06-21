@@ -3,6 +3,6 @@
   "appName": "AI占卜大师",
   "webDir": "www",
   "server": {
-    "androidScheme": "http"
+    "androidScheme": "https"
   }
 }

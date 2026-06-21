@@ -15,7 +15,8 @@ const Cache = {
     MAX_ENTRIES: 50,
     TTL_DAYS: 7,
     STORAGE_KEY: 'divination_cache_v1',
-    VERSION_KEY: 'divination_cache_version'
+    VERSION_KEY: 'divination_cache_version',
+    ACCESS_ORDER_KEY: 'divination_cache_access_order'
   },
 
   // ===== 初始化：版本升级时清除旧缓存 =====
@@ -27,6 +28,8 @@ const Cache = {
       this.clear();
       localStorage.setItem(this.CONFIG.VERSION_KEY, appVer);
     }
+    // 恢复访问顺序
+    this._accessOrder = JSON.parse(localStorage.getItem(this.CONFIG.ACCESS_ORDER_KEY)) || [];
   },
 
   // ===== 生成缓存 Key =====
@@ -89,13 +92,20 @@ const Cache = {
       const ttlMs = this.CONFIG.TTL_DAYS * 86400000;
       if (Date.now() - entry.ts > ttlMs) {
         delete store[key];
-        localStorage.setItem(this.CONFIG.STORAGE_KEY, JSON.stringify(store));
+        this._removeFromAccessOrder(key);
+        this._saveStore(store);
         return null;
       }
 
       // 更新访问时间（LRU）
       entry.at = Date.now();
-      localStorage.setItem(this.CONFIG.STORAGE_KEY, JSON.stringify(store));
+
+      // 将 key 移到 _accessOrder 末尾
+      this._removeFromAccessOrder(key);
+      this._accessOrder.push(key);
+      this._saveAccessOrder();
+
+      this._saveStore(store);
 
       return entry.output;
     } catch (e) {
@@ -122,16 +132,39 @@ const Cache = {
       // LRU 淘汰：如果超过最大条目数，删除最久未访问的
       const keys = Object.keys(store);
       if (keys.length > this.CONFIG.MAX_ENTRIES) {
-        const sorted = keys.sort((a, b) => store[a].at - store[b].at);
-        const toDelete = sorted.slice(0, keys.length - this.CONFIG.MAX_ENTRIES);
-        for (const k of toDelete) delete store[k];
-        console.log('[Cache] LRU 淘汰:', toDelete.length, '条');
+        // 使用 splice(0,1) 删除最旧的
+        const oldest = this._accessOrder.splice(0, 1)[0];
+        if (oldest && store[oldest]) {
+          delete store[oldest];
+          console.log('[Cache] LRU 淘汰:', oldest);
+        }
       }
 
-      localStorage.setItem(this.CONFIG.STORAGE_KEY, JSON.stringify(store));
+      // 添加到访问顺序末尾
+      this._removeFromAccessOrder(key);
+      this._accessOrder.push(key);
+      this._saveAccessOrder();
+
+      this._saveStore(store);
     } catch (e) {
       console.warn('[Cache] 写入失败:', e);
     }
+  },
+
+  // ===== 内部方法 =====
+  _removeFromAccessOrder(key) {
+    const idx = this._accessOrder.indexOf(key);
+    if (idx !== -1) {
+      this._accessOrder.splice(idx, 1);
+    }
+  },
+
+  _saveStore(store) {
+    localStorage.setItem(this.CONFIG.STORAGE_KEY, JSON.stringify(store));
+  },
+
+  _saveAccessOrder() {
+    localStorage.setItem(this.CONFIG.ACCESS_ORDER_KEY, JSON.stringify(this._accessOrder));
   },
 
   // ===== 统计信息 =====
@@ -152,6 +185,8 @@ const Cache = {
   // ===== 清除所有缓存 =====
   clear() {
     localStorage.removeItem(this.CONFIG.STORAGE_KEY);
+    localStorage.removeItem(this.CONFIG.ACCESS_ORDER_KEY);
+    this._accessOrder = [];
   }
 };
 

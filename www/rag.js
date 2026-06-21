@@ -341,7 +341,9 @@ const RAG = {
       lines.push(line);
       totalLen += line.length;
     }
-    return '\n' + lines.join('\n') + '\n';
+    const result = '\n' + lines.join('\n') + '\n';
+    if (!result || result.length === 0) return '';
+    return result;
   }
 };
 

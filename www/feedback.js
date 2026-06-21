@@ -43,7 +43,8 @@ const Feedback = {
   getAll() {
     try {
       return JSON.parse(localStorage.getItem(this.STORAGE_KEY)) || [];
-    } catch {
+    } catch (e) {
+      console.error('Feedback parse error:', e);
       return [];
     }
   },

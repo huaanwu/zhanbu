@@ -125,6 +125,37 @@ const ABTest = {
     return report;
   },
   
+  // 获取变体分组
+  // getVariant() - 等同于 getVariant(2)，返回 0 或 1
+  // getVariant(n) - 返回 0 到 n-1 的随机整数
+  // getVariant({ weights: [w1, w2, ...] }) - 按权重分配，返回索引
+  getVariant(param) {
+    if (param === undefined) {
+      // 默认二元分组，向后兼容
+      return Math.floor(Math.random() * 2);
+    }
+
+    if (typeof param === 'number') {
+      // 指定数量分组
+      return Math.floor(Math.random() * param);
+    }
+
+    if (typeof param === 'object' && Array.isArray(param.weights)) {
+      // 权重分配
+      const { weights } = param;
+      const total = weights.reduce((sum, w) => sum + w, 0);
+      let random = Math.random() * total;
+      for (let i = 0; i < weights.length; i++) {
+        random -= weights[i];
+        if (random <= 0) return i;
+      }
+      return weights.length - 1;
+    }
+
+    // 兜底返回 0
+    return 0;
+  },
+
   // 获取数据
   getData() {
     try {

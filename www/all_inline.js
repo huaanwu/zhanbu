@@ -22,11 +22,31 @@
     if (typeof window.RAG === 'undefined') console.error('rag.js 未加载，请检查 script 标签');
     return;
   }
-  const load = (url) => fetch(url).then(r => { if (!r.ok) throw new Error(url + ' load failed'); return r.text(); });
   try {
-    if (typeof window.Expert === 'undefined') { const code = await load('expert.js'); (0, eval)(code); }
-    if (typeof window.RAG === 'undefined') { const code = await load('rag.js'); (0, eval)(code); }
-  } catch(e) { console.error('Expert/RAG加载失败:', e); }
+    // 使用动态 import() 替代 eval()，更安全且符合 ES Module 规范
+    if (typeof window.Expert === 'undefined') {
+      const module = await import('./expert.js');
+      // 如果是默认导出，需要从 module.default 获取
+      if (module.default) Object.assign(window, module.default);
+    }
+    if (typeof window.RAG === 'undefined') {
+      const module = await import('./rag.js');
+      if (module.default) Object.assign(window, module.default);
+    }
+  } catch(e) {
+    // 降级：尝试使用 script 标签加载
+    console.warn('ES Module 加载失败，尝试 script 标签:', e);
+    if (typeof window.Expert === 'undefined') {
+      const script = document.createElement('script');
+      script.src = 'expert.js';
+      document.head.appendChild(script);
+    }
+    if (typeof window.RAG === 'undefined') {
+      const script = document.createElement('script');
+      script.src = 'rag.js';
+      document.head.appendChild(script);
+    }
+  }
 })();
 
 var APP_VERSION = 'v1.2.9';
@@ -61,7 +81,7 @@ let currentFs = null, currentFsPrompt = '';
 // 追问模式：保存之前的内容前缀
 let _followUpPrefix = '';
 
-var DEFAULT_API_KEY = 'sk-58c20c40a30f4564bbf76c8ccccbaabd';
+var DEFAULT_API_KEY = ''; // 不再硬编码，请通过设置页面配置
 var DEFAULT_VISION_KEY = '';
 
 // ========== 页面切换 ==========
@@ -156,6 +176,7 @@ function addFeedbackUI(domain, contentEl, outputText, prompt, system) {
     <span class="fb-status" style="color:var(--text-muted);margin-left:auto;font-size:0.75rem;">反馈将用于校准后续解读</span>
   `;
   // 移除同 container 旧 feedback-bar
+  if (!contentEl || !contentEl.parentNode) return;
   contentEl.parentNode.querySelectorAll('.feedback-bar').forEach(el => el.remove());
   // 追加到 contentEl 之后
   if (contentEl.nextSibling) {
@@ -212,7 +233,7 @@ function renderHistory() {
   stats.textContent = `共 ${s.total} 条记录` + (items.length !== s.total ? `（筛选后 ${items.length} 条）` : '');
 
   if (items.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text-muted);font-size:0.85rem;">暂无记录</div>';
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted);"><div style="font-size:3rem;margin-bottom:1rem;">📜</div><p style="font-size:1rem;">暂无占卜记录</p><p style="font-size:0.8rem;">开始你的第一次占卜吧</p></div>';
     return;
   }
 
@@ -289,6 +310,7 @@ function clearAllHistory() {
 // 追问UI：在feedback-bar后追加追问输入框
 function addFollowUpUI(domain, contentEl) {
   // 移除旧的追问栏
+  if (!contentEl || !contentEl.parentNode) return;
   contentEl.parentNode.querySelectorAll('.follow-up-bar').forEach(el => el.remove());
 
   const fu = document.createElement('div');
@@ -575,8 +597,14 @@ async function readSSE(body, onChunk) {
 // 自动扫描局域网找本地模型服务器
 async function autoDiscoverServer() {
   const statusEl = document.getElementById('discoverStatus');
-  statusEl.textContent = '正在获取本机IP...';
-  statusEl.style.color = 'var(--text-muted)';
+
+  // Helper: set status with spinner
+  function setStatusWithSpinner(text) {
+    statusEl.innerHTML = `<div class="spinner" style="display:inline-block;width:14px;height:14px;border-width:2px;margin-right:8px;vertical-align:middle;flex-shrink:0;"></div><span>${text}</span>`;
+    statusEl.style.color = 'var(--text-muted)';
+  }
+
+  setStatusWithSpinner('正在获取本机IP...');
 
   // 步骤1: 用WebRTC获取本机局域网IP
   let myIp = null;
@@ -607,10 +635,10 @@ async function autoDiscoverServer() {
     base = `${parts[0]}.${parts[1]}.${parts[2]}`;
   }
   const scanPort = getLocalServerPort();
-  statusEl.textContent = `扫描 ${base}.1~50:${scanPort}...`;
+  setStatusWithSpinner(`扫描中 (0/50)...`);
 
   // 步骤3: 并发扫描（每组20个，避免浏览器限制）
-  async function scanBatch(start, end) {
+  async function scanBatch(start, end, onProgress) {
     const promises = [];
     for (let i = start; i <= end; i++) {
       const ip = `${base}.${i}`;
@@ -618,11 +646,22 @@ async function autoDiscoverServer() {
         const xhr = new XMLHttpRequest();
         xhr.open('GET', `http://${ip}:${scanPort}/v1/models`, true);
         xhr.timeout = 1500;
-        xhr.onload = () => resolve(xhr.status === 200 ? ip : null);
+        xhr.onload = () => {
+          if (xhr.status === 200) resolve(ip);
+          else resolve(null);
+        };
         xhr.onerror = () => resolve(null);
         xhr.ontimeout = () => resolve(null);
         xhr.send();
       }));
+    }
+    // Report progress as each promise settles
+    let completed = start - 1;
+    for (const p of promises) {
+      p.then(() => {
+        completed++;
+        onProgress(completed);
+      });
     }
     const results = await Promise.all(promises);
     return results.find(ip => ip !== null) || null;
@@ -630,18 +669,22 @@ async function autoDiscoverServer() {
 
   let foundIp = null;
   // 先扫 .1~20
-  if (!foundIp) foundIp = await scanBatch(1, 20);
+  if (!foundIp) foundIp = await scanBatch(1, 20, cur => {
+    if (cur <= 20) setStatusWithSpinner(`扫描中 (${cur}/20)...`);
+  });
   if (foundIp) { done(foundIp); return; }
-  statusEl.textContent = `扫描 ${base}.21~50:${scanPort}...`;
+  setStatusWithSpinner(`扫描中 (20/50)...`);
 
   // 再扫 .21~50
-  if (!foundIp) foundIp = await scanBatch(21, 50);
+  if (!foundIp) foundIp = await scanBatch(21, 50, cur => {
+    setStatusWithSpinner(`扫描中 (${cur}/50)...`);
+  });
   if (foundIp) { done(foundIp); return; }
 
   // 最后扫常见fallback网段
   const fallbackBases = myIp ? [] : ['192.168.0'];
   for (const fb of fallbackBases) {
-    statusEl.textContent = `扫描 ${fb}.1~30:${scanPort}...`;
+    setStatusWithSpinner(`扫描 ${fb}.1~30 中...`);
     const promises = [];
     for (let i = 1; i <= 30; i++) {
       const ip = `${fb}.${i}`;
@@ -661,7 +704,7 @@ async function autoDiscoverServer() {
   }
 
   // 未找到
-  statusEl.textContent = `❌ 未找到。请手动输入IP或检查：1.同WiFi 2.模型已启动(${scanPort}端口) 3.防火墙开放${scanPort}`;
+  statusEl.innerHTML = `❌ 未找到。请手动输入IP或检查：1.同WiFi 2.模型已启动(${scanPort}端口) 3.防火墙开放${scanPort}`;
   statusEl.style.color = 'var(--accent-red)';
 
   function done(ip) {
@@ -669,7 +712,7 @@ async function autoDiscoverServer() {
     localStorage.setItem('local_server_ip', ip);
     document.getElementById('localModelCheck').checked = true;
     localStorage.setItem('use_local_model', '1');
-    statusEl.textContent = `✅ 发现服务器: ${ip}:${scanPort}`;
+    statusEl.innerHTML = `✅ 发现服务器: ${ip}:${scanPort}`;
     statusEl.style.color = 'var(--accent-green)';
   }
 }
@@ -723,10 +766,19 @@ window.testLocalModel = testLocalModel;
 
 // ========== 知识库 ==========
 let _kb = null;
+let _kbProgressEl = null;
 async function ensureKB() {
   if (_kb) return _kb;
+  // 显示加载进度
+  _kbProgressEl = document.createElement('div');
+  _kbProgressEl.id = 'kb-loading';
+  _kbProgressEl.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.85);color:#fff;padding:16px 28px;border-radius:10px;font-size:0.9rem;z-index:99999;text-align:center;';
+  _kbProgressEl.textContent = '正在加载知识库...';
+  document.body.appendChild(_kbProgressEl);
+
   // 直接fetch JSON文件，不再依赖KB_EMBEDDED
   const fileMap = {
+    // 已有知识库
     bazi: 'kb_data/bazi_kb.json',
     bazi_ext: 'kb_data/bazi_ext_kb.json',
     gua: 'kb_data/gua_kb.json',
@@ -743,23 +795,75 @@ async function ensureKB() {
     ziwei_geju: 'kb_data/ziwei_geju_kb.json',
     qimen_xingmen: 'kb_data/qimen_xingmen_kb.json',
     qimen_geju: 'kb_data/qimen_geju_kb.json',
-    qimen_zhanji: 'kb_data/qimen_zhanji_kb.json'
+    qimen_zhanji: 'kb_data/qimen_zhanji_kb.json',
+    // 新接入知识库
+    bazi_dayun: 'kb_data/bazi_dayun_kb.json',
+    bazi_geju: 'kb_data/bazi_geju_kb.json',
+    bazi_hehun: 'kb_data/bazi_hehun_kb.json',
+    bazi_shensha: 'kb_data/bazi_shensha_kb.json',
+    bazi_shensha2: 'kb_data/bazi_shensha2_kb.json',
+    bazi_shishen: 'kb_data/bazi_shishen_kb.json',
+    bazi_tiaohou: 'kb_data/bazi_tiaohou_kb.json',
+    bazi_ziwei_hecan: 'kb_data/bazi_ziwei_hecan_kb.json',
+    daoism_fuzhou: 'kb_data/daoism_fuzhou_kb.json',
+    daoism_jiuhuo: 'kb_data/daoism_jiuhuo_kb.json',
+    daoism_shoujue: 'kb_data/daoism_shoujue_kb.json',
+    daoism_zhaijiao: 'kb_data/daoism_zhaijiao_kb.json',
+    daoism_zhoushu: 'kb_data/daoism_zhoushu_kb.json',
+    fengshui_base: 'kb_data/fengshui_base_kb.json',
+    fengshui_ext: 'kb_data/fengshui_ext_kb.json',
+    fengshui_luopan: 'kb_data/fengshui_luopan_kb.json',
+    meihua_ext: 'kb_data/meihua_ext_kb.json',
+    meihua_lei_xiang: 'kb_data/meihua_lei_xiang_kb.json',
+    mianxiang_qise: 'kb_data/mianxiang_qise_kb.json',
+    mianxiang_qise2: 'kb_data/mianxiang_qise2_kb.json',
+    qimen_paipan: 'kb_data/qimen_paipan_kb.json',
+    qimen_yongshen: 'kb_data/qimen_yongshen_kb.json',
+    qimen_fengshui: 'kb_data/qimen_fengshui_jiehe_kb.json',
+    qise: 'kb_data/qise_kb.json',
+    xingshi_cases: 'kb_data/xingshi_cases_kb.json',
+    ziwei_ext2: 'kb_data/ziwei_ext2_kb.json',
+    ziwei_daxian2: 'kb_data/ziwei_daxian2_kb.json',
+    ziwei_gongwei: 'kb_data/ziwei_gongwei_kb.json',
+    ziwei_sihua: 'kb_data/ziwei_sihua_kb.json',
+    ziwei_zuhe: 'kb_data/ziwei_zuhe_kb.json',
+    liuyao_najia: 'kb_data/liuyao_najia_kb.json',
+    liuyao_liuqin: 'kb_data/liuyao_liuqin_kb.json',
+    liuyao_liushen: 'kb_data/liuyao_liushen_kb.json',
+    liuyao_xunkong: 'kb_data/liuyao_xunkong_kb.json',
+    liuyao_cases: 'kb_data/liuyao_cases_kb.json',
+    liuyao_jintui: 'kb_data/liuyao_jintui_kb.json',
+    liuyao_meihua_hucan: 'kb_data/liuyao_meihua_hucan_kb.json',
+    shouxiang_wenli: 'kb_data/shouxiang_wenli_kb.json',
+    shengxiang: 'kb_data/shengxiang_kb.json',
+    guxiang: 'kb_data/guxiang_kb.json',
+    wannianli: 'kb_data/wannianli_kb.json',
+    zeri_ext: 'kb_data/zeri_ext_kb.json',
+    zeri_jixiong: 'kb_data/zeri_jixiong_kb.json',
+    buddhism_divine: 'kb_data/buddhism_divine_kb.json',
+    buddhism_mantra: 'kb_data/buddhism_mantra_kb.json',
   };
   try {
+    const total = Object.keys(fileMap).length;
+    let loaded = 0;
     const entries = await Promise.all(
       Object.entries(fileMap).map(async ([key, path]) => {
         try {
           const r = await fetch(path);
           if (!r.ok) return [key, {}];
           const data = await r.json();
+          loaded++;
+          if (_kbProgressEl) _kbProgressEl.textContent = `正在加载知识库... ${loaded}/${total}`;
           return [key, data];
-        } catch { return [key, {}]; }
+        } catch { loaded++; if (_kbProgressEl) _kbProgressEl.textContent = `正在加载知识库... ${loaded}/${total}`; return [key, {}]; }
       })
     );
     _kb = Object.fromEntries(entries);
   } catch(e) {
     console.warn('ensureKB load fail:', e);
     _kb = Object.fromEntries(Object.keys(fileMap).map(k => [k, {}]));
+  } finally {
+    if (_kbProgressEl) { _kbProgressEl.remove(); _kbProgressEl = null; }
   }
   return _kb;
 }
@@ -1307,6 +1411,526 @@ function kbNihaiXia() {
   return s;
 }
 
+// ========== 新知识库接入函数 ==========
+
+// 八字大运流年
+function kbBaziDayun(pan) {
+  const k = _kb?.bazi_dayun || {};
+  if (!k.entries) return '';
+  let s = '\n\n【大运流年知识库】';
+  // 找相关内容（根据问事关键词匹配）
+  const q = (pan.question || '').toLowerCase();
+  const matched = k.entries.filter(e => {
+    const kw = (e.keywords || '').toLowerCase();
+    return kw.includes(q) || q.includes(kw);
+  }).slice(0, 5);
+  if (matched.length > 0) {
+    for (const item of matched) {
+      s += `\n· ${item.title}：${item.content}`;
+      if (item.method) s += ` 方法：${item.method}`;
+    }
+  } else {
+    // 默认展示前3条通用知识
+    for (const item of k.entries.slice(0, 3)) {
+      s += `\n· ${item.title}：${item.content}`;
+    }
+  }
+  return s;
+}
+
+// 八字格局
+function kbBaziGeju(pan) {
+  const k = _kb?.bazi_geju || {};
+  if (!k.entries) return '';
+  let s = '\n\n【八字格局知识库】';
+  // 根据十神匹配格局
+  const tenGods = pan.tenGods ? Object.values(pan.tenGods).flat() : [];
+  const tenGodSet = new Set(tenGods);
+  const matched = k.entries.filter(e => {
+    if (!e.category) return false;
+    return tenGodSet.has(e.category) || tenGodSet.has(e.category.replace('格', ''));
+  }).slice(0, 5);
+  if (matched.length > 0) {
+    for (const item of matched) {
+      s += `\n· ${item.title}（${item.category}）：${item.content}`;
+      if (item.condition) s += ` 条件：${item.condition}`;
+    }
+  } else {
+    for (const item of k.entries.slice(0, 3)) {
+      s += `\n· ${item.title}：${item.content}`;
+    }
+  }
+  return s;
+}
+
+// 八字合婚（仅当问婚恋时使用）
+function kbBaziHehun(pan) {
+  const k = _kb?.bazi_hehun || {};
+  if (!k.entries) return '';
+  const q = (pan.question || '').toLowerCase();
+  // 只有问婚姻感情时才加入合婚知识
+  if (!q.includes('婚') && !q.includes('恋') && !q.includes('配') && !q.includes('偶')) return '';
+  let s = '\n\n【合婚知识库】';
+  const matched = k.entries.filter(e => {
+    const kw = (e.keywords || '').toLowerCase();
+    return kw.some(k => q.includes(k));
+  }).slice(0, 4);
+  if (matched.length > 0) {
+    for (const item of matched) {
+      s += `\n· ${item.title}：${item.content}`;
+    }
+  } else {
+    for (const item of k.entries.slice(0, 2)) {
+      s += `\n· ${item.title}：${item.content}`;
+    }
+  }
+  return s;
+}
+
+// 八字神煞（扩展）
+function kbBaziShensha(pan) {
+  const k = _kb?.bazi_shensha || {};
+  if (!k.entries) return '';
+  let s = '\n\n【神煞知识库】';
+  // 根据命盘中的神煞关键词匹配
+  const tenGods = pan.tenGods ? Object.values(pan.tenGods).flat() : [];
+  const matched = k.entries.filter(e => {
+    if (!e.keywords) return false;
+    return e.keywords.some(kw => tenGods.includes(kw) || tenGods.some(t => t.includes(kw)));
+  }).slice(0, 6);
+  if (matched.length > 0) {
+    for (const item of matched) {
+      s += `\n· ${item.title}（${item.category}）：${item.content}`;
+      if (item.check) s += ` 查法：${item.check}`;
+      if (item.effect) s += ` 作用：${item.effect}`;
+    }
+  } else {
+    // 默认展示吉神
+    const jishen = k.entries.filter(e => e.category === '吉神').slice(0, 3);
+    for (const item of jishen) {
+      s += `\n· ${item.title}：${item.content}`;
+    }
+  }
+  return s;
+}
+
+// 面相气色
+function kbMianxiangQise() {
+  const k = _kb?.mianxiang_qise || {};
+  if (!k.entries) return '';
+  let s = '\n\n【面相气色知识库】';
+  for (const item of k.entries.slice(0, 5)) {
+    s += `\n· ${item.title}：${item.content}`;
+  }
+  return s;
+}
+
+// 风水基础
+function kbFengshui() {
+  const k = _kb?.fengshui_base || {};
+  if (!k.entries) return '';
+  let s = '\n\n【风水知识库】';
+  for (const item of k.entries.slice(0, 4)) {
+    s += `\n· ${item.title}：${item.content}`;
+  }
+  return s;
+}
+
+// 梅花易数扩展
+function kbMeihua(pan) {
+  const k = _kb?.meihua_ext || {};
+  if (!k.entries) return '';
+  const q = (pan.question || '').toLowerCase();
+  // 只有问特定事项时使用
+  if (!q.includes('梅') && !q.includes('象') && !q.includes('数')) return '';
+  let s = '\n\n【梅花易数知识库】';
+  const matched = k.entries.filter(e => {
+    const kw = (e.keywords || '').toLowerCase();
+    return kw.some(k => q.includes(k));
+  }).slice(0, 4);
+  if (matched.length > 0) {
+    for (const item of matched) {
+      s += `\n· ${item.title}：${item.content}`;
+    }
+  }
+  return s;
+}
+
+// 奇门排盘详解
+function kbQimenPaipan() {
+  const k = _kb?.qimen_paipan || {};
+  if (!k.entries) return '';
+  let s = '\n\n【奇门排盘知识库】';
+  for (const item of k.entries.slice(0, 3)) {
+    s += `\n· ${item.title}：${item.content}`;
+  }
+  return s;
+}
+
+// 姓名学案例
+function kbXingshiCases() {
+  const k = _kb?.xingshi_cases || {};
+  if (!k.entries) return '';
+  let s = '\n\n【姓名学案例参考】';
+  for (const item of k.entries.slice(0, 3)) {
+    s += `\n· ${item.title}：${item.content}`;
+  }
+  return s;
+}
+
+// 紫微斗数扩展v2
+function kbZiweiExt2(chart) {
+  const k = _kb?.ziwei_ext2 || {};
+  let s = '';
+  // 星曜入十二宫
+  if (k.star_in_palace) {
+    s += '\n\n【星曜入宫详解】';
+    const mainStars = chart.mingGong?.stars?.filter(s => s.type === 'main').map(s => s.name) || [];
+    for (const star of mainStars.slice(0, 3)) {
+      const key = star + '入命宫';
+      if (k.star_in_palace[key]) s += `\n· ${key}：${k.star_in_palace[key]}`;
+    }
+  }
+  // 流年小限
+  if (k.liunian) {
+    s += '\n\n【流年小限分析】';
+    s += ` ${k.liunian.description || ''}`;
+  }
+  return s;
+}
+
+// ========== 更多知识库接入函数 ==========
+
+// 八字十神
+function kbBaziShishen(pan) {
+  const k = _kb?.bazi_shishen || {};
+  if (!k.entries) return '';
+  let s = '\n\n【十神知识库】';
+  const tenGods = pan.tenGods ? Object.values(pan.tenGods).flat() : [];
+  const matched = k.entries.filter(e => tenGods.some(t => e.title.includes(t) || e.content.includes(t))).slice(0, 4);
+  if (matched.length > 0) {
+    for (const item of matched) s += `\n· ${item.title}：${item.content}`;
+  } else {
+    for (const item of k.entries.slice(0, 2)) s += `\n· ${item.title}：${item.content}`;
+  }
+  return s;
+}
+
+// 八字调候
+function kbBaziTiaohou(pan) {
+  const k = _kb?.bazi_tiaohou || {};
+  if (!k.entries) return '';
+  let s = '\n\n【调候用神知识库】';
+  const wx = pan.gz ? [pan.gz.month?.[0], pan.gz.hour?.[0]].filter(Boolean) : [];
+  const matched = k.entries.filter(e => wx.some(w => e.content.includes(w) || e.title.includes(w))).slice(0, 3);
+  if (matched.length > 0) {
+    for (const item of matched) s += `\n· ${item.title}：${item.content}`;
+  } else {
+    for (const item of k.entries.slice(0, 2)) s += `\n· ${item.title}：${item.content}`;
+  }
+  return s;
+}
+
+// 八字神煞2
+function kbBaziShensha2(pan) {
+  const k = _kb?.bazi_shensha2 || {};
+  if (!k.entries) return '';
+  let s = '\n\n【神煞扩展知识库】';
+  for (const item of k.entries.slice(0, 3)) {
+    s += `\n· ${item.title}：${item.content}`;
+  }
+  return s;
+}
+
+// 紫微合参
+function kbBaziZiweiHecan(pan) {
+  const k = _kb?.bazi_ziwei_hecan || {};
+  if (!k.entries) return '';
+  let s = '\n\n【八字紫微合参知识库】';
+  for (const item of k.entries.slice(0, 3)) {
+    s += `\n· ${item.title}：${item.content}`;
+  }
+  return s;
+}
+
+// 六爻纳甲
+function kbLiuyaoNajia() {
+  const k = _kb?.liuyao_najia || {};
+  if (!k.entries) return '';
+  let s = '\n\n【纳甲知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 六爻六亲
+function kbLiuyaoLiuqin() {
+  const k = _kb?.liuyao_liuqin || {};
+  if (!k.entries) return '';
+  let s = '\n\n【六亲知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 六爻六神
+function kbLiuyaoLiushen() {
+  const k = _kb?.liuyao_liushen || {};
+  if (!k.entries) return '';
+  let s = '\n\n【六神知识库】';
+  for (const item of k.entries.slice(0, 4)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 六爻旬空
+function kbLiuyaoXunkong() {
+  const k = _kb?.liuyao_xunkong || {};
+  if (!k.entries) return '';
+  let s = '\n\n【旬空知识库】';
+  for (const item of k.entries.slice(0, 2)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 六爻进退
+function kbLiuyaoJintui() {
+  const k = _kb?.liuyao_jintui || {};
+  if (!k.entries) return '';
+  let s = '\n\n【进退知识库】';
+  for (const item of k.entries.slice(0, 2)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 六爻梅花互参
+function kbLiuyaoMeihuaHucan(pan) {
+  const k = _kb?.liuyao_meihua_hucan || {};
+  if (!k.entries) return '';
+  const q = (pan.question || '').toLowerCase();
+  if (!q.includes('梅') && !q.includes('象')) return '';
+  let s = '\n\n【六爻梅花互参知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 六爻案例
+function kbLiuyaoCases() {
+  const k = _kb?.liuyao_cases || {};
+  if (!k.entries) return '';
+  let s = '\n\n【六爻实战案例】';
+  for (const item of k.entries.slice(0, 2)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 奇门用神
+function kbQimenYongshen() {
+  const k = _kb?.qimen_yongshen || {};
+  if (!k.entries) return '';
+  let s = '\n\n【奇门用神知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 奇门风水结合
+function kbQimenFengshui() {
+  const k = _kb?.qimen_fengshui || {};
+  if (!k.entries) return '';
+  let s = '\n\n【奇门风水结合知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 气色知识库
+function kbQise() {
+  const k = _kb?.qise || {};
+  if (!k.entries) return '';
+  let s = '\n\n【气色知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 风水扩展
+function kbFengshuiExt() {
+  const k = _kb?.fengshui_ext || {};
+  if (!k.entries) return '';
+  let s = '\n\n【风水扩展知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 罗盘知识库
+function kbFengshuiLuopan() {
+  const k = _kb?.fengshui_luopan || {};
+  if (!k.entries) return '';
+  let s = '\n\n【罗盘知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 梅花万物类象
+function kbMeihuaLeixiang() {
+  const k = _kb?.meihua_lei_xiang || {};
+  if (!k.entries) return '';
+  let s = '\n\n【万物类象知识库】';
+  for (const item of k.entries.slice(0, 4)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 面相气色扩展
+function kbMianxiangQise2() {
+  const k = _kb?.mianxiang_qise2 || {};
+  if (!k.entries) return '';
+  let s = '\n\n【面相气色扩展知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 紫微大限v2
+function kbZiweiDaxian2(chart) {
+  const k = _kb?.ziwei_daxian2 || {};
+  if (!k.entries) return '';
+  let s = '\n\n【紫微大限扩展知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 紫微宫位
+function kbZiweiGongwei() {
+  const k = _kb?.ziwei_gongwei || {};
+  if (!k.entries) return '';
+  let s = '\n\n【紫微宫位知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 紫微四化
+function kbZiweiSihua(chart) {
+  const k = _kb?.ziwei_sihua || {};
+  if (!k.entries) return '';
+  let s = '\n\n【四化知识库】';
+  const siHua = chart.siHua ? Object.values(chart.siHua) : [];
+  const matched = k.entries.filter(e => siHua.some(s => e.title.includes(s))).slice(0, 3);
+  if (matched.length > 0) {
+    for (const item of matched) s += `\n· ${item.title}：${item.content}`;
+  } else {
+    for (const item of k.entries.slice(0, 2)) s += `\n· ${item.title}：${item.content}`;
+  }
+  return s;
+}
+
+// 紫微组合
+function kbZiweiZuhe() {
+  const k = _kb?.ziwei_zuhe || {};
+  if (!k.entries) return '';
+  let s = '\n\n【双星组合知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 手相纹理
+function kbShouxiangWenli() {
+  const k = _kb?.shouxiang_wenli || {};
+  if (!k.entries) return '';
+  let s = '\n\n【手相纹理知识库】';
+  for (const item of k.entries.slice(0, 4)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 生肖知识库
+function kbShengxiang() {
+  const k = _kb?.shengxiang || {};
+  if (!k.entries) return '';
+  let s = '\n\n【生肖知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 民俗知识库
+function kbGuxiang() {
+  const k = _kb?.guxiang || {};
+  if (!k.entries) return '';
+  let s = '\n\n【民俗知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 万年历知识库
+function kbWannianli() {
+  const k = _kb?.wannianli || {};
+  if (!k.entries) return '';
+  let s = '\n\n【万年历知识库】';
+  for (const item of k.entries.slice(0, 2)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 子平扩展
+function kbZeriExt() {
+  const k = _kb?.zeri_ext || {};
+  if (!k.entries) return '';
+  let s = '\n\n【子平扩展知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 子平吉凶
+function kbZeriJixiong() {
+  const k = _kb?.zeri_jixiong || {};
+  if (!k.entries) return '';
+  let s = '\n\n【吉凶知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 佛教神祇
+function kbBuddhismDivine() {
+  const k = _kb?.buddhism_divine || {};
+  if (!k.entries) return '';
+  let s = '\n\n【佛教神祇知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 佛教咒语
+function kbBuddhismMantra() {
+  const k = _kb?.buddhism_mantra || {};
+  if (!k.entries) return '';
+  let s = '\n\n【佛教咒语知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 道教九火
+function kbDaoismJiuhuo() {
+  const k = _kb?.daoism_jiuhuo || {};
+  if (!k.entries) return '';
+  let s = '\n\n【道教九火知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 道教寿诀
+function kbDaoismShoujue() {
+  const k = _kb?.daoism_shoujue || {};
+  if (!k.entries) return '';
+  let s = '\n\n【道教寿诀知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 道教斋醮
+function kbDaoismZhaijiao() {
+  const k = _kb?.daoism_zhaijiao || {};
+  if (!k.entries) return '';
+  let s = '\n\n【道教斋醮知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
+// 道教咒术
+function kbDaoismZhoushu() {
+  const k = _kb?.daoism_zhoushu || {};
+  if (!k.entries) return '';
+  let s = '\n\n【道教咒术知识库】';
+  for (const item of k.entries.slice(0, 3)) s += `\n· ${item.title}：${item.content}`;
+  return s;
+}
+
 // ========== AI 调用 ==========
 async function callDeepSeek(prompt, system, onChunk, opts = {}) {
   const { temperature = 0.15, model: optModel } = opts;
@@ -1618,11 +2242,11 @@ async function doAIBazi() {
   const btn = document.getElementById('baziAIBtn');
   const content = document.getElementById('baziAIContent');
   btn.disabled = true; btn.textContent = '加载知识库...';
-  content.textContent = '正在加载知识库，请稍候...';
+  content.innerHTML = '<div class="spinner"></div><div>正在加载知识库，请稍候...</div>';
 
   await ensureKB();
   btn.textContent = '解读中...';
-  content.textContent = '正在构建索引...';
+  content.innerHTML = '<div class="spinner"></div><div>正在构建索引...</div>';
   await window.RAG.build();
   btn.textContent = '解读中...';
 
@@ -1644,6 +2268,14 @@ async function doAIBazi() {
       + (feedbackCalib || '')
       + (riskPrompt || '')
       + kbBaziExt()
+      + kbBaziDayun(currentBazi)
+      + kbBaziGeju(currentBazi)
+      + kbBaziShensha(currentBazi)
+      + kbBaziShensha2(currentBazi)
+      + kbBaziShishen(currentBazi)
+      + kbBaziTiaohou(currentBazi)
+      + kbBaziHehun(currentBazi)
+      + kbBaziZiweiHecan(currentBazi)
       + kbNihaiXia()
       + '\n\n'
       + window.Expert.chainOfThought('八字');
@@ -1656,7 +2288,7 @@ async function doAIBazi() {
     addFeedbackUI('bazi', content, finalText, currentBaziPrompt, system);
     showResultActions('baziAIContent', 'baziAIActions');
   } catch (e) {
-    content.innerHTML = prefix + separator + `<div class="error">${e.message}</div>`;
+    content.innerHTML = prefix + separator + `<div class="error"><span>⚠️ ${escapeHtml(e.message)}</span><button onclick="doAIBazi()" class="retry-btn">🔄 重试</button></div>`;
   } finally {
     btn.disabled = false; btn.textContent = 'AI 解读';
   }
@@ -1856,9 +2488,14 @@ async function doAIZiwei() {
       + (feedbackCalib || '')
       + (riskPrompt || '')
       + kbZiweiExt()
+      + kbZiweiExt2(currentZw)
       + kbZiweiFuxing()
       + kbZiweiDaxian()
+      + kbZiweiDaxian2(currentZw)
       + kbZiweiGeju()
+      + kbZiweiGongwei()
+      + kbZiweiSihua(currentZw)
+      + kbZiweiZuhe()
       + kbNihaiXia()
       + '\n\n'
       + window.Expert.chainOfThought('紫微');
@@ -1871,7 +2508,7 @@ async function doAIZiwei() {
     addFeedbackUI('ziwei', content, finalText, currentZwPrompt, system);
     showResultActions('zwAIContent', 'zwAIActions');
   } catch (e) {
-    content.innerHTML = prefix + separator + `<div class="error">${e.message}</div>`;
+    content.innerHTML = prefix + separator + `<div class="error"><span>⚠️ ${escapeHtml(e.message)}</span><button onclick="doAIZiwei()" class="retry-btn">🔄 重试</button></div>`;
   } finally {
     btn.disabled = false; btn.textContent = 'AI 解读';
   }
@@ -2146,6 +2783,15 @@ async function doAILiuyao() {
       + (feedbackCalib || '')
       + (riskPrompt || '')
       + kbLiuyaoExt()
+      + kbLiuyaoNajia()
+      + kbLiuyaoLiuqin()
+      + kbLiuyaoLiushen()
+      + kbLiuyaoXunkong()
+      + kbLiuyaoJintui()
+      + kbLiuyaoMeihuaHucan(currentLy)
+      + kbLiuyaoCases()
+      + kbMeihua(currentLy)
+      + kbMeihuaLeixiang()
       + kbNihaiXia()
       + '\n\n'
       + window.Expert.chainOfThought('六爻');
@@ -2161,7 +2807,7 @@ async function doAILiuyao() {
     addFeedbackUI('liuyao', content, finalText, currentLyPrompt, system);
     showResultActions('lyAIContent', 'lyAIActions');
   } catch (e) {
-    content.innerHTML = prefix + separator + `<div class="error">${e.message}</div>`;
+    content.innerHTML = prefix + separator + `<div class="error"><span>⚠️ ${escapeHtml(e.message)}</span><button onclick="doAILiuyao()" class="retry-btn">🔄 重试</button></div>`;
   } finally {
     btn.disabled = false; btn.textContent = 'AI 解读';
   }
@@ -2267,9 +2913,13 @@ async function doAIQimen() {
       + (feedbackCalib || '')
       + (riskPrompt || '')
       + kbQimenExt()
+      + kbQimenPaipan()
+      + kbQimenYongshen()
       + kbQimenXingmen()
       + kbQimenGeju()
       + kbQimenZhanji()
+      + kbQimenFengshui()
+      + kbQise()
       + kbNihaiXia()
       + '\n\n'
       + window.Expert.chainOfThought('奇门');
@@ -2282,7 +2932,7 @@ async function doAIQimen() {
     addFeedbackUI('qimen', content, finalText, currentQmPrompt, system);
     showResultActions('qmAIContent', 'qmAIActions');
   } catch (e) {
-    content.innerHTML = prefix + separator + `<div class="error">${e.message}</div>`;
+    content.innerHTML = prefix + separator + `<div class="error"><span>⚠️ ${escapeHtml(e.message)}</span><button onclick="doAIQimen()" class="retry-btn">🔄 重试</button></div>`;
   } finally {
     btn.disabled = false; btn.textContent = 'AI 解读';
   }
@@ -2722,7 +3372,7 @@ function doCross() {
     document.getElementById('cxAILoading').style.display = 'none';
     document.getElementById('cxAIText').style.display = 'none';
   } catch (e) {
-    result.innerHTML = `<div class="error">排盘失败: ${e.message}</div>`;
+    result.innerHTML = `<div class="error">排盘失败: ${escapeHtml(e.message)}</div>`;
   }
 }
 window.doCross = doCross;
@@ -2823,7 +3473,7 @@ async function doAICross() {
     addFeedbackUI('cross', text, finalText, currentCrossPrompt, system);
     showResultActions('cxAIText', 'cxAIActions');
   } catch (e) {
-    text.innerHTML = prefix + separator + '<div class="error">综合解读失败: ' + e.message + '</div>';
+    text.innerHTML = prefix + separator + '<div class="error"><span>⚠️ 综合解读失败: ' + escapeHtml(e.message) + '</span><button onclick="doAICross()" class="retry-btn">🔄 重试</button></div>';
     text.style.display = 'block';
     loading.style.display = 'none';
   } finally {
@@ -2913,7 +3563,7 @@ async function doAIXingshi() {
 
   let fullText = '';
   try {
-    const sys = '你是一位精通姓名学的命理大师，请根据五格剖象进行专业解读。重点说明人格（主运）、地格（基础）、总格（后运）的吉凶含义，并结合三才配置分析。注意：吉数并非绝对好，需要配合三才平衡。' + kbXingshi();
+    const sys = '你是一位精通姓名学的命理大师，请根据五格剖象进行专业解读。重点说明人格（主运）、地格（基础）、总格（后运）的吉凶含义，并结合三才配置分析。注意：吉数并非绝对好，需要配合三才平衡。' + kbXingshi() + kbXingshiCases();
     const out = await callDeepSeek(currentXsPrompt, sys, (delta, full) => {
       fullText = full;
       text.textContent = prefix + separator + full;
@@ -2924,7 +3574,7 @@ async function doAIXingshi() {
     }
     showResultActions('xsAIText', 'xsAIActions');
   } catch (e) {
-    text.innerHTML = prefix + separator + '<div class="error">解读失败: ' + e.message + '</div>';
+    text.innerHTML = prefix + separator + '<div class="error"><span>⚠️ 解读失败: ' + escapeHtml(e.message) + '</span><button onclick="doAIXingshi()" class="retry-btn">🔄 重试</button></div>';
     text.style.display = 'block';
     loading.style.display = 'none';
   } finally {
@@ -3062,7 +3712,7 @@ async function doAIFengshui() {
 
   let fullText = '';
   try {
-    const sys = '你是一位精通八宅风水的大师，请根据命卦、宅卦、户型进行详细分析。重点说明：1.命卦与宅卦是否相合 2.四吉方如何利用 3.四凶方如何化解 4.卧室/客厅/厨房/书房的最佳布局建议。' + kbFengshui();
+    const sys = '你是一位精通八宅风水的大师，请根据命卦、宅卦、户型进行详细分析。重点说明：1.命卦与宅卦是否相合 2.四吉方如何利用 3.四凶方如何化解 4.卧室/客厅/厨房/书房的最佳布局建议。' + kbFengshui() + kbFengshuiExt() + kbFengshuiLuopan() + kbWannianli();
     const out = await callDeepSeek(currentFsPrompt, sys, (delta, full) => {
       fullText = full;
       text.textContent = prefix + separator + full;
@@ -3073,7 +3723,7 @@ async function doAIFengshui() {
     }
     showResultActions('fsAIText', 'fsAIActions');
   } catch (e) {
-    text.innerHTML = prefix + separator + '<div class="error">解读失败: ' + e.message + '</div>';
+    text.innerHTML = prefix + separator + '<div class="error"><span>⚠️ 解读失败: ' + escapeHtml(e.message) + '</span><button onclick="doAIFengshui()" class="retry-btn">🔄 重试</button></div>';
     text.style.display = 'block';
     loading.style.display = 'none';
   } finally {
@@ -3082,7 +3732,8 @@ async function doAIFengshui() {
 }
 window.doAIFengshui = doAIFengshui;
 
-function kbFengshui() {
+// 基础风水知识（内联）
+function kbFengshuiBasic() {
   return '\n\n【知识库参考】八宅风水要点：\n'
     + '· 八宅由"伏位"起，沿洛书轨迹分四吉四凶星位\n'
     + '· 东四命（坎/震/巽/离）吉位：东、南、北、东南\n'

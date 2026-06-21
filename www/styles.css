@@ -402,3 +402,16 @@ html { font-size: 16px; }
   50% { transform: rotate(-5deg); }
   75% { transform: rotate(5deg); }
 }
+
+@keyframes rotate {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent-gold);
+  border-radius: 50%;
+  animation: rotate 0.8s linear infinite;
+  margin: 0 auto;
+}
