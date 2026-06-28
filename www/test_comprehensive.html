@@ -1,0 +1,255 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset=\"UTF-8\">
+<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+<title>AI占卜大师 — 综合测试报告</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1612; color: #e8e0d5; font-family: 'Segoe UI', monospace; padding: 1rem; }
+  h1 { color: #c9a84c; text-align: center; font-size: 1.5rem; margin-bottom: 0.3rem; }
+  .subtitle { text-align: center; color: #6b6358; font-size: 0.8rem; margin-bottom: 1rem; }
+  .summary { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-bottom: 1rem; }
+  .stat-card { background: #2d2520; border: 1px solid #3d3528; border-radius: 8px; padding: 0.6rem 1rem; text-align: center; min-width: 100px; }
+  .stat-card .num { font-size: 1.5rem; font-weight: bold; }
+  .stat-card .label { font-size: 0.75rem; color: #a09888; }
+  .stat-card.green { border-color: #5a9a5a; } .stat-card.green .num { color: #5a9a5a; }
+  .stat-card.red { border-color: #c94c4c; } .stat-card.red .num { color: #c94c4c; }
+  .stat-card.gold { border-color: #c9a84c; } .stat-card.gold .num { color: #c9a84c; }
+  .module { background: #25201a; border: 1px solid #3d3528; border-radius: 8px; padding: 0.6rem; margin-bottom: 0.6rem; }
+  .module h3 { font-size: 0.9rem; margin-bottom: 0.4rem; display: flex; gap: 0.5rem; }
+  .case { padding: 0.25rem 0; border-bottom: 1px solid #1e1915; font-size: 0.8rem; display: flex; gap: 0.4rem; }
+  .case:last-child { border-bottom: none; }
+  .badge { display: inline-block; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.7rem; font-weight: bold; min-width: 34px; text-align: center; }
+  .badge.pass { background: rgba(90,154,90,0.25); color: #5a9a5a; }
+  .badge.fail { background: rgba(201,76,76,0.25); color: #c94c4c; }
+  .badge.skip { background: rgba(201,168,76,0.25); color: #c9a84c; }
+  #progress { text-align: center; padding: 1rem; color: #c9a84c; }
+  .actions { text-align: center; margin: 0.5rem 0; }
+  .actions button { background: #2d2520; border: 1px solid #c9a84c; color: #c9a84c; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; margin: 0 0.2rem; font-family: inherit; font-size: 0.85rem; }
+  .actions button:hover { background: rgba(201,168,76,0.15); }
+</style>
+</head>
+<body>
+<h1>🔮 AI占卜大师 全面测试报告</h1>
+<div class=\"subtitle\">请打开浏览器控制台查看详细日志</div>
+<div id=\"progress\">⏳ 正在加载模块...</div>
+<div class=\"actions"><button onclick=\"runAllTests()\">▶ 运行全部测试</button></div>
+<div id=\"summary\" class=\"summary\"></div>
+<div id=\"results\"></div>
+
+<script src=\"lib/lunar.bundle.js\"></script>
+<script src=\"lib/iztro.bundle.js\"></script>
+<script src=\"expert.js\"></script>
+<script src=\"rag.js\"></script>
+<script src=\"liuyao.js\"></script>
+<script src=\"qimen.js\"></script>
+<script src=\"xingshi.js\"></script>
+<script src=\"history.js\"></script>
+<script src=\"feedback.js\"></script>
+<script src=\"feedback-loop.js\"></script>
+<script src=\"visual.js\"></script>
+<script src=\"cache.js\"></script>
+<script src=\"ab_test.js\"></script>
+<script>
+
+// Simple browser-based test runner
+var totalTests = 0, passedTests = 0, failedTests = 0;
+var results = [];
+
+function assert(condition, msg) { if (!condition) throw new Error(msg || 'assert failed'); }
+function assertEq(a, b, msg) { if (a !== b) throw new Error((msg||'eq') + ': ' + JSON.stringify(a) + ' != ' + JSON.stringify(b)); }
+function assertHasKeys(obj, keys) { for (var i = 0; i < keys.length; i++) { if (!(keys[i] in obj)) throw new Error('missing key: ' + keys[i]); } }
+
+function test(mod, name, fn) {
+  totalTests++;
+  try {
+    fn();
+    passedTests++;
+    results.push({ module: mod, name: name, passed: true });
+    console.log('%c[OK] ' + mod + ' > ' + name, 'color:#5a9a5a');
+  } catch(e) {
+    failedTests++;
+    results.push({ module: mod, name: name, passed: false, error: e.message });
+    console.log('%c[FAIL] ' + mod + ' > ' + name + ': ' + e.message, 'color:#c94c4c');
+  }
+}
+
+function renderResults() {
+  document.getElementById('progress').textContent = passedTests + '/' + totalTests + ' passed';
+  var summaryEl = document.getElementById('summary');
+  summaryEl.innerHTML = ''
+    + '<div class=\"stat-card gold\"><div class=\"num\">' + totalTests + '</div><div class=\"label\">总计</div></div>'
+    + '<div class=\"stat-card green\"><div class=\"num\">' + passedTests + '</div><div class=\"label\">通过</div></div>'
+    + '<div class=\"stat-card red\"><div class=\"num\">' + failedTests + '</div><div class=\"label\">失败</div></div>'
+    + '<div class=\"stat-card gold\"><div class=\"num\">' + (totalTests ? (passedTests/totalTests*100).toFixed(1) : 0) + '%</div><div class=\"label\">通过率</div></div>';
+  
+  var resultsEl = document.getElementById('results');
+  resultsEl.innerHTML = '';
+  var groups = {};
+  for (var i = 0; i < results.length; i++) {
+    var r = results[i];
+    if (!groups[r.module]) groups[r.module] = [];
+    groups[r.module].push(r);
+  }
+  for (var mod in groups) {
+    var cases = groups[mod];
+    var mp = cases.filter(function(c) { return c.passed; }).length;
+    var mf = cases.filter(function(c) { return !c.passed; }).length;
+    var div = document.createElement('div'); div.className = 'module';
+    div.innerHTML = '<h3>' + mod + ' <span class=\"badge pass\">' + mp + '/' + cases.length + '</span></h3>';
+    for (var j = 0; j < cases.length; j++) {
+      var c = cases[j];
+      var el = document.createElement('div'); el.className = 'case';
+      el.innerHTML = '<span class=\"badge ' + (c.passed ? 'pass' : 'fail') + '\">' + (c.passed ? 'PASS' : 'FAIL') + '</span> ' + c.name;
+      if (c.error) el.innerHTML += '<br><span style=\"color:#c94c4c;font-size:0.7rem;margin-left:3rem;\">- ' + c.error + '</span>';
+      div.appendChild(el);
+    }
+    resultsEl.appendChild(div);
+  }
+}
+
+function runAllTests() {
+  totalTests = 0; passedTests = 0; failedTests = 0; results = [];
+  document.getElementById('progress').textContent = '⏳ 运行中...';
+  
+  // --- liuyao tests ---
+  if (window.liuyao) {
+    test('liuyao.js', 'global object exists', function() { assert(window.liuyao); });
+    test('liuyao.js', 'panGua returns structure', function() {
+      var pan = window.liuyao.panGua('time', { dt: new Date() });
+      assertHasKeys(pan, ['method', 'datetime', 'timeGanzhi', 'gua', 'yaoList']);
+      assertEq(pan.yaoList.length, 6);
+    });
+    test('liuyao.js', 'each yao has all fields', function() {
+      var pan = window.liuyao.panGua('number', { num1: 3, num2: 7, num3: 5 });
+      assertHasKeys(pan.yaoList[0], ['yao','name','gan','zhi','wuxing','liuqin','liushen','isDong']);
+    });
+    test('liuyao.js', 'format prompt works', function() {
+      var pan = window.liuyao.panGua('time', { dt: new Date() });
+      var p = window.liuyao.formatLiuyaoPrompt(pan, 'test');
+      assert(p.indexOf('test') >= 0);
+    });
+  }
+
+  // --- qimen tests ---  
+  if (window.qimen) {
+    test('qimen.js', 'global object exists', function() { assert(window.qimen); });
+    test('qimen.js', 'panQimen returns 9 palaces', function() {
+      var pan = window.qimen.panQimen(2026, 6, 28, 14, 0);
+      assertHasKeys(pan, ['jushu', 'jushu_text', 'bazi', 'gong9']);
+      assertEq(pan.gong9.length, 9);
+    });
+    test('qimen.js', 'format prompt works', function() {
+      var pan = window.qimen.panQimen(2026, 6, 28, 14, 0);
+      var p = window.qimen.formatQimenPrompt(pan, 'test');
+      assert(p.indexOf('test') >= 0);
+    });
+  }
+
+  // --- xingshi tests ---
+  if (window.Xingshi) {
+    test('xingshi.js', 'global object exists', function() { assert(window.Xingshi); });
+    test('xingshi.js', 'wuge calculation', function() {
+      var d = window.Xingshi.calculateGege('Li', 'Ming');
+      assertHasKeys(d, ['tiange','renge','dige','waige','zongge','sancaiWuge']);
+      assertEq(d.sancaiWuge.length, 3);
+    });
+    test('xingshi.js', 'bihua query', function() {
+      var bh = window.Xingshi.getCharBihua('A');
+      assert(bh > 0);
+    });
+  }
+
+  // --- expert tests ---
+  if (window.Expert) {
+    test('expert.js', 'Expert object exists', function() { assert(window.Expert); });
+    test('expert.js', 'bazi function', function() {
+      assert(typeof window.Expert.bazi === 'function');
+      var facts = window.Expert.bazi({ gz: {day:'Jia'}, dayGan:'Jia', wangShuai:'shengqiang' });
+      assert(typeof facts === 'string');
+    });
+  }
+
+  // --- visual tests ---
+  if (window.Visual) {
+    test('visual.js', 'global object exists', function() { assert(window.Visual); });
+    test('visual.js', 'drawLiuyao returns SVG', function() {
+      var svg = window.Visual.drawLiuyao({ gua: { name: 'Qian', lines: [1,1,1,1,1,1], dongYaoList: [3] } });
+      assert(svg.startsWith('<svg'));
+    });
+    test('visual.js', 'drawQimen returns SVG', function() {
+      var svg = window.Visual.drawQimen({
+        gong9: [{number:1, name:'Kan', tianpan:'Jia', dipan:'Zi', renpan:'Xiu', jiuxing:'TianPeng', shenpan:'ZhiFu'}]
+      });
+      assert(svg.startsWith('<svg'));
+    });
+  }
+
+  // --- history tests ---
+  if (window.History) {
+    test('history.js', 'add/load record', function() {
+      window.History.clear();
+      window.History.add('bazi', 'signal', 'question', 'output');
+      assert(window.History.load().length === 1);
+    });
+    test('history.js', 'set feedback', function() {
+      var items = window.History.load();
+      window.History.setFeedback(items[0].id, 'good');
+      assert(window.History.load()[0].feedback === 'good');
+    });
+  }
+
+  // --- cache tests ---
+  if (window.Cache) {
+    test('cache.js', 'set/get cache', function() {
+      window.Cache.clear();
+      window.Cache.set('bazi', {gz:{year:'Jia',month:'Zi',day:'Yi',hour:'Chou'}, gender:'male', question:'q'}, 'output123');
+      var out = window.Cache.get('bazi', {gz:{year:'Jia',month:'Zi',day:'Yi',hour:'Chou'}, gender:'male', question:'q'});
+      assertEq(out, 'output123');
+    });
+    test('cache.js', 'key isolation by domain', function() {
+      window.Cache.set('bazi', {gz:{year:'A',month:'B',day:'C',hour:'D'}, gender:'male', question:'x'}, 'bazi_out');
+      window.Cache.set('liuyao', {gua:{name:'Qian'}, dongYaoList:['1']}, 'liuyao_out');
+      var a = window.Cache.get('bazi', {gz:{year:'A',month:'B',day:'C',hour:'D'}, gender:'male', question:'x'});
+      var b = window.Cache.get('liuyao', {gua:{name:'Qian'}, dongYaoList:['1']});
+      assertEq(a, 'bazi_out');
+      assertEq(b, 'liuyao_out');
+    });
+  }
+
+  // --- feedback tests ---
+  if (window.Feedback) {
+    test('feedback.js', 'submit feedback', function() {
+      var id = window.Feedback.submit({ domain:'bazi', question:'q', aiResponse:'r', rating:4, accuracy:'accurate' });
+      assert(id && id.length > 0);
+    });
+    test('feedback.js', 'getAll returns list', function() {
+      assert(window.Feedback.getAll().length > 0);
+    });
+  }
+
+  // --- ABTest tests ---
+  if (window.ABTest) {
+    test('ab_test.js', 'getVariant returns 0 or 1', function() {
+      var v = window.ABTest.getVariant();
+      assert(v === 0 || v === 1);
+    });
+    test('ab_test.js', 'start/end test', function() {
+      window.ABTest.start('test_b', 'prompt_v1', 'prompt_v2');
+      var cfg = window.ABTest.getConfig();
+      assert(cfg.variant === 'A' || cfg.variant === 'B');
+    });
+  }
+
+  renderResults();
+}
+
+// Auto-run after load
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(runAllTests, 800);
+});
+
+<\/script>
+</body>
+</html>

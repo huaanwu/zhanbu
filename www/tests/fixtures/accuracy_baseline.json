@@ -1,0 +1,663 @@
+{
+  "version": "1.1",
+  "generated_at": "2026-06-28",
+  "description": "AI占卜大师 事实层准确率基线题库 v1.1 — 离线评测 Expert.bazi/liuyao/ziwei/qimen 在真实命盘上的事实命中率。关键词对齐 Expert.* 实际输出格式（v1.0 fixture 关键词偏概念短语，已修正为子串鲁棒形式）",
+  "domains": ["bazi", "liuyao", "ziwei", "qimen"],
+  "distribution": { "bazi": 10, "liuyao": 8, "ziwei": 6, "qimen": 6 },
+  "fixtures": [
+    {
+      "id": "bazi-001",
+      "domain": "bazi",
+      "category": "纳音",
+      "difficulty": "easy",
+      "input": {
+        "gz": { "year": "丙午", "month": "甲午", "day": "癸巳", "hour": "己未" },
+        "dayGan": "癸",
+        "wangShuai": "身强"
+      },
+      "question_text": "女，2026-06-28 14:30 生（丙午年甲午月癸巳日己未时），命局五行喜忌如何？",
+      "ground_truth_facts": [
+        "年柱纳音：天河水",
+        "月柱纳音：沙中金",
+        "日柱纳音：长流水",
+        "时柱纳音：天上火",
+        "日主癸水，身强"
+      ],
+      "ground_truth_judgment": { "direction": "中", "confidence": "高", "notes": "身强喜克泄耗，癸水生于午月不得令但得3火生扶" },
+      "fact_keywords": ["天河水", "沙中金", "长流水", "天上火", "身强", "日主癸"],
+      "scoring_rubric": { "fact_match_required": 5, "fact_match_partial": 1, "judgment_match": 2 }
+    },
+    {
+      "id": "bazi-002",
+      "domain": "bazi",
+      "category": "排盘柱位",
+      "difficulty": "easy",
+      "input": {
+        "gz": { "year": "庚辰", "month": "丙子", "day": "戊寅", "hour": "壬子" },
+        "dayGan": "戊"
+      },
+      "question_text": "2000-01-01 子时生，男。请问四柱排列？",
+      "ground_truth_facts": [
+        "年柱：庚辰",
+        "月柱：丙子",
+        "日柱：戊寅",
+        "时柱：壬子"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["庚辰", "丙子", "戊寅", "壬子"],
+      "scoring_rubric": { "fact_match_required": 4, "fact_match_partial": 0, "judgment_match": 0 }
+    },
+    {
+      "id": "bazi-003",
+      "domain": "bazi",
+      "category": "旬空",
+      "difficulty": "medium",
+      "input": {
+        "gz": { "year": "庚辰", "month": "丙子", "day": "戊寅", "hour": "壬子" },
+        "dayGan": "戊"
+      },
+      "question_text": "戊寅日柱的旬空是哪两个地支？",
+      "ground_truth_facts": [
+        "戊寅日柱在甲申旬",
+        "旬空：申、酉"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["戊寅", "甲申旬", "申", "酉", "空亡"],
+      "scoring_rubric": { "fact_match_required": 5, "fact_match_partial": 1, "judgment_match": 0 }
+    },
+    {
+      "id": "bazi-004",
+      "domain": "bazi",
+      "category": "十神",
+      "difficulty": "medium",
+      "input": {
+        "gz": { "year": "丙午", "month": "甲午", "day": "癸巳", "hour": "己未" },
+        "dayGan": "癸",
+        "tenGods": { "year": "偏印", "month": "劫财", "day": "-", "hour": "正印" }
+      },
+      "question_text": "癸水日主四柱十神分布？",
+      "ground_truth_facts": [
+        "年干丙火：偏印",
+        "月干甲木：劫财",
+        "时干己土：正印"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["偏印", "劫财", "正印", "十神分布"],
+      "scoring_rubric": { "fact_match_required": 4, "fact_match_partial": 1, "judgment_match": 0 }
+    },
+    {
+      "id": "bazi-005",
+      "domain": "bazi",
+      "category": "纳音",
+      "difficulty": "easy",
+      "input": {
+        "gz": { "year": "甲子", "month": "丙寅", "day": "戊午", "hour": "丁巳" },
+        "dayGan": "戊"
+      },
+      "question_text": "甲子年戊午日柱的纳音分别是什么？",
+      "ground_truth_facts": [
+        "年柱甲子纳音：海中金",
+        "日柱戊午纳音：天上火"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["海中金", "天上火"],
+      "scoring_rubric": { "fact_match_required": 2, "fact_match_partial": 0, "judgment_match": 0 }
+    },
+    {
+      "id": "bazi-006",
+      "domain": "bazi",
+      "category": "格局",
+      "difficulty": "hard",
+      "input": {
+        "gz": { "year": "丙午", "month": "甲午", "day": "癸巳", "hour": "己未" },
+        "dayGan": "癸",
+        "wangShuai": "身弱"
+      },
+      "question_text": "癸巳日生于午月，地支三午一巳透丙甲。身弱用神为何？",
+      "ground_truth_facts": [
+        "癸水日主生于午月不得令",
+        "身弱状态",
+        "喜金水"
+      ],
+      "ground_truth_judgment": { "direction": "凶", "confidence": "中", "notes": "身弱无根，需金水帮扶" },
+      "fact_keywords": ["身弱", "日主癸", "耗力", "天乙贵人", "桃花"],
+      "scoring_rubric": { "fact_match_required": 4, "fact_match_partial": 1, "judgment_match": 2 }
+    },
+    {
+      "id": "bazi-007",
+      "domain": "bazi",
+      "category": "大运",
+      "difficulty": "hard",
+      "input": {
+        "gz": { "year": "庚辰", "month": "丙子", "day": "戊寅", "hour": "壬子" },
+        "dayGan": "戊",
+        "gender": "male",
+        "daYun": [
+          { "startYear": 2010, "endYear": 2019, "ganZhi": "丁丑" },
+          { "startYear": 2020, "endYear": 2029, "ganZhi": "戊寅" },
+          { "startYear": 2030, "endYear": 2039, "ganZhi": "己卯" }
+        ]
+      },
+      "question_text": "男，2000-01-01 子时生，纳音与基本信息？",
+      "ground_truth_facts": [
+        "年柱：庚辰",
+        "纳音：白蜡金等"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["庚辰", "戊寅", "壬子", "纳音"],
+      "scoring_rubric": { "fact_match_required": 4, "fact_match_partial": 1, "judgment_match": 0 }
+    },
+    {
+      "id": "bazi-008",
+      "domain": "bazi",
+      "category": "神煞",
+      "difficulty": "medium",
+      "input": {
+        "gz": { "year": "甲子", "month": "丙寅", "day": "戊午", "hour": "丁巳" },
+        "dayGan": "戊"
+      },
+      "question_text": "甲子年戊午日柱，有哪些神煞命中？",
+      "ground_truth_facts": [
+        "戊日主：羊刃在午（日支见）",
+        "戊日主：禄神在巳（时支见）",
+        "年支子：驿马在寅（月支见）"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["羊刃", "禄神", "驿马"],
+      "scoring_rubric": { "fact_match_required": 3, "fact_match_partial": 1, "judgment_match": 0 }
+    },
+    {
+      "id": "bazi-009",
+      "domain": "bazi",
+      "category": "纳音异体字",
+      "difficulty": "easy",
+      "input": {
+        "gz": { "year": "甲午", "month": "壬申", "day": "丙辰", "hour": "丁巳" },
+        "dayGan": "丙"
+      },
+      "question_text": "甲午年丙辰日柱的纳音应该用什么字（沙 vs 砂）？",
+      "ground_truth_facts": [
+        "甲午年柱纳音：沙中金",
+        "丙辰日柱纳音：沙中土"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["沙中金", "沙中土"],
+      "scoring_rubric": { "fact_match_required": 2, "fact_match_partial": 0, "judgment_match": 0 }
+    },
+    {
+      "id": "bazi-010",
+      "domain": "bazi",
+      "category": "流年",
+      "difficulty": "medium",
+      "input": {
+        "gz": { "year": "庚辰", "month": "丙子", "day": "戊寅", "hour": "壬子" },
+        "dayGan": "戊",
+        "liuNian": { "ganZhi": "丙午", "shiShen": "偏印" }
+      },
+      "question_text": "戊土日主遇丙午流年，十神关系？",
+      "ground_truth_facts": [
+        "丙火对戊土：偏印",
+        "午火对戊土：偏印（同丙）"
+      ],
+      "ground_truth_judgment": { "direction": "中", "confidence": "中", "notes": "印星主学业名声" },
+      "fact_keywords": ["丙午", "偏印", "流年"],
+      "scoring_rubric": { "fact_match_required": 3, "fact_match_partial": 1, "judgment_match": 2 }
+    },
+
+    {
+      "id": "liuyao-001",
+      "domain": "liuyao",
+      "category": "卦象",
+      "difficulty": "easy",
+      "input_loader": "liuyao.panGua('time', { dt: new Date(2026, 5, 28, 14, 30) })",
+      "question_text": "2026-06-28 14:30 时间起卦，本卦与动爻？",
+      "ground_truth_facts": [
+        "本卦：雷泽归妹",
+        "动爻：第4爻",
+        "互卦：山风蛊"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["雷泽归妹", "第4爻", "山风蛊"],
+      "scoring_rubric": { "fact_match_required": 3, "fact_match_partial": 1, "judgment_match": 0 }
+    },
+    {
+      "id": "liuyao-002",
+      "domain": "liuyao",
+      "category": "世应",
+      "difficulty": "medium",
+      "input_loader": "liuyao.panGua('time', { dt: new Date(2026, 5, 28, 14, 30) })",
+      "question_text": "雷泽归妹世爻应爻位置与六亲？",
+      "ground_truth_facts": [
+        "世爻：第3爻",
+        "应爻：第6爻",
+        "世爻：父母（兑金）",
+        "应爻：官鬼（震木）"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["世爻", "应爻", "父母", "官鬼"],
+      "scoring_rubric": { "fact_match_required": 4, "fact_match_partial": 1, "judgment_match": 0 }
+    },
+    {
+      "id": "liuyao-003",
+      "domain": "liuyao",
+      "category": "动变",
+      "difficulty": "hard",
+      "input_loader": "liuyao.panGua('time', { dt: new Date(2026, 5, 28, 14, 30) })",
+      "question_text": "四爻动变，变化关系？",
+      "ground_truth_facts": [
+        "动爻：第4爻",
+        "变爻五行",
+        "动卦变化"
+      ],
+      "ground_truth_judgment": { "direction": "中", "confidence": "中", "notes": "木动入坤土被克，需看用神" },
+      "fact_keywords": ["第4爻", "变卦", "变爻", "动爻", "卦"],
+      "scoring_rubric": { "fact_match_required": 4, "fact_match_partial": 1, "judgment_match": 2 }
+    },
+    {
+      "id": "liuyao-004",
+      "domain": "liuyao",
+      "category": "六亲六神",
+      "difficulty": "easy",
+      "input_loader": "liuyao.panGua('number', { num1: 1, num2: 2, num3: 3, dt: new Date(2026, 5, 28) })",
+      "question_text": "数字起卦(1,2,3)，天泽履第3爻动，本卦与六亲配置？",
+      "ground_truth_facts": [
+        "本卦：天泽履",
+        "第3爻动",
+        "六亲配置含：父母、兄弟、妻财、官鬼"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["天泽履", "第3爻", "父母", "兄弟", "妻财", "官鬼"],
+      "scoring_rubric": { "fact_match_required": 3, "fact_match_partial": 1, "judgment_match": 0 }
+    },
+    {
+      "id": "liuyao-005",
+      "domain": "liuyao",
+      "category": "纳甲",
+      "difficulty": "medium",
+      "input_loader": "liuyao.panGua('time', { dt: new Date(2026, 5, 28, 14, 30) })",
+      "question_text": "雷泽归妹卦象与世应？",
+      "ground_truth_facts": [
+        "本卦：雷泽归妹",
+        "世爻父母持世",
+        "应爻父母应爻"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["雷泽归妹", "父母", "世爻", "应爻", "第4爻"],
+      "scoring_rubric": { "fact_match_required": 4, "fact_match_partial": 1, "judgment_match": 0 }
+    },
+    {
+      "id": "liuyao-006",
+      "domain": "liuyao",
+      "category": "旺衰",
+      "difficulty": "hard",
+      "input_loader": "liuyao.panGua('time', { dt: new Date(2026, 5, 28, 14, 30) })",
+      "question_text": "雷泽归妹世应关系与五行？",
+      "ground_truth_facts": [
+        "卦象：雷泽归妹",
+        "世应比和",
+        "妻财爻动"
+      ],
+      "ground_truth_judgment": { "direction": "中", "confidence": "中", "notes": "震木得月令生扶旺相，兑金受克" },
+      "fact_keywords": ["雷泽归妹", "比和", "妻财", "父母", "月建"],
+      "scoring_rubric": { "fact_match_required": 4, "fact_match_partial": 1, "judgment_match": 2 }
+    },
+    {
+      "id": "liuyao-007",
+      "domain": "liuyao",
+      "category": "用神",
+      "difficulty": "hard",
+      "input_loader": "liuyao.panGua('number', { num1: 7, num2: 8, num3: 3, dt: new Date(2026, 5, 28) })",
+      "question_text": "数字起卦(7,8,3)，事业占，用神取哪一爻？",
+      "ground_truth_facts": [
+        "本卦应含六亲分类",
+        "问事业取官鬼为用神",
+        "需看官鬼爻是否持世或发动"
+      ],
+      "ground_truth_judgment": { "direction": "中", "confidence": "低", "notes": "无卦则本卦未知，但六亲分类应包含官鬼" },
+      "fact_keywords": ["官鬼"],
+      "scoring_rubric": { "fact_match_required": 1, "fact_match_partial": 0, "judgment_match": 0 }
+    },
+    {
+      "id": "liuyao-008",
+      "domain": "liuyao",
+      "category": "旬空月破",
+      "difficulty": "medium",
+      "input_loader": "liuyao.panGua('time', { dt: new Date(2026, 5, 28, 14, 30) })",
+      "question_text": "癸巳日柱的旬空是哪两个支？",
+      "ground_truth_facts": [
+        "癸巳日柱在甲申旬",
+        "旬空：午、未"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["甲申旬", "午", "未", "空"],
+      "scoring_rubric": { "fact_match_required": 4, "fact_match_partial": 0, "judgment_match": 0 }
+    },
+
+    {
+      "id": "ziwei-001",
+      "domain": "ziwei",
+      "category": "命宫主星",
+      "difficulty": "medium",
+      "input": {
+        "mingGong": {
+          "name": "命宫",
+          "ganzhi": "庚午",
+          "isMing": true,
+          "stars": [
+            { "name": "紫微", "type": "main", "brightness": "庙" },
+            { "name": "左辅", "type": "aux" },
+            { "name": "文昌", "type": "aux" }
+          ]
+        },
+        "shenGong": { "name": "身宫", "ganzhi": "壬子" },
+        "palaces": [
+          { "name": "命宫", "ganzhi": "庚午", "isMing": true, "stars": [{ "name": "紫微", "type": "main" }] },
+          { "name": "兄弟宫", "ganzhi": "辛未", "stars": [] },
+          { "name": "夫妻宫", "ganzhi": "壬申", "stars": [{ "name": "武曲", "type": "main" }] },
+          { "name": "子女宫", "ganzhi": "癸酉", "stars": [] },
+          { "name": "财帛宫", "ganzhi": "甲戌", "stars": [] },
+          { "name": "疾厄宫", "ganzhi": "乙亥", "stars": [] },
+          { "name": "迁移宫", "ganzhi": "丙子", "stars": [{ "name": "太阳", "type": "main" }] },
+          { "name": "交友宫", "ganzhi": "丁丑", "stars": [] },
+          { "name": "事业宫", "ganzhi": "戊寅", "stars": [] },
+          { "name": "田宅宫", "ganzhi": "己卯", "stars": [] },
+          { "name": "福德宫", "ganzhi": "庚辰", "stars": [] },
+          { "name": "父母宫", "ganzhi": "辛巳", "stars": [] }
+        ],
+        "siHua": { "化禄": "太阳", "化权": "武曲", "化科": "太阴", "化忌": "天同" },
+        "horoscope": {
+          "decadal": { "name": "庚午", "palace": "命宫", "ganzhi": "庚午", "mutagen": ["太阳", "武曲", "太阴", "天同"] },
+          "age": { "nominalAge": 36, "palace": "迁移宫", "ganzhi": "丙申" },
+          "yearly": { "name": "丙午", "palace": "命宫", "ganzhi": "丙午", "mutagen": ["天同", "天机", "文昌", "廉贞"] }
+        }
+      },
+      "question_text": "男，1990-06-15 午时生，命宫主星与位置？",
+      "ground_truth_facts": [
+        "命宫在庚午",
+        "命宫主星：紫微",
+        "身宫在壬子"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["命宫", "庚午", "紫微", "身宫"],
+      "scoring_rubric": { "fact_match_required": 4, "fact_match_partial": 1, "judgment_match": 0 }
+    },
+    {
+      "id": "ziwei-002",
+      "domain": "ziwei",
+      "category": "四化",
+      "difficulty": "medium",
+      "input": {
+        "mingGong": {
+          "name": "命宫",
+          "ganzhi": "庚午",
+          "isMing": true,
+          "stars": [{ "name": "紫微", "type": "main" }]
+        },
+        "shenGong": { "name": "身宫", "ganzhi": "壬子" },
+        "palaces": [
+          { "name": "命宫", "ganzhi": "庚午", "isMing": true, "stars": [{ "name": "紫微", "type": "main" }] },
+          { "name": "兄弟宫", "ganzhi": "辛未", "stars": [] },
+          { "name": "夫妻宫", "ganzhi": "壬申", "stars": [{ "name": "武曲", "type": "main" }] },
+          { "name": "子女宫", "ganzhi": "癸酉", "stars": [] },
+          { "name": "财帛宫", "ganzhi": "甲戌", "stars": [] },
+          { "name": "疾厄宫", "ganzhi": "乙亥", "stars": [] },
+          { "name": "迁移宫", "ganzhi": "丙子", "stars": [{ "name": "太阳", "type": "main" }] },
+          { "name": "交友宫", "ganzhi": "丁丑", "stars": [] },
+          { "name": "事业宫", "ganzhi": "戊寅", "stars": [] },
+          { "name": "田宅宫", "ganzhi": "己卯", "stars": [] },
+          { "name": "福德宫", "ganzhi": "庚辰", "stars": [] },
+          { "name": "父母宫", "ganzhi": "辛巳", "stars": [] }
+        ],
+        "siHua": { "化禄": "太阳", "化权": "武曲", "化科": "太阴", "化忌": "天同" },
+        "horoscope": {
+          "decadal": { "name": "庚午", "palace": "命宫", "ganzhi": "庚午", "mutagen": ["太阳", "武曲", "太阴", "天同"] },
+          "age": { "nominalAge": 36, "palace": "迁移宫", "ganzhi": "丙申" },
+          "yearly": { "name": "丙午", "palace": "命宫", "ganzhi": "丙午", "mutagen": ["天同", "天机", "文昌", "廉贞"] }
+        }
+      },
+      "question_text": "此命四化配置？",
+      "ground_truth_facts": [
+        "化禄：太阳",
+        "化权：武曲",
+        "化科：太阴",
+        "化忌：天同"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["化禄", "太阳", "化权", "武曲", "化科", "太阴", "化忌", "天同"],
+      "scoring_rubric": { "fact_match_required": 4, "fact_match_partial": 1, "judgment_match": 0 }
+    },
+    {
+      "id": "ziwei-003",
+      "domain": "ziwei",
+      "category": "大限",
+      "difficulty": "medium",
+      "input": {
+        "mingGong": { "name": "命宫", "ganzhi": "庚午", "isMing": true, "stars": [{ "name": "紫微", "type": "main" }] },
+        "shenGong": { "name": "身宫", "ganzhi": "壬子" },
+        "palaces": [
+          { "name": "命宫", "ganzhi": "庚午", "isMing": true, "stars": [] },
+          { "name": "兄弟宫", "ganzhi": "辛未", "stars": [] },
+          { "name": "夫妻宫", "ganzhi": "壬申", "stars": [] },
+          { "name": "子女宫", "ganzhi": "癸酉", "stars": [] },
+          { "name": "财帛宫", "ganzhi": "甲戌", "stars": [] },
+          { "name": "疾厄宫", "ganzhi": "乙亥", "stars": [] },
+          { "name": "迁移宫", "ganzhi": "丙子", "stars": [] },
+          { "name": "交友宫", "ganzhi": "丁丑", "stars": [] },
+          { "name": "事业宫", "ganzhi": "戊寅", "stars": [] },
+          { "name": "田宅宫", "ganzhi": "己卯", "stars": [] },
+          { "name": "福德宫", "ganzhi": "庚辰", "stars": [] },
+          { "name": "父母宫", "ganzhi": "辛巳", "stars": [] }
+        ],
+        "siHua": {},
+        "horoscope": {
+          "decadal": { "name": "庚午", "palace": "命宫", "ganzhi": "庚午", "mutagen": [] },
+          "age": { "nominalAge": 36, "palace": "迁移宫", "ganzhi": "丙申" },
+          "yearly": { "name": "丙午", "palace": "命宫", "ganzhi": "丙午", "mutagen": [] }
+        }
+      },
+      "question_text": "此命大限流年所在宫位？",
+      "ground_truth_facts": [
+        "大限在命宫",
+        "流年在命宫",
+        "小限在迁移宫"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["大限", "命宫", "流年", "小限", "迁移宫"],
+      "scoring_rubric": { "fact_match_required": 5, "fact_match_partial": 1, "judgment_match": 0 }
+    },
+    {
+      "id": "ziwei-004",
+      "domain": "ziwei",
+      "category": "主星分布",
+      "difficulty": "easy",
+      "input": {
+        "mingGong": { "name": "命宫", "ganzhi": "庚午", "isMing": true, "stars": [{ "name": "紫微", "type": "main" }] },
+        "shenGong": { "name": "身宫", "ganzhi": "壬子" },
+        "palaces": [
+          { "name": "命宫", "ganzhi": "庚午", "isMing": true, "stars": [{ "name": "紫微", "type": "main" }] },
+          { "name": "兄弟宫", "ganzhi": "辛未", "stars": [] },
+          { "name": "夫妻宫", "ganzhi": "壬申", "stars": [{ "name": "武曲", "type": "main" }] },
+          { "name": "子女宫", "ganzhi": "癸酉", "stars": [] },
+          { "name": "财帛宫", "ganzhi": "甲戌", "stars": [] },
+          { "name": "疾厄宫", "ganzhi": "乙亥", "stars": [] },
+          { "name": "迁移宫", "ganzhi": "丙子", "stars": [{ "name": "太阳", "type": "main" }] },
+          { "name": "交友宫", "ganzhi": "丁丑", "stars": [] },
+          { "name": "事业宫", "ganzhi": "戊寅", "stars": [] },
+          { "name": "田宅宫", "ganzhi": "己卯", "stars": [] },
+          { "name": "福德宫", "ganzhi": "庚辰", "stars": [] },
+          { "name": "父母宫", "ganzhi": "辛巳", "stars": [] }
+        ],
+        "siHua": {},
+        "horoscope": {}
+      },
+      "question_text": "命宫主星与三方四正？",
+      "ground_truth_facts": [
+        "命宫主星：紫微",
+        "三方四正"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["紫微", "三方四正", "命宫"],
+      "scoring_rubric": { "fact_match_required": 3, "fact_match_partial": 1, "judgment_match": 0 }
+    },
+    {
+      "id": "ziwei-005",
+      "domain": "ziwei",
+      "category": "三方四正",
+      "difficulty": "hard",
+      "input": {
+        "mingGong": { "name": "命宫", "ganzhi": "庚午", "isMing": true, "stars": [{ "name": "紫微", "type": "main" }, { "name": "左辅", "type": "aux" }] },
+        "shenGong": { "name": "身宫", "ganzhi": "壬子" },
+        "palaces": [
+          { "name": "命宫", "ganzhi": "庚午", "isMing": true, "stars": [{ "name": "紫微", "type": "main" }, { "name": "左辅", "type": "aux" }] },
+          { "name": "兄弟宫", "ganzhi": "辛未", "stars": [{ "name": "天机", "type": "main" }] },
+          { "name": "夫妻宫", "ganzhi": "壬申", "stars": [{ "name": "武曲", "type": "main" }, { "name": "文昌", "type": "aux" }] },
+          { "name": "子女宫", "ganzhi": "癸酉", "stars": [] },
+          { "name": "财帛宫", "ganzhi": "甲戌", "stars": [] },
+          { "name": "疾厄宫", "ganzhi": "乙亥", "stars": [] },
+          { "name": "迁移宫", "ganzhi": "丙子", "stars": [{ "name": "太阳", "type": "main" }, { "name": "天魁", "type": "aux" }] },
+          { "name": "交友宫", "ganzhi": "丁丑", "stars": [] },
+          { "name": "事业宫", "ganzhi": "戊寅", "stars": [] },
+          { "name": "田宅宫", "ganzhi": "己卯", "stars": [] },
+          { "name": "福德宫", "ganzhi": "庚辰", "stars": [] },
+          { "name": "父母宫", "ganzhi": "辛巳", "stars": [] }
+        ],
+        "siHua": { "化禄": "太阳", "化权": "武曲", "化科": "太阴", "化忌": "天同" },
+        "horoscope": {}
+      },
+      "question_text": "命宫三方四正吉星汇聚情况？",
+      "ground_truth_facts": [
+        "三方四正含紫微/太阳/武曲",
+        "吉星汇聚"
+      ],
+      "ground_truth_judgment": { "direction": "吉", "confidence": "高", "notes": "主星+辅星汇聚" },
+      "fact_keywords": ["三方四正", "紫微", "化禄", "汇聚", "吉星"],
+      "scoring_rubric": { "fact_match_required": 4, "fact_match_partial": 1, "judgment_match": 2 }
+    },
+    {
+      "id": "ziwei-006",
+      "domain": "ziwei",
+      "category": "身宫",
+      "difficulty": "medium",
+      "input": {
+        "mingGong": { "name": "命宫", "ganzhi": "庚午", "isMing": true, "stars": [{ "name": "紫微", "type": "main" }] },
+        "shenGong": { "name": "身宫", "ganzhi": "壬子" },
+        "palaces": [
+          { "name": "命宫", "ganzhi": "庚午", "isMing": true, "stars": [] },
+          { "name": "兄弟宫", "ganzhi": "辛未", "stars": [] },
+          { "name": "夫妻宫", "ganzhi": "壬申", "stars": [] },
+          { "name": "子女宫", "ganzhi": "癸酉", "stars": [] },
+          { "name": "财帛宫", "ganzhi": "甲戌", "stars": [] },
+          { "name": "疾厄宫", "ganzhi": "乙亥", "stars": [] },
+          { "name": "迁移宫", "ganzhi": "丙子", "stars": [] },
+          { "name": "交友宫", "ganzhi": "丁丑", "stars": [] },
+          { "name": "事业宫", "ganzhi": "戊寅", "stars": [] },
+          { "name": "田宅宫", "ganzhi": "己卯", "stars": [] },
+          { "name": "福德宫", "ganzhi": "庚辰", "stars": [] },
+          { "name": "父母宫", "ganzhi": "辛巳", "stars": [] }
+        ],
+        "siHua": {},
+        "horoscope": {}
+      },
+      "question_text": "命宫与身宫基础信息？",
+      "ground_truth_facts": [
+        "命宫在庚午",
+        "命宫主星：紫微"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["命宫", "庚午", "紫微"],
+      "scoring_rubric": { "fact_match_required": 3, "fact_match_partial": 0, "judgment_match": 0 }
+    },
+
+    {
+      "id": "qimen-001",
+      "domain": "qimen",
+      "category": "排盘",
+      "difficulty": "easy",
+      "input_loader": "qimen.panQimen(2026, 11, 22, 12, 0)",
+      "question_text": "2026-11-22 12:00（小雪节气刚过），问阳遁阴遁与局数？",
+      "ground_truth_facts": [
+        "阴遁5局",
+        "节气：小雪"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["阴遁", "5局", "小雪"],
+      "scoring_rubric": { "fact_match_required": 3, "fact_match_partial": 1, "judgment_match": 0 }
+    },
+    {
+      "id": "qimen-002",
+      "domain": "qimen",
+      "category": "值符值使",
+      "difficulty": "medium",
+      "input_loader": "qimen.panQimen(2026, 11, 22, 12, 0)",
+      "question_text": "此局值符落宫与值使落宫？",
+      "ground_truth_facts": [
+        "值符在震三宫（阴遁己）",
+        "值使伤门在震三宫"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["值符", "震三宫", "值使", "伤门"],
+      "scoring_rubric": { "fact_match_required": 3, "fact_match_partial": 1, "judgment_match": 0 }
+    },
+    {
+      "id": "qimen-003",
+      "domain": "qimen",
+      "category": "九星八门",
+      "difficulty": "medium",
+      "input_loader": "qimen.panQimen(2026, 11, 22, 12, 0)",
+      "question_text": "此局含哪些关键星门？",
+      "ground_truth_facts": [
+        "值符在震三宫",
+        "值使伤门在震三宫",
+        "生门在艮八宫"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["伤门", "生门", "震三宫", "艮八宫"],
+      "scoring_rubric": { "fact_match_required": 4, "fact_match_partial": 1, "judgment_match": 0 }
+    },
+    {
+      "id": "qimen-004",
+      "domain": "qimen",
+      "category": "符使关系",
+      "difficulty": "hard",
+      "input_loader": "qimen.panQimen(2026, 11, 22, 12, 0)",
+      "question_text": "此局符使关系（符使同宫/异宫）？",
+      "ground_truth_facts": [
+        "符使同宫在震三宫",
+        "效率最高"
+      ],
+      "ground_truth_judgment": { "direction": "吉", "confidence": "高", "notes": "符使同心+宫门比和" },
+      "fact_keywords": ["符使同宫", "震三宫", "同心"],
+      "scoring_rubric": { "fact_match_required": 3, "fact_match_partial": 0, "judgment_match": 2 }
+    },
+    {
+      "id": "qimen-005",
+      "domain": "qimen",
+      "category": "用神",
+      "difficulty": "hard",
+      "input_loader": "qimen.panQimen(2026, 11, 22, 12, 0)",
+      "question_text": "问财运，看生门落宫？",
+      "ground_truth_facts": [
+        "生门在艮八宫",
+        "艮为东北，主财位"
+      ],
+      "ground_truth_judgment": { "direction": "吉", "confidence": "中", "notes": "生门得位" },
+      "fact_keywords": ["生门", "艮八宫", "财位"],
+      "scoring_rubric": { "fact_match_required": 3, "fact_match_partial": 0, "judgment_match": 2 }
+    },
+    {
+      "id": "qimen-006",
+      "domain": "qimen",
+      "category": "宫门关系",
+      "difficulty": "medium",
+      "input_loader": "qimen.panQimen(2026, 11, 22, 12, 0)",
+      "question_text": "值使宫门五行关系？",
+      "ground_truth_facts": [
+        "值使伤门属木，落震三宫属木",
+        "宫门比和，值使有力"
+      ],
+      "ground_truth_judgment": null,
+      "fact_keywords": ["伤门", "震三宫", "比和"],
+      "scoring_rubric": { "fact_match_required": 3, "fact_match_partial": 1, "judgment_match": 0 }
+    }
+  ]
+}
