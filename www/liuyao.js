@@ -1,4 +1,4 @@
-/**
+﻿﻿/**
  * 六爻纳甲排盘系统 - 纯 JavaScript 版
  * 移植自 backend/divination/liuyao.py
  */
@@ -57,6 +57,99 @@ var LIU_SHEN_START = { "甲":0,"乙":0,"丙":1,"丁":1,"戊":2,"己":3,"庚":4,"
 
 var TG = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
 var DZ = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+// ========== 高精度八字引擎 ==========
+// 使用文件系统路径加载 lunar-javascript 库
+// 支持：立春换年柱、节气月、早子时/晚子时
+(function() {
+  var _Solar = null;
+  function _getSolar() {
+    if (_Solar) return true;
+    // 三层 fallback:① node_modules 包名解析 → ② 同目录 lib 相对路径 → ③ 兜底
+    // 注意:不要硬编码绝对路径(在 CI/其他机器会失败)
+    try { var m = require("lunar-javascript"); if (m && m.Solar) { _Solar = m.Solar; return true; } } catch(e) { console.warn('[lunar-javascript] require 包名失败:', e.message); }
+    try { var m = require("./lib/node_modules/lunar-javascript/lunar.js"); if (m && m.Solar) { _Solar = m.Solar; return true; } } catch(e) { console.warn('[lunar-javascript] require 相对路径失败:', e.message); }
+    return false;
+  }
+  window.getYearGZEx = function(y,m,d) {
+    if (_getSolar()) { try { return _Solar.fromYmd(y,m,d).getLunar().getYearInGanZhi(); } catch(e) { console.warn('[lunar-javascript] getYearGZEx 调用失败:', e.message); } }
+    return getYearGZ(y);
+  };
+  window.getMonthGZEx = function(y,m,d,yg) {
+    if (_getSolar()) { try { return _Solar.fromYmd(y,m,d).getLunar().getMonthInGanZhi(); } catch(e) { console.warn('[lunar-javascript] getMonthGZEx 调用失败:', e.message); } }
+    return getMonthGZ(yg, m);
+  };
+  window.getDayGZEx = getDayGZ;
+  window.getHourGZEx = function(dg, h, ndg) {
+    var isLateZi = (h >= 23);
+    var eg = (isLateZi && ndg) ? ndg : dg;
+    var zi = Math.floor((h + 1) / 2) % 12;
+    var di = TG.indexOf(eg);
+    return TG[(di * 2 + zi) % 10] + DZ[zi];
+  };
+  window._getNextDayGZ = function(dt) {
+    var d = new Date(dt);
+    d.setDate(d.getDate() + 1);
+    return getDayGZ(d)[0];
+  };
+})();
+// ========== 纳音表（60甲子纳音）==========
+var NA_YIN = {
+  "甲子":"海中金","乙丑":"海中金","丙寅":"炉中火","丁卯":"炉中火","戊辰":"大林木","己巳":"大林木",
+  "庚午":"路旁土","辛未":"路旁土","壬申":"剑锋金","癸酉":"剑锋金","甲戌":"山头火","乙亥":"山头火",
+  "丙子":"涧下水","丁丑":"涧下水","戊寅":"城头土","己卯":"城头土","庚辰":"白蜡金","辛巳":"白蜡金",
+  "壬午":"杨柳木","癸未":"杨柳木","甲申":"泉中水","乙酉":"泉中水","丙戌":"屋上土","丁亥":"屋上土",
+  "戊子":"霹雳火","己丑":"霹雳火","庚寅":"松柏木","辛卯":"松柏木","壬辰":"长流水","癸巳":"长流水",
+  "甲午":"沙中金","乙未":"沙中金","丙申":"山下火","丁酉":"山下火","戊戌":"平地木","己亥":"平地木",
+  "庚子":"壁上土","辛丑":"壁上土","壬寅":"金箔金","癸卯":"金箔金","甲辰":"覆灯火","乙巳":"覆灯火",
+  "丙午":"天河水","丁未":"天河水","戊申":"大驿土","己酉":"大驿土","庚戌":"钗钏金","辛亥":"钗钏金",
+  "壬子":"桑柘木","癸丑":"桑柘木","甲寅":"大溪水","乙卯":"大溪水","丙辰":"沙中土","丁巳":"沙中土",
+  "戊午":"天上火","己未":"天上火","庚申":"石榴木","辛酉":"石榴木","壬戌":"大海水","癸亥":"大海水"
+};
+
+// ========== 旬空表 ==========
+var XUN_KONG = {
+  "甲子":"戌亥","甲戌":"申酉","甲申":"午未","甲午":"辰巳","甲辰":"寅卯","甲寅":"子丑"
+};
+
+// ========== 世应表（八宫六十四卦）==========
+var SHI_YING = {
+  "乾为天":{shi:6,ying:3},"天风姤":{shi:1,ying:4},"天山遁":{shi:2,ying:5},"天地否":{shi:3,ying:6},
+  "风地观":{shi:4,ying:1},"山地剥":{shi:5,ying:2},"火地晋":{shi:4,ying:1},"火天大有":{shi:3,ying:6},
+  "坎为水":{shi:6,ying:3},"水泽节":{shi:1,ying:4},"水雷屯":{shi:2,ying:5},"水火既济":{shi:3,ying:6},
+  "泽火革":{shi:4,ying:1},"雷火丰":{shi:5,ying:2},"地火明夷":{shi:4,ying:1},"地水师":{shi:3,ying:6},
+  "艮为山":{shi:6,ying:3},"山火贲":{shi:1,ying:4},"山天大畜":{shi:2,ying:5},"山泽损":{shi:3,ying:6},
+  "火泽睽":{shi:4,ying:1},"天泽履":{shi:5,ying:2},"风泽中孚":{shi:4,ying:1},"风山渐":{shi:3,ying:6},
+  "震为雷":{shi:6,ying:3},"雷地豫":{shi:1,ying:4},"雷水解":{shi:2,ying:5},"雷风恒":{shi:3,ying:6},
+  "地风升":{shi:4,ying:1},"水风井":{shi:5,ying:2},"泽风大过":{shi:4,ying:1},"泽雷随":{shi:3,ying:6},
+  "巽为风":{shi:6,ying:3},"风天小畜":{shi:1,ying:4},"风火家人":{shi:2,ying:5},"风雷益":{shi:3,ying:6},
+  "天雷无妄":{shi:4,ying:1},"火雷噬嗑":{shi:5,ying:2},"山雷颐":{shi:4,ying:1},"山风蛊":{shi:3,ying:6},
+  "离为火":{shi:6,ying:3},"火山旅":{shi:1,ying:4},"火风鼎":{shi:2,ying:5},"火水未济":{shi:3,ying:6},
+  "山水蒙":{shi:4,ying:1},"风水涣":{shi:5,ying:2},"天水讼":{shi:4,ying:1},"天火同人":{shi:3,ying:6},
+  "坤为地":{shi:6,ying:3},"地雷复":{shi:1,ying:4},"地泽临":{shi:2,ying:5},"地天泰":{shi:3,ying:6},
+  "雷天大壮":{shi:4,ying:1},"泽天夬":{shi:5,ying:2},"水天需":{shi:4,ying:1},"水地比":{shi:3,ying:6},
+  "兑为泽":{shi:6,ying:3},"泽水困":{shi:1,ying:4},"泽地萃":{shi:2,ying:5},"泽山咸":{shi:3,ying:6},
+  "水山蹇":{shi:4,ying:1},"地山谦":{shi:5,ying:2},"雷山小过":{shi:4,ying:1},"雷泽归妹":{shi:3,ying:6},
+};
+
+// 获取纳音
+function getNaYin(gz) { return NA_YIN[gz] || "未知"; }
+
+// 获取旬空
+function getXunKong(dayGZ) {
+  var xun = XUN[dayGZ];
+  return XUN_KONG[xun] || "";
+}
+
+// 获取日柱所属的旬
+var XUN = {
+  "甲子":"甲子","乙丑":"甲子","丙寅":"甲子","丁卯":"甲子","戊辰":"甲子","己巳":"甲子","庚午":"甲子","辛未":"甲子","壬申":"甲子","癸酉":"甲子",
+  "甲戌":"甲戌","乙亥":"甲戌","丙子":"甲戌","丁丑":"甲戌","戊寅":"甲戌","己卯":"甲戌","庚辰":"甲戌","辛巳":"甲戌","壬午":"甲戌","癸未":"甲戌",
+  "甲申":"甲申","乙酉":"甲申","丙戌":"甲申","丁亥":"甲申","戊子":"甲申","己丑":"甲申","庚寅":"甲申","辛卯":"甲申","壬辰":"甲申","癸巳":"甲申",
+  "甲午":"甲午","乙未":"甲午","丙申":"甲午","丁酉":"甲午","戊戌":"甲午","己亥":"甲午","庚子":"甲午","辛丑":"甲午","壬寅":"甲午","癸卯":"甲午",
+  "甲辰":"甲辰","乙巳":"甲辰","丙午":"甲辰","丁未":"甲辰","戊申":"甲辰","己酉":"甲辰","庚戌":"甲辰","辛亥":"甲辰","壬子":"甲辰","癸丑":"甲辰",
+  "甲寅":"甲寅","乙卯":"甲寅","丙辰":"甲寅","丁巳":"甲寅","戊午":"甲寅","己未":"甲寅","庚申":"甲寅","辛酉":"甲寅","壬戌":"甲寅","癸亥":"甲寅",
+};
+
 
 function getGanZhi(offset) { return TG[offset % 10] + DZ[offset % 12]; }
 function getYearGZ(year) { return getGanZhi(year - 4); }
@@ -229,10 +322,10 @@ function panGua(method, params) {
   }
 
   const dt = params.dt || new Date();
-  const yearGZ = getYearGZ(dt.getFullYear());
-  const dayGZ = getDayGZ(dt);
-  const hourGZ = getHourGZ(dayGZ[0], dt.getHours());
-  const monthGZ = getMonthGZ(yearGZ[0], dt.getMonth() + 1);
+  const yearGZ = window.getYearGZEx(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+  const dayGZ = window.getDayGZEx(dt);
+  const hourGZ = window.getHourGZEx(dayGZ[0], dt.getHours(), window._getNextDayGZ(dt));
+  const monthGZ = window.getMonthGZEx(dt.getFullYear(), dt.getMonth() + 1, dt.getDate(), yearGZ[0]);
 
   const guaInfo = getGuaImage(qigua.upper, qigua.lower, qigua.dongYaoList);
   const yaoList = naJia(guaInfo.upperGua, guaInfo.lowerGua, qigua.dongYaoList, dayGZ[0]);

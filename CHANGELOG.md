@@ -1,5 +1,26 @@
 # AI占卜大师 更新日志
 
+## v1.3.1 (Unreleased)
+
+### Bug 修复
+- **P0 chainOfThought key 错位**:`Expert.chainOfThought` 的 domainRules 用英文 key(bazi/liuyao/qimen/ziwei),但 index.html 5 处调用传中文('八字'/'紫微'/'六爻'/'奇门'/'三术同参'),全部走 fallback。改为中英文双 key + 提取 7 个 `_CO_*` 模块级 const
+- **P1 innerHTML XSS**:`index.html` 9 处 catch 路径 `${e.message}` 未转义(3105/3344/3661/3806/4264/4410/4512/4664/5147),改 `escapeHtml(e.message)`
+- **P2 liuyao lunar 集成**:移除 `liuyao.js` 硬编码绝对路径 `D:/get/zhanbu/www/lib/node_modules/lunar-javascript/lunar.js`,改为相对路径 fallback + 5 处静默 catch 加 console.warn
+- **P3 空 catch 加日志**:`index.html` 3 处空 catch(LocalServerDiscovery × 2, LocalModelTest × 1)补 console.warn
+
+### 改进
+- AI 解读入口统一接入 `getActiveABConfig()` + Cache + Fewshot/CoT 开关(bazi/ziwei/liuyao/qimen/cross 共 5 处)
+- `liuyao.js` 暴露高精度排盘函数 `getYearGZEx` / `getMonthGZEx` / `getHourGZEx`(立春换年柱、节气月、早子时/晚子时分支)
+- `expert.js` `liuYao.score` / `crossValidate` 用 `SHI_YING + GUA_FULL_TO_SHORT` 双 fallback 推导世应位置(替代不可靠的 `isShi`/`isYing` 标记)
+
+### 测试
+- 新增 `www/test_all.js`(master runner)+ 6 个模块单测 + Cache/ABTest/bug_fixes 接线测试
+- 基线:`node www/test_all.js` → 143/143 全过(liuyao 7 + qimen 7 + xingshi 8 + expert 10 + visual 7 + accuracy 104)
+- 准确度基线数据存档在 `www/tests/fixtures/accuracy_baseline*.{json,md}`
+
+### 清理
+- 删除临时调试文件:`_fix2.js` / `_fix_test.js` / `_original_test.js` / `test_simple.js` / `test_suite.js` / `test_rag.js`(共 6 个)
+
 ## v1.3.0 (2026-06-22)
 
 ### 安全修复

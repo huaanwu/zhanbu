@@ -96,10 +96,10 @@ var NAYIN_60JIAZI = {};
     '涧下水','涧下水','城头土','城头土','白蜡金','白蜡金',
     '杨柳木','杨柳木','泉中水','泉中水','屋上土','屋上土',
     '霹雳火','霹雳火','松柏木','松柏木','长流水','长流水',
-    '砂中金','砂中金','山下火','山下火','平地木','平地木',
+    '沙中金','沙中金','山下火','山下火','平地木','平地木',
     '壁上土','壁上土','金箔金','金箔金','覆灯火','覆灯火',
     '天河水','天河水','大驿土','大驿土','钗钏金','钗钏金',
-    '桑柘木','桑柘木','大溪水','大溪水','砂中土','砂中土',
+    '桑柘木','桑柘木','大溪水','大溪水','沙中土','沙中土',
     '天上火','天上火','石榴木','石榴木','大海水','大海水'
   ];
   const TG = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
@@ -142,6 +142,9 @@ Expert.bazi = function(pan) {
   const gz = pan.gz;
   const tg = gz.day[0]; // 日干
   const wx = TG_WX[tg];
+
+  // 四柱回显(保证用户/AI 能直接读到柱位原值)
+  facts.push(`【事实·四柱】年柱${gz.year} 月柱${gz.month} 日柱${gz.day} 时柱${gz.hour}`);
 
   // 旺衰（已有）
   if (pan.wangShuai) {
@@ -602,8 +605,8 @@ Expert.liuyao = function(pan) {
         if (dongYls.length > 0) {
           const dongEffects = [];
           for (const y of dongYls) {
-            if (pan.bianYaoList && pan.bianYaoList[y.idx]) {
-              const bian = pan.bianYaoList[y.idx];
+            if (pan.bianYaoList && pan.bianYaoList[y.yao - 1]) {
+              const bian = pan.bianYaoList[y.yao - 1];
               // 回头生
               if (SHENGED[ylWx] === bian.wuxing) dongEffects.push('化回头生');
               // 回头克
@@ -946,14 +949,32 @@ Expert.ziwei = function(chart) {
 };
 
 // ============= 思维链 Prompt =============
+// 各流派规则(模块级 const,供中文/英文 key 共用,避免重复)
+const _CO_BAZI = '八字分析重点：日主旺衰决定格局高低，用神取法需看月令+全局五行流通，忌见用神被冲克、闲神混杂。大运流年与命局形成刑冲合会时需特别关注。';
+const _CO_LIUYAO = '六爻分析重点：用神选取看问测类型（财/官/父/子/兄），用神旺衰看月令+日辰+动爻生克，世爻代表自己、应爻代表对方/事情。动爻变出之爻为变卦，变爻对动爻有生克作用。';
+const _CO_QIMEN = '奇门分析重点：值符为事体、值使为执行，日干为求测人、时干为所问之事。吉格（如青龙返首、飞鸟跌穴）主吉，凶格（如白虎猖狂、青龙逃走）主凶。生门/开门/休门为吉门，死门/惊门/伤门为凶门。';
+const _CO_ZIWEI = '紫微分析重点：命宫主星决定基本性格，三方四正看格局高低，四化（禄权科忌）决定运势起伏。吉星（紫微天府日月同梁左右昌曲魁钺）多则格局清，煞星（羊陀火铃空劫）多则波折多。';
+const _CO_XINGSHI = '姓名学分析重点：五格中人格为核心（主一生运势），地格主青年、总格主晚年。三才配置（天格人格地格的五行关系）需相生忌相克。数理吉凶看1-81数理的固定属性。';
+const _CO_SHOUXIANG = '手相分析重点：三大主线（生命线/智慧线/感情线）为骨架，辅助纹路（太阳线/命运线/婚姻线）为细节。掌丘饱满主该领域能力强，纹路深长清晰主运势稳定。';
+const _CO_CROSS = '三术同参重点：以八字定先天格局、六爻看具体事态、奇门择时定向。综合三方信号避免单一术数的局限,重点关注三术指向一致的结论。';
+
 Expert.chainOfThought = function(domain) {
   const domainRules = {
-    bazi: '八字分析重点：日主旺衰决定格局高低，用神取法需看月令+全局五行流通，忌见用神被冲克、闲神混杂。大运流年与命局形成刑冲合会时需特别关注。',
-    liuyao: '六爻分析重点：用神选取看问测类型（财/官/父/子/兄），用神旺衰看月令+日辰+动爻生克，世爻代表自己、应爻代表对方/事情。动爻变出之爻为变卦，变爻对动爻有生克作用。',
-    qimen: '奇门分析重点：值符为事体、值使为执行，日干为求测人、时干为所问之事。吉格（如青龙返首、飞鸟跌穴）主吉，凶格（如白虎猖狂、青龙逃走）主凶。生门/开门/休门为吉门，死门/惊门/伤门为凶门。',
-    ziwei: '紫微分析重点：命宫主星决定基本性格，三方四正看格局高低，四化（禄权科忌）决定运势起伏。吉星（紫微天府日月同梁左右昌曲魁钺）多则格局清，煞星（羊陀火铃空劫）多则波折多。',
-    xingshi: '姓名学分析重点：五格中人格为核心（主一生运势），地格主青年、总格主晚年。三才配置（天格人格地格的五行关系）需相生忌相克。数理吉凶看1-81数理的固定属性。',
-    shouxiang: '手相分析重点：三大主线（生命线/智慧线/感情线）为骨架，辅助纹路（太阳线/命运线/婚姻线）为细节。掌丘饱满主该领域能力强，纹路深长清晰主运势稳定。'
+    // 中文 key(对齐 index.html / all_inline.js 调用方的实际传参)
+    '八字': _CO_BAZI,
+    '六爻': _CO_LIUYAO,
+    '奇门': _CO_QIMEN,
+    '紫微': _CO_ZIWEI,
+    '姓名': _CO_XINGSHI,
+    '手相': _CO_SHOUXIANG,
+    '三术同参': _CO_CROSS,
+    // 英文 key(向后兼容,避免内部/历史调用崩)
+    bazi: _CO_BAZI,
+    liuyao: _CO_LIUYAO,
+    qimen: _CO_QIMEN,
+    ziwei: _CO_ZIWEI,
+    xingshi: _CO_XINGSHI,
+    shouxiang: _CO_SHOUXIANG
   };
 
   return `【解读要求】
@@ -981,8 +1002,8 @@ ${domainRules[domain] || '请基于传统命理知识进行严谨分析。'}
 };
 
 // ============= Few-shot 案例 =============
-Expert.fewshot = function(domain) {
-  return `【Few-shot 标准示范】
+// 六爻样例(完整版,作为基线示范)
+const FEWSHOT_LIUYAO = `【Few-shot 标准示范】
 
 示范案例（问事业）：
 排盘：乾卦，五爻动（兄弟持世），妻财爻动，官鬼静。
@@ -1011,6 +1032,49 @@ Expert.fewshot = function(domain) {
 ---
 
 请参照上述风格进行本次解读。`;
+
+// 八字样例(bazi 模块使用频率最高,优先保证质量)
+const FEWSHOT_BAZI = `【Few-shot 标准示范】
+
+示范案例（问财运）：
+排盘：男，1990 年 6 月 15 日午时。八字：庚午、壬午、戊午、戊午（午午自刑）。
+格局：戊土日主生于午月当令，地支三午一庚透干。身极旺，喜金水，忌木火。
+提问："未来三年财运如何"
+
+## 关键信号
+1. 戊土日主当令又得三午火局生扶，身极旺
+2. 庚金偏财透干但坐死地（午火克金），财星无根
+3. 壬水正财藏于午中本气不透，财弱
+4. 用神为金水，喜西北、秋冬
+
+## 推理过程
+身极旺而财弱，说明命主有赚钱能力但难得大财，需行金水运方能发富。当前大运若走木火则财运平平，若遇金水流年则有转机。三刑入命需注意人际关系破财。
+
+## 结论
+未来三年总体财运平稳，无大起大落。若遇申酉金年或亥子水年有偏财机会，但需防合伙破财。宜稳健理财，忌投机借贷。
+
+## 置信度
+中高，身旺喜忌明确；但具体年份应期需结合流年十神配置。
+
+## 行动建议
+- 主业深耕，不宜大幅扩张副业
+- 西北方向发展有利，可考虑出差或异地求财
+- 慎选合伙人，避免与午、未年生者大额合资
+- 秋冬季节把握投资机会，春夏守为上
+
+---
+
+请参照上述风格进行本次解读。`;
+
+Expert.fewshot = function(domain) {
+  const map = {
+    '六爻': FEWSHOT_LIUYAO,
+    '八字': FEWSHOT_BAZI,
+    '紫微': FEWSHOT_LIUYAO,  // 占位：复用六爻样例,后续按 ROI 补
+    '奇门': FEWSHOT_LIUYAO,  // 占位
+    '三术同参': FEWSHOT_LIUYAO, // 占位
+  };
+  return map[domain] || FEWSHOT_LIUYAO;
 };
 
 // ============= 六爻旺衰综合评分 =============
@@ -1091,8 +1155,10 @@ Expert.score = function(domain, pan) {
     // 六爻评分：用神旺衰、动爻数量、世应关系
     const yaoList = pan.yaoList || [];
     const dongYao = yaoList.filter(y => y.isDong).length;
-    const shiYao = yaoList.find(y => y.isShi);
-    const yingYao = yaoList.find(y => y.isYing);
+    const liuyaoShortName = GUA_FULL_TO_SHORT[pan.gua.name] || (pan.gua.name && pan.gua.name[0]) || pan.gua.name;
+    const liuyaoSY = SHI_YING[liuyaoShortName] || {};
+    const shiYao = yaoList[liuyaoSY.shi - 1];
+    const yingYao = yaoList[liuyaoSY.ying - 1];
     scores.accuracy = dongYao >= 1 && dongYao <= 3 ? 80 : 55;
     scores.timing = dongYao > 0 ? 75 : 40;
     scores.outcome = shiYao && yingYao ? 70 : 45;
@@ -1112,7 +1178,8 @@ Expert.score = function(domain, pan) {
   
   if (domain === 'xingshi') {
     // 姓名评分：五格吉凶、三才配置、数理得分
-    const ge = pan.wuge || {};
+    // xingshi.calculateGege() 返回扁平对象 {tiange, renge, ...},无 wuge wrapper
+    const ge = pan.wuge || pan;
     const goodGe = [1,3,5,6,7,8,11,13,15,16,17,18,21,23,24,25,31,32,33,35,37,39,41,45,47,48,52,57,61,63,65,67,68,81];
     const scores_list = [ge.tiange, ge.renge, ge.dige, ge.waige, ge.zongge].map(g => goodGe.includes(g) ? 80 : 50);
     scores.overall = Math.round(scores_list.reduce((a,b)=>a+b,0) / 5);
@@ -1251,8 +1318,10 @@ Expert.crossValidate = function(cross) {
       else if (KE[yongYao.wuxing] === monthMain) liuyaoDirection = '凶';
     }
     // 世应生克关系
-    const shiYao = liuyao.yaoList.find(y => y.isShi);
-    const yingYao = liuyao.yaoList.find(y => y.isYing);
+    const cvShortName = GUA_FULL_TO_SHORT[liuyao.gua.name] || (liuyao.gua.name && liuyao.gua.name[0]) || liuyao.gua.name;
+    const cvSY = SHI_YING[cvShortName] || {};
+    const shiYao = liuyao.yaoList[cvSY.shi - 1];
+    const yingYao = liuyao.yaoList[cvSY.ying - 1];
     if (shiYao && yingYao && SHENG[shiYao.wuxing] === yingYao.wuxing) {
       // 世生应，我生对方，对我不利
       if (liuyaoDirection === '吉') liuyaoDirection = '中';

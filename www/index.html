@@ -1149,7 +1149,7 @@ function loadSettings() {
         }
       };
       setTimeout(() => pc.close(), 2000);
-    } catch(e) {}
+    } catch(e) { console.warn('[LocalServerDiscovery] ICE candidate 监听失败:', e); }
   }
 }
 function saveSettings() {
@@ -1287,7 +1287,7 @@ async function autoDiscoverServer() {
       };
       setTimeout(() => { pc.close(); resolve(); }, 2000);
     });
-  } catch(e) {}
+  } catch(e) { console.warn('[LocalServerDiscovery] Promise 监听失败:', e); }
 
   // 步骤2: 推断网段
   let base = '192.168.1';
@@ -1382,7 +1382,7 @@ async function testLocalModel() {
       statusEl.style.color = 'var(--accent-green)';
       return;
     }
-  } catch (e) {}
+  } catch (e) { console.warn('[LocalModelTest] /v1/models 测试失败:', e); }
 
   // 测试2: /v1/chat/completions 直接发一条测试消息
   try {
@@ -2689,6 +2689,41 @@ function kbDaoismBuddhismOnDemand(question) {
 }
 
 // ========== AI 调用 ==========
+
+/**
+ * 读取 ABTest 当前配置,带 fallback(无 active test 时返回默认)。
+ * 设计: prompt_v1 (fewshot + chainOfThought, 默认开启) 是基线;
+ *        prompt_v2 (量化评分) / rag_v1 (topK=8) / rag_v2 (topK=12) 可叠加。
+ * @returns {{ topK:number, maxChars:number, useFewshot:boolean, useChainOfThought:boolean, scoreEnabled:boolean, variant:string|null }}
+ */
+function getActiveABConfig() {
+  const fallback = {
+    topK: 10,
+    maxChars: 2500,
+    useFewshot: true,            // 默认开启 fewshot(对齐 prompt_v1 设计意图)
+    useChainOfThought: true,
+    scoreEnabled: false,
+    variant: null,
+  };
+  try {
+    if (!window.ABTest) return fallback;
+    const cfg = window.ABTest.getConfig();
+    if (!cfg || !cfg.config) return fallback;
+
+    return {
+      topK:       cfg.config.topK       ?? fallback.topK,
+      maxChars:   cfg.config.maxChars   ?? fallback.maxChars,
+      useFewshot: cfg.config.fewshot    ?? fallback.useFewshot,
+      useChainOfThought: cfg.config.chainOfThought ?? fallback.useChainOfThought,
+      scoreEnabled: cfg.config.scoreEnabled ?? fallback.scoreEnabled,
+      variant:    cfg.variant || null,
+    };
+  } catch (e) {
+    console.warn('[ABConfig] fallback:', e);
+    return fallback;
+  }
+}
+
 async function callDeepSeek(prompt, system, onChunk, opts = {}) {
   const { temperature = 0.15, model: optModel } = opts;
   const useLocal = localStorage.getItem('use_local_model') === '1';
@@ -3015,8 +3050,13 @@ async function doAIBazi() {
 
   let fullText = '';
   try {
+    const abCfg = getActiveABConfig();
     const facts = window.Expert.bazi(currentBazi);
-    const ragContent = window.RAG.search(currentBazi, currentBazi.question, { topK: 10, maxChars: 2500, source: '八字' });
+    const ragContent = window.RAG.search(currentBazi, currentBazi.question, {
+      topK: abCfg.topK,
+      maxChars: abCfg.maxChars,
+      source: '八字'
+    });
     const historyPrompt = getSimilarHistoryPrompt('bazi', currentBazi.gz.day, currentBazi.question);
     const feedbackCalib = window.FeedbackLoop ? window.FeedbackLoop.getCalibrationPrompt('bazi') : '';
     const riskPrompt = window.FeedbackLoop ? window.FeedbackLoop.getRiskPrompt('bazi', currentBazi.question) : '';
@@ -3029,17 +3069,40 @@ async function doAIBazi() {
       + kbExtended('bazi', currentBazi.question)
       + kbDaoismBuddhismOnDemand(currentBazi.question)
       + '\n\n'
-      + window.Expert.chainOfThought('八字');
+      + (function() {
+          let instruction = '';
+          if (abCfg.useChainOfThought) instruction += window.Expert.chainOfThought('八字');
+          if (abCfg.useFewshot)         instruction += (instruction ? '\n\n' : '') + window.Expert.fewshot('八字');
+          return instruction;
+        })();
+    // 缓存查询:相同命盘+问题直接复用(7 天 TTL,LRU 50 条)
+    const cacheKey = window.Cache
+      ? window.Cache.makeKey('bazi', { ...currentBazi, question: currentBazi.question })
+      : null;
+    const cached = cacheKey ? window.Cache.get('bazi', { ...currentBazi, question: currentBazi.question }) : null;
+    if (cached) {
+      fullText = cached;
+      content.textContent = prefix + separator + cached;
+      const finalText0 = prefix + separator + cached;
+      saveHistory('bazi', currentBazi.gz.day, currentBazi.question || '八字解读', finalText0);
+      addFeedbackUI('bazi', content, finalText0, currentBaziPrompt, system);
+      showResultActions('baziAIContent', 'baziAIActions');
+      return;
+    }
     const text = await callDeepSeek(currentBaziPrompt, system, (delta, full) => {
       fullText = full;
       content.textContent = prefix + separator + full;
     });
     const finalText = prefix + separator + (fullText || text);
+    if (cacheKey && finalText) {
+      try { window.Cache.set('bazi', { ...currentBazi, question: currentBazi.question }, finalText); }
+      catch (e) { console.warn('[Cache] set bazi failed:', e); }
+    }
     saveHistory('bazi', currentBazi.gz.day, currentBazi.question || '八字解读', finalText);
     addFeedbackUI('bazi', content, finalText, currentBaziPrompt, system);
     showResultActions('baziAIContent', 'baziAIActions');
   } catch (e) {
-    content.innerHTML = prefix + separator + `<div class="error">${e.message}</div>`;
+    content.innerHTML = prefix + separator + `<div class="error">${escapeHtml(e.message)}</div>`;
   } finally {
     btn.disabled = false; btn.textContent = 'AI 解读';
   }
@@ -3229,8 +3292,13 @@ async function doAIZiwei() {
 
   let fullText = '';
   try {
+    const abCfg = getActiveABConfig();
     const facts = window.Expert.ziwei(currentZw);
-    const ragContent = window.RAG.search(currentZw, currentZw.question, { topK: 10, maxChars: 2500, source: '紫微' });
+    const ragContent = window.RAG.search(currentZw, currentZw.question, {
+      topK: abCfg.topK,
+      maxChars: abCfg.maxChars,
+      source: '紫微'
+    });
     const historyPrompt = getSimilarHistoryPrompt('ziwei', currentZw.mingGong.ganzhi, currentZw.question);
     const feedbackCalib = window.FeedbackLoop ? window.FeedbackLoop.getCalibrationPrompt('ziwei') : '';
     const riskPrompt = window.FeedbackLoop ? window.FeedbackLoop.getRiskPrompt('ziwei', currentZw.question) : '';
@@ -3243,17 +3311,37 @@ async function doAIZiwei() {
       + kbExtended('ziwei', currentZw.question)
       + kbDaoismBuddhismOnDemand(currentZw.question)
       + '\n\n'
-      + window.Expert.chainOfThought('紫微');
+      + (function() {
+          let instruction = '';
+          if (abCfg.useChainOfThought) instruction += window.Expert.chainOfThought('紫微');
+          if (abCfg.useFewshot)         instruction += (instruction ? '\n\n' : '') + window.Expert.fewshot('紫微');
+          return instruction;
+        })();
+    // 缓存查询
+    const zwParams = { ...currentZw, question: currentZw.question };
+    const cached = window.Cache ? window.Cache.get('ziwei', zwParams) : null;
+    if (cached) {
+      fullText = cached;
+      content.textContent = prefix + separator + cached;
+      const finalText0 = prefix + separator + cached;
+      saveHistory('ziwei', currentZw.mingGong.ganzhi, currentZw.question || '紫微解读', finalText0);
+      addFeedbackUI('ziwei', content, finalText0, currentZwPrompt, system);
+      showResultActions('zwAIContent', 'zwAIActions');
+      return;
+    }
     const text = await callDeepSeek(currentZwPrompt, system, (delta, full) => {
       fullText = full;
       content.textContent = prefix + separator + full;
     });
     const finalText = prefix + separator + (fullText || text);
+    if (window.Cache && finalText) {
+      try { window.Cache.set('ziwei', zwParams, finalText); } catch (e) { console.warn('[Cache] set ziwei failed:', e); }
+    }
     saveHistory('ziwei', currentZw.mingGong.ganzhi, currentZw.question || '紫微解读', finalText);
     addFeedbackUI('ziwei', content, finalText, currentZwPrompt, system);
     showResultActions('zwAIContent', 'zwAIActions');
   } catch (e) {
-    content.innerHTML = prefix + separator + `<div class="error">${e.message}</div>`;
+    content.innerHTML = prefix + separator + `<div class="error">${escapeHtml(e.message)}</div>`;
   } finally {
     btn.disabled = false; btn.textContent = 'AI 解读';
   }
@@ -3518,8 +3606,13 @@ async function doAILiuyao() {
 
   let fullText = '';
   try {
+    const abCfg = getActiveABConfig();
     const facts = window.Expert.liuyao(currentLy);
-    const ragContent = window.RAG.search(currentLy, currentLy.question, { topK: 10, maxChars: 2500, source: '六爻' });
+    const ragContent = window.RAG.search(currentLy, currentLy.question, {
+      topK: abCfg.topK,
+      maxChars: abCfg.maxChars,
+      source: '六爻'
+    });
     const historyPrompt = getSimilarHistoryPrompt('liuyao', currentLy.gua.name, currentLy.question);
     const feedbackCalib = window.FeedbackLoop ? window.FeedbackLoop.getCalibrationPrompt('liuyao') : '';
     const riskPrompt = window.FeedbackLoop ? window.FeedbackLoop.getRiskPrompt('liuyao', currentLy.question) : '';
@@ -3532,20 +3625,40 @@ async function doAILiuyao() {
       + kbExtended('liuyao', currentLy.question)
       + kbDaoismBuddhismOnDemand(currentLy.question)
       + '\n\n'
-      + window.Expert.chainOfThought('六爻');
+      + (function() {
+          let instruction = '';
+          if (abCfg.useChainOfThought) instruction += window.Expert.chainOfThought('六爻');
+          if (abCfg.useFewshot)         instruction += (instruction ? '\n\n' : '') + window.Expert.fewshot('六爻');
+          return instruction;
+        })();
     if ((state.liuyao.mode || 'normal') === 'xunwu') {
       system += '\n\n【此为寻物占】用户正在寻找丢失的物品。重点解读：方位、距离、环境特征、是否还在原处、找回可能性、最佳时间、具体建议。';
+    }
+    // 缓存查询
+    const lyParams = { ...currentLy, question: currentLy.question };
+    const cached = window.Cache ? window.Cache.get('liuyao', lyParams) : null;
+    if (cached) {
+      fullText = cached;
+      content.textContent = prefix + separator + cached;
+      const finalText0 = prefix + separator + cached;
+      saveHistory('liuyao', currentLy.gua.name, currentLy.question || '六爻解读', finalText0);
+      addFeedbackUI('liuyao', content, finalText0, currentLyPrompt, system);
+      showResultActions('lyAIContent', 'lyAIActions');
+      return;
     }
     const text = await callDeepSeek(currentLyPrompt, system, (delta, full) => {
       fullText = full;
       content.textContent = prefix + separator + full;
     });
     const finalText = prefix + separator + (fullText || text);
+    if (window.Cache && finalText) {
+      try { window.Cache.set('liuyao', lyParams, finalText); } catch (e) { console.warn('[Cache] set liuyao failed:', e); }
+    }
     saveHistory('liuyao', currentLy.gua.name, currentLy.question || '六爻解读', finalText);
     addFeedbackUI('liuyao', content, finalText, currentLyPrompt, system);
     showResultActions('lyAIContent', 'lyAIActions');
   } catch (e) {
-    content.innerHTML = prefix + separator + `<div class="error">${e.message}</div>`;
+    content.innerHTML = prefix + separator + `<div class="error">${escapeHtml(e.message)}</div>`;
   } finally {
     btn.disabled = false; btn.textContent = 'AI 解读';
   }
@@ -3641,8 +3754,13 @@ async function doAIQimen() {
 
   let fullText = '';
   try {
+    const abCfg = getActiveABConfig();
     const facts = window.Expert.qimen(currentQm);
-    const ragContent = window.RAG.search(currentQm, currentQm.question, { topK: 10, maxChars: 2500, source: '奇门' });
+    const ragContent = window.RAG.search(currentQm, currentQm.question, {
+      topK: abCfg.topK,
+      maxChars: abCfg.maxChars,
+      source: '奇门'
+    });
     const historyPrompt = getSimilarHistoryPrompt('qimen', currentQm.jushu_text, currentQm.question);
     const feedbackCalib = window.FeedbackLoop ? window.FeedbackLoop.getCalibrationPrompt('qimen') : '';
     const riskPrompt = window.FeedbackLoop ? window.FeedbackLoop.getRiskPrompt('qimen', currentQm.question) : '';
@@ -3655,17 +3773,37 @@ async function doAIQimen() {
       + kbExtended('qimen', currentQm.question)
       + kbDaoismBuddhismOnDemand(currentQm.question)
       + '\n\n'
-      + window.Expert.chainOfThought('奇门');
+      + (function() {
+          let instruction = '';
+          if (abCfg.useChainOfThought) instruction += window.Expert.chainOfThought('奇门');
+          if (abCfg.useFewshot)         instruction += (instruction ? '\n\n' : '') + window.Expert.fewshot('奇门');
+          return instruction;
+        })();
+    // 缓存查询
+    const qmParams = { ...currentQm, question: currentQm.question };
+    const cached = window.Cache ? window.Cache.get('qimen', qmParams) : null;
+    if (cached) {
+      fullText = cached;
+      content.textContent = prefix + separator + cached;
+      const finalText0 = prefix + separator + cached;
+      saveHistory('qimen', currentQm.jushu_text, currentQm.question || '奇门解读', finalText0);
+      addFeedbackUI('qimen', content, finalText0, currentQmPrompt, system);
+      showResultActions('qmAIContent', 'qmAIActions');
+      return;
+    }
     const text = await callDeepSeek(currentQmPrompt, system, (delta, full) => {
       fullText = full;
       content.textContent = prefix + separator + full;
     });
     const finalText = prefix + separator + (fullText || text);
+    if (window.Cache && finalText) {
+      try { window.Cache.set('qimen', qmParams, finalText); } catch (e) { console.warn('[Cache] set qimen failed:', e); }
+    }
     saveHistory('qimen', currentQm.jushu_text, currentQm.question || '奇门解读', finalText);
     addFeedbackUI('qimen', content, finalText, currentQmPrompt, system);
     showResultActions('qmAIContent', 'qmAIActions');
   } catch (e) {
-    content.innerHTML = prefix + separator + `<div class="error">${e.message}</div>`;
+    content.innerHTML = prefix + separator + `<div class="error">${escapeHtml(e.message)}</div>`;
   } finally {
     btn.disabled = false; btn.textContent = 'AI 解读';
   }
@@ -4123,7 +4261,7 @@ function doCross() {
     document.getElementById('cxAILoading').style.display = 'none';
     document.getElementById('cxAIText').style.display = 'none';
   } catch (e) {
-    result.innerHTML = `<div class="error">排盘失败: ${e.message}</div>`;
+    result.innerHTML = `<div class="error">排盘失败: ${escapeHtml(e.message)}</div>`;
   }
 }
 window.doCross = doCross;
@@ -4200,7 +4338,13 @@ async function doAICross() {
     const factsZiwei = window.Expert.ziwei(currentCross.ziwei);
     // 交叉验证（代码层面确定三术一致性）
     const crossCheck = window.Expert.crossValidate ? window.Expert.crossValidate(currentCross) : null;
-    const ragContent = window.RAG.search(currentCross.bazi, currentCross.question, { topK: 8, maxChars: 2000 });
+    const abCfg = getActiveABConfig();
+    // cross 检索 3 个事实模块,默认 maxChars 更小以避免 prompt 爆炸
+    const crossMaxChars = Math.min(abCfg.maxChars, 2000);
+    const ragContent = window.RAG.search(currentCross.bazi, currentCross.question, {
+      topK: Math.min(abCfg.topK, 8),
+      maxChars: crossMaxChars
+    });
     const historyPrompt = getSimilarHistoryPrompt('cross', currentCross.bazi.gz.day, currentCross.question);
     const feedbackCalib = window.FeedbackLoop ? window.FeedbackLoop.getCalibrationPrompt('cross') : '';
     const riskPrompt = window.FeedbackLoop ? window.FeedbackLoop.getRiskPrompt('cross', currentCross.question) : '';
@@ -4222,7 +4366,25 @@ async function doAICross() {
       + (riskPrompt || '')
       + kbDaoismBuddhismOnDemand(currentCross.question)
       + '\n\n'
-      + window.Expert.chainOfThought('三术同参');
+      + (function() {
+          let instruction = '';
+          if (abCfg.useChainOfThought) instruction += window.Expert.chainOfThought('三术同参');
+          if (abCfg.useFewshot)         instruction += (instruction ? '\n\n' : '') + window.Expert.fewshot('三术同参');
+          return instruction;
+        })();
+
+    // 缓存查询(三术同参用 cross key)
+    const crossParams = { bazi: currentCross.bazi, liuyao: currentCross.liuyao, question: currentCross.question };
+    const cached = window.Cache ? window.Cache.get('cross', crossParams) : null;
+    if (cached) {
+      fullText = cached;
+      text.textContent = prefix + separator + cached;
+      const finalText0 = prefix + separator + cached;
+      saveHistory('cross', currentCross.bazi.gz.day, currentCross.question || '三术同参', finalText0);
+      addFeedbackUI('cross', text, finalText0, currentCrossPrompt, system);
+      showResultActions('crossAIContent', 'crossAIActions');
+      return;
+    }
 
     // 引导用户问题转化为三术共同关心的方向
     const out = await callDeepSeek(currentCrossPrompt, system, (delta, full) => {
@@ -4238,11 +4400,14 @@ async function doAICross() {
       text.textContent = prefix + separator + fullText + '\n\n... [内容已截断，完整内容见历史]';
     }
     const finalText = prefix + separator + (fullText || out);
+    if (window.Cache && finalText) {
+      try { window.Cache.set('cross', crossParams, finalText); } catch (e) { console.warn('[Cache] set cross failed:', e); }
+    }
     saveHistory('cross', currentCross.bazi.gz.day, currentCross.question, finalText);
     addFeedbackUI('cross', text, finalText, currentCrossPrompt, system);
     showResultActions('cxAIText', 'cxAIActions');
   } catch (e) {
-    text.innerHTML = prefix + separator + '<div class="error">综合解读失败: ' + e.message + '</div>';
+    text.innerHTML = prefix + separator + '<div class="error">综合解读失败: ' + escapeHtml(e.message) + '</div>';
     text.style.display = 'block';
     loading.style.display = 'none';
   } finally {
@@ -4344,7 +4509,7 @@ async function doAIXingshi() {
     }
     showResultActions('xsAIText', 'xsAIActions');
   } catch (e) {
-    text.innerHTML = prefix + separator + '<div class="error">解读失败: ' + e.message + '</div>';
+    text.innerHTML = prefix + separator + '<div class="error">解读失败: ' + escapeHtml(e.message) + '</div>';
     text.style.display = 'block';
     loading.style.display = 'none';
   } finally {
@@ -4496,7 +4661,7 @@ async function doAIFengshui() {
     }
     showResultActions('fsAIText', 'fsAIActions');
   } catch (e) {
-    text.innerHTML = prefix + separator + '<div class="error">解读失败: ' + e.message + '</div>';
+    text.innerHTML = prefix + separator + '<div class="error">解读失败: ' + escapeHtml(e.message) + '</div>';
     text.style.display = 'block';
     loading.style.display = 'none';
   } finally {
@@ -4979,7 +5144,7 @@ ${kbBuddhismDivine()}
         <button onclick="navigator.clipboard.writeText(\`${text.replace(/`/g, '\\`').replace(/\\/g, '\\\\')}\`);showToast('已复制','success');" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:0.3rem 0.6rem;border-radius:4px;font-size:0.75rem;cursor:pointer;">📋 复制</button>
       </div>`;
   } catch (e) {
-    result.innerHTML = `<div class="error">化解生成失败：${e.message}</div>`;
+    result.innerHTML = `<div class="error">化解生成失败：${escapeHtml(e.message)}</div>`;
   }
 }
 
