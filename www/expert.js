@@ -880,12 +880,6 @@ Expert.ziwei = function(chart) {
     facts.push(`【事实·四化】${siHuaStr}`);
   }
 
-  // 【新增】按生年天干查四化（事实层校对）
-  if (chart.mingGong && chart.mingGong.ganzhi) {
-    const yearGan = chart.mingGong.ganzhi ? null : null; // chart没有年干信息
-    // 跳过：chart 实际是从 iztro 适配的，siHua 字段已经由 iztro 算好
-  }
-
   // 【新增】三方四正（命宫+对宫+三合宫）吉星密度
   if (chart.palaces && Array.isArray(chart.palaces) && chart.mingGong) {
     const SAN_HE_GONG = {
@@ -1066,13 +1060,126 @@ const FEWSHOT_BAZI = `【Few-shot 标准示范】
 
 请参照上述风格进行本次解读。`;
 
+// 紫微样例(命宫主星 + 四化 + 三方四正 + 大限流年,展示紫微范式)
+const FEWSHOT_ZIWEI = `【Few-shot 标准示范】
+
+示范案例（问事业）：
+排盘：男，1988 年 5 月 20 日卯时。
+紫微盘：命宫在子宫（壬子），主星紫微+天府同宫。
+四化（戊年生年）：贪狼化禄、太阳化权、武曲化科、天同化忌。
+三方四正：吉星 5 颗（紫微/天府/左辅/文昌/天魁），煞星 0 颗。
+大限：当前 26-35 岁大限在巳宫（天机天梁）。
+流年：2026 丙午年，流年命宫在寅宫（廉贞破军）。
+提问："接下来五年事业发展如何"
+
+## 关键信号
+1. 紫微天府同宫于子位 → 帝星+财星组合,主格局清贵,事业起点高
+2. 戊年贪狼化禄落命迁线 → 偏财/桃花星化禄,主机遇多
+3. 三方四正吉星密度高(5/14),煞星 0 → 先天格局稳定
+4. 当前大限天机天梁 → 主运筹帷幄、贵人扶持
+5. 流年丙午,火旺克金(武曲化科受克),今年文书/合同易有变数
+
+## 推理过程
+紫微天府同宫者,事业起步即有格局,适合体制内或大平台。戊年贪狼化禄落命迁线,主三十岁前后有重要机遇(外派/升职/创业)。三方四正吉多煞少,说明先天抗压能力强,即使遇挫也能快速恢复。当前大限天机天梁,主靠智慧与长辈提拔,2025-2030 五年是关键成长期。但流年丙午克武曲化科,2026 年需注意合同细节、证书延期等小波折。
+
+## 结论
+未来五年事业总体向上,2026-2027 年是奠基期(可能平台/方向调整),2028-2030 年是大展期(化禄发力)。忌急躁跳槽,宜在大平台深耕,等大限吉星完全发力。
+
+## 置信度
+中高,紫微主星+四化+大限三处信号一致;但具体应期需结合流年逐盘推。
+
+## 行动建议
+- 选择行业优先考虑大平台(央国企/上市公司/头部外企)
+- 流年丙午注意合同审核、文书签字
+- 西北、北方发展方向有利
+- 2028 戊申年(贪狼化禄到位)是事业关键年,提前 1-2 年布局
+
+---
+
+请参照上述风格进行本次解读。`;
+
+// 奇门样例(九宫 + 值符值使 + 三奇六仪 + 格局)
+const FEWSHOT_QIMEN = `【Few-shot 标准示范】
+
+示范案例（问投资）：
+排盘：男，1992 年 3 月 10 日午时。
+奇门盘：阳遁 1 局,值符天蓬（落坎一宫）,值使休门（落坤二宫）。
+日干丙（火）落艮八宫,时干庚（金）落震三宫。
+格局：生门落巽四宫,天辅+戊土;开门落乾六宫,天心+壬水。
+提问："近期股票投资是否合适"
+
+## 关键信号
+1. 值符天蓬主智谋/暗助,落坎一宫(水),得月令,主有贵人暗中指点
+2. 值使休门主休养/等待,落坤二宫(土),主不宜急进
+3. 日干丙落艮八宫,宫位属土,丙火泄于土(有消耗之象)
+4. 时干庚为投资标的,落震三宫(木),金克木,主有阻力
+5. 生门落巽四宫(木),木生火,与日干相生,可求小财
+
+## 推理过程
+奇门预测投资需看三要素:①日干(求测人)②时干(所测事)③生门/开门(财位)。本案日干丙火落艮八宫,虽然有戊土泄力,但宫位得月令,主有根。时干庚金为股票/投资标的,落震三宫木位,金克木,主力道受阻,投资环境不利。生门虽落巽四宫与日干相生,但生门宫位本身属木,木旺金弱时求财反致损耗。值使休门主休,综合判断:近三个月不宜激进投资。
+
+## 结论
+近期股票投资偏凶,主:①市场阻力大 ②求测人精力消耗 ③即便入场也难获利。建议观望至 2026 年下半年(丙午流年火旺金弱转金旺时)。可关注债券类稳定收益。
+
+## 置信度
+中,奇门盘信息丰富但解读依赖经验;具体个股选择需结合更多数据。
+
+## 行动建议
+- 暂停股票加仓,现有持仓可减半
+- 关注债券/货币基金等低风险品种
+- 2026 年 9-10 月(秋季金旺)再考虑入场
+- 投资决策多与长辈/专业人士商议,忌独断
+
+---
+
+请参照上述风格进行本次解读。`;
+
+// 三术同参样例(八字+紫微+六爻联合,展示三方一致性判断)
+const FEWSHOT_CROSS = `【Few-shot 标准示范】
+
+示范案例（问事业）：
+八字：男，1990 年 6 月 15 日午时 — 庚午、壬午、戊午、戊午（午午自刑）。
+格局：戊土日主生于午月当令,地支三午一庚,身极旺,喜金水忌木火。
+紫微盘：命宫在未宫（己未）,主星紫微+天府同宫。壬年生年:天梁化禄、紫微化权、左辅化科、武曲化忌。
+六爻盘：时间起卦（当日午时）→ 天水讼卦（本宫坎）,三爻父母动。
+共同提问："未来三年事业财运如何"
+
+## 关键信号
+1. **八字**:身极旺(戊土+三午),喜金水(财官方位),忌木火(印比耗泄)
+2. **紫微**:紫微天府同宫(大贵之格),天梁化禄主名声/荫庇,紫微化权主权柄
+3. **六爻**:官鬼爻持世(事业有根),三爻父母动(文书/合同/调动)
+4. **三方一致性**:三术都指向"事业有格局但需金水年触发" — 高置信
+
+## 推理过程
+八字定先天:身旺需财官(庚金/壬水)激发,2028 戊申、2029 己酉、2030 庚戌是金旺年。
+紫微定十年大运:紫微化权在命,主 30-40 岁掌权;壬年天梁化禄主遇贵人提拔。
+六爻定近期事件:父母动主近期有合同/调动相关事,官鬼持世动则事业主体活跃。
+三术交叉:共同指向 2028-2030 三年是事业黄金期(八字金年+紫微大限发力+六爻官鬼动),2026 丙午年(克金)需守。
+
+## 结论
+未来三年事业有"先蹲后跳"特征:2026-2027 奠基/调整(可能换平台/换岗),2028-2030 跃升(升职/创业/分红)。财运与事业同步,主业收入大幅增长,副业/投资可适度参与但需在 2028 后。
+
+## 置信度
+高,八字用神/紫微化禄/六爻官鬼三方一致。
+
+## 行动建议
+- 2026-2027 强化专业能力,争取关键项目/证书
+- 西北方向发展有利,可考虑外派/异地机会
+- 2028 春(戊申)开始留意晋升/创业信号
+- 2026 丙午年避免重大财务决策(签约/投资/合伙)
+- 重视六亲(尤其父母/长辈)助力,紫微天梁化禄主长辈荫庇
+
+---
+
+请参照上述风格进行本次解读。`;
+
 Expert.fewshot = function(domain) {
   const map = {
     '六爻': FEWSHOT_LIUYAO,
     '八字': FEWSHOT_BAZI,
-    '紫微': FEWSHOT_LIUYAO,  // 占位：复用六爻样例,后续按 ROI 补
-    '奇门': FEWSHOT_LIUYAO,  // 占位
-    '三术同参': FEWSHOT_LIUYAO, // 占位
+    '紫微': FEWSHOT_ZIWEI,
+    '奇门': FEWSHOT_QIMEN,
+    '三术同参': FEWSHOT_CROSS,
   };
   return map[domain] || FEWSHOT_LIUYAO;
 };
@@ -1293,16 +1400,45 @@ Expert.crossValidate = function(cross) {
     }
   }
 
-  // 紫微方向（基于命宫主星吉凶）
+  // 紫微方向（综合三方四正密度 + 主星 + 四化加权打分）
   let ziweiDirection = '中';
   if (ziwei?.mingGong?.stars) {
-    const mainStars = ziwei.mingGong.stars.filter(s => s.type === 'main').map(s => s.name);
     const jiStars = ['紫微','天府','太阳','太阴','天同','天梁','左辅','右弼','文昌','文曲','天魁','天钺'];
     const xiongStars = ['擎羊','陀罗','火星','铃星','地空','地劫'];
-    const jiCount = mainStars.filter(s => jiStars.includes(s)).length;
-    const xiongCount = mainStars.filter(s => xiongStars.includes(s)).length;
-    if (jiCount >= 2 && xiongCount === 0) ziweiDirection = '吉';
-    else if (xiongCount >= 2 && jiCount === 0) ziweiDirection = '凶';
+    // 1) 三方四正密度(若 palaces 可用):吉星 +2/颗,煞星 -3/颗
+    let sifangScore = 0;
+    if (ziwei.palaces && Array.isArray(ziwei.palaces)) {
+      const mingIdx = ziwei.palaces.findIndex(p => p.isMing);
+      if (mingIdx >= 0) {
+        const oppIdx = (mingIdx + 6) % 12;
+        const triIdx1 = (mingIdx + 4) % 12;
+        const triIdx2 = (mingIdx + 8) % 12;
+        const sifang = [ziwei.palaces[mingIdx], ziwei.palaces[oppIdx], ziwei.palaces[triIdx1], ziwei.palaces[triIdx2]];
+        const allStars = sifang.flatMap(p => (p.stars || []).map(s => s.name));
+        const jiC = allStars.filter(s => jiStars.includes(s)).length;
+        const xiongC = allStars.filter(s => xiongStars.includes(s)).length;
+        sifangScore = jiC * 2 - xiongC * 3;
+      }
+    }
+    // 2) 命宫主星 fallback(若 palaces 不可用,至少看命宫)
+    if (sifangScore === 0) {
+      const mainStars = ziwei.mingGong.stars.filter(s => s.type === 'main').map(s => s.name);
+      const jiC = mainStars.filter(s => jiStars.includes(s)).length;
+      const xiongC = mainStars.filter(s => xiongStars.includes(s)).length;
+      sifangScore = jiC * 2 - xiongC * 3;
+    }
+    // 3) 四化加权:禄/权/科 +2,忌 -2
+    let siHuaScore = 0;
+    if (ziwei.siHua && typeof ziwei.siHua === 'object') {
+      for (const k of Object.keys(ziwei.siHua)) {
+        if (k === '化禄' || k === '化权' || k === '化科') siHuaScore += 2;
+        else if (k === '化忌') siHuaScore -= 2;
+      }
+    }
+    // 4) 综合判定:总得分 ≥ 4 吉,≤ -4 凶,其余中
+    const totalScore = sifangScore + siHuaScore;
+    if (totalScore >= 4) ziweiDirection = '吉';
+    else if (totalScore <= -4) ziweiDirection = '凶';
   }
 
   // 六爻方向（基于用神旺衰+世应关系）

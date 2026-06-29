@@ -1,6 +1,7 @@
 # dependencies
 /node_modules
 /www/lib/node_modules
+/www/node_modules
 
 # build
 /dist

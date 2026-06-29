@@ -67,6 +67,7 @@ const Cache = {
       case 'cross':
         parts.push(params.bazi?.gz?.day);
         parts.push(params.liuyao?.gua?.name);
+        parts.push(params.ziwei?.mingGong?.ganzhi);
         break;
       default:
         parts.push(JSON.stringify(params));
