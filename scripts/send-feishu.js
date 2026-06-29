@@ -104,6 +104,20 @@ async function sendMessage(token, fileKey, receiverId) {
     content: JSON.stringify({ file_key: fileKey })
   });
 
+  return postFeishuMessage(token, data);
+}
+
+// 飞书发文本消息(msg_type=text)
+async function sendTextMessage(token, receiverId, text) {
+  const data = JSON.stringify({
+    receive_id: receiverId,
+    msg_type: 'text',
+    content: JSON.stringify({ text })
+  });
+  return postFeishuMessage(token, data);
+}
+
+function postFeishuMessage(token, data) {
   const options = {
     hostname: 'open.feishu.cn',
     path: '/open-apis/im/v1/messages?receive_id_type=chat_id',
@@ -119,12 +133,64 @@ async function sendMessage(token, fileKey, receiverId) {
     let result = '';
     const req = https.request(options, res => {
       res.on('data', d => result += d);
-      res.on('end', () => resolve(JSON.parse(result)));
+      res.on('end', () => {
+        const json = JSON.parse(result);
+        if (json.code === 0) resolve(json);
+        else reject(new Error(JSON.stringify(json)));
+      });
     });
     req.on('error', reject);
     req.write(data);
     req.end();
   });
+}
+
+// ===== 版本信息自动同步 =====
+// 从 www/index.html 顶部读 var APP_VERSION = '...'
+function readAppVersion(rootDir) {
+  try {
+    const html = fs.readFileSync(path.join(rootDir, 'www', 'index.html'), 'utf-8');
+    const m = html.match(/var\s+APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+    return m ? m[1] : 'unknown';
+  } catch (e) {
+    console.warn('[send-feishu] 读 APP_VERSION 失败:', e.message);
+    return 'unknown';
+  }
+}
+
+// 从 CHANGELOG.md 读最新段(第一个 ## vX.Y.Z 起到下一个 ## vX.Y.Z 之前)
+function readLatestChangelog(rootDir) {
+  try {
+    const md = fs.readFileSync(path.join(rootDir, 'CHANGELOG.md'), 'utf-8');
+    const lines = md.split('\n');
+    const startIdx = lines.findIndex(l => /^##\s+v?\d+\.\d+/.test(l));
+    if (startIdx < 0) return '';
+    let endIdx = lines.length;
+    for (let i = startIdx + 1; i < lines.length; i++) {
+      if (/^##\s+v?\d+\.\d+/.test(lines[i])) { endIdx = i; break; }
+    }
+    return lines.slice(startIdx, endIdx).join('\n').trim();
+  } catch (e) {
+    console.warn('[send-feishu] 读 CHANGELOG.md 失败:', e.message);
+    return '';
+  }
+}
+
+// 把 CHANGELOG 一段精简成最多 N 行的飞书消息摘要
+function buildAnnouncement(version, changelog, maxLines = 8) {
+  const lines = changelog.split('\n');
+  // 取标题 + 前 maxLines 行实质内容(跳过空行和标题分隔)
+  const summary = [];
+  for (const l of lines) {
+    if (/^##\s/.test(l) || /^---/.test(l)) continue;
+    if (l.trim() === '') {
+      if (summary.length > 0) summary.push('');
+      continue;
+    }
+    summary.push(l);
+    if (summary.length >= maxLines) break;
+  }
+  return `📦 AI占卜大师 ${version}\n\n${summary.join('\n').trim()}`;
 }
 
 const filePath = process.argv[2];
@@ -142,7 +208,13 @@ if (!fs.existsSync(filePath)) {
 }
 
 var fileName = path.basename(filePath);
+var rootDir = path.resolve(__dirname, '..');
+var appVersion = readAppVersion(rootDir);
+var changelog = readLatestChangelog(rootDir);
+var announcement = buildAnnouncement(appVersion, changelog);
+
 console.log('正在发送:', fileName);
+console.log('版本:', appVersion);
 console.log('接收者:', receiverId);
 
 getToken()
@@ -151,7 +223,12 @@ getToken()
     return sendFile(token, filePath, receiverId);
   })
   .then(data => {
-    console.log('发送成功! message_id:', data.message_id);
+    console.log('APK 上传成功, file_key:', data.file_key);
+    // 推完文件后,发一条版本公告文本消息
+    return getToken().then(t => sendTextMessage(t, receiverId, announcement)).then(() => data);
+  })
+  .then(data => {
+    console.log('版本公告已发送:', appVersion);
   })
   .catch(err => {
     console.error('发送失败:', err.message);

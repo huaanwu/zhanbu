@@ -21,6 +21,13 @@
 ### 清理
 - 删除临时调试文件:`_fix2.js` / `_fix_test.js` / `_original_test.js` / `test_simple.js` / `test_suite.js` / `test_rag.js`(共 6 个)
 
+### Hotfix (2026-06-29)
+- **紫微/三术同参 fewshot 占位修复**: 新增 `FEWSHOT_ZIWEI` / `FEWSHOT_QIMEN` / `FEWSHOT_CROSS` 三段专属样例,替换 expert.fewshot map 中六爻占位(此前 AI 跑紫微会拿到六爻样例,术语/格式错位)
+- **紫微 crossValidate 增强**: 旧二值硬阈值 → 三方四正密度 + 命宫主星 + 四化加权打分(吉星 +2,煞星 -3,化禄权科 +2,化忌 -2)
+- **cache cross key 修正**: 加 `ziwei.mingGong.ganzhi` 字段,防止业务规则变化时缓存错乱
+- **send-feishu.js 增强**: 推完 APK 后自动读 `APP_VERSION` + `CHANGELOG.md` 最新段,发版本公告到飞书群(L3 自动同步)
+- **杂项**: 删 expert.js 死代码(yearGan 永远 null);`.gitignore` 加 `/www/node_modules`(Vite dev 缓存)
+
 ## v1.3.0 (2026-06-22)
 
 ### 安全修复
