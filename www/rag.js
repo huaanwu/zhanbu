@@ -180,29 +180,51 @@ const RAG = {
     if (this.ready) return;
     if (this._building) return this._building; // 复用进行中的 build
     this._building = (async () => {
-      // 直接fetch JSON文件，不再依赖KB_EMBEDDED
-    const sources = [
-      { key: 'bazi', name: '八字', file: 'kb_data/bazi_kb.json' },
-      { key: 'bazi_ext', name: '八字扩展', file: 'kb_data/bazi_ext_kb.json' },
-      { key: 'gua', name: '六爻', file: 'kb_data/gua_kb.json' },
-      { key: 'liuyao_ext', name: '六爻高级', file: 'kb_data/liuyao_ext_kb.json' },
-      { key: 'qimen', name: '奇门', file: 'kb_data/qimen_kb.json' },
-      { key: 'qimen_ext', name: '奇门扩展', file: 'kb_data/qimen_ext_kb.json' },
-      { key: 'ziwei', name: '紫微', file: 'kb_data/ziwei_kb.json' },
-      { key: 'ziwei_ext', name: '紫微扩展', file: 'kb_data/ziwei_ext_kb.json' },
-      { key: 'shouxiang', name: '手相', file: 'kb_data/shouxiang_kb.json' },
-      { key: 'xingshi', name: '姓名', file: 'kb_data/xingshi_kb.json' },
-      { key: 'nihai_xia', name: '倪海厦', file: 'kb_data/nihai_xia_kb.json' }
-    ];
+      // v2.0.2: 直接 fetch kb_core bundle,不再 11 个并发请求
+      // bundle 内仍按 key 区分, flattenKB 的 source tag 仍用 key 名
     const all = [];
-    await Promise.all(sources.map(async ({ key, name, file }) => {
-      try {
-        const r = await fetch(file);
-        if (!r.ok) return;
-        const kb = await r.json();
-        all.push(...flattenKB(kb, name));
-      } catch (e) { console.warn('KB flatten fail:', key, e); }
-    }));
+    try {
+      const r = await fetch('kb_data/_bundles/kb_core.json');
+      if (r.ok) {
+        const bundle = await r.json();
+        for (const [key, kb] of Object.entries(bundle)) {
+          // tag 用原始 key 名(去 _kb 后缀),例如 bazi → "八字"
+          const nameMap = {
+            bazi: '八字', bazi_ext: '八字扩展', gua: '六爻', liuyao_ext: '六爻高级',
+            qimen: '奇门', qimen_ext: '奇门扩展', ziwei: '紫微', ziwei_ext: '紫微扩展',
+            shouxiang: '手相', xingshi: '姓名', nihai_xia: '倪海厦'
+          };
+          const name = nameMap[key] || key;
+          all.push(...flattenKB(kb, name));
+        }
+      } else {
+        console.warn('[RAG] kb_core bundle 加载失败,降级逐个 fetch');
+        // 降级: 11 个并发 fetch
+        const sources = [
+          { key: 'bazi', name: '八字', file: 'kb_data/bazi_kb.json' },
+          { key: 'bazi_ext', name: '八字扩展', file: 'kb_data/bazi_ext_kb.json' },
+          { key: 'gua', name: '六爻', file: 'kb_data/gua_kb.json' },
+          { key: 'liuyao_ext', name: '六爻高级', file: 'kb_data/liuyao_ext_kb.json' },
+          { key: 'qimen', name: '奇门', file: 'kb_data/qimen_kb.json' },
+          { key: 'qimen_ext', name: '奇门扩展', file: 'kb_data/qimen_ext_kb.json' },
+          { key: 'ziwei', name: '紫微', file: 'kb_data/ziwei_kb.json' },
+          { key: 'ziwei_ext', name: '紫微扩展', file: 'kb_data/ziwei_ext_kb.json' },
+          { key: 'shouxiang', name: '手相', file: 'kb_data/shouxiang_kb.json' },
+          { key: 'xingshi', name: '姓名', file: 'kb_data/xingshi_kb.json' },
+          { key: 'nihai_xia', name: '倪海厦', file: 'kb_data/nihai_xia_kb.json' }
+        ];
+        await Promise.all(sources.map(async ({ key, name, file }) => {
+          try {
+            const r = await fetch(file);
+            if (!r.ok) return;
+            const kb = await r.json();
+            all.push(...flattenKB(kb, name));
+          } catch (e) { console.warn('KB flatten fail:', key, e); }
+        }));
+      }
+    } catch (e) {
+      console.warn('[RAG] bundle 加载异常,降级逐个 fetch:', e.message);
+    }
 
     // 构建 BM25 索引
     this.index = new BM25Index();

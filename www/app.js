@@ -1068,21 +1068,97 @@ const PAGE_KB_GROUPS = {
 
 const _loadedKBGroups = new Set();
 let _kb = {};
+let _bundleCache = {};   // v2.0.2: bundle → 已 fetch 的数据,避免重复 fetch
+let _bundleIndex = null; // v2.0.2: key → bundle 映射
+let _bundleIndexPromise = null;
+
+// v2.0.2: 加载 bundle index (一次,后续复用)
+function _loadBundleIndex() {
+  if (_bundleIndex) return Promise.resolve(_bundleIndex);
+  if (_bundleIndexPromise) return _bundleIndexPromise;
+  _bundleIndexPromise = (async () => {
+    try {
+      const r = await fetch('kb_data/_bundles/_index.json');
+      if (!r.ok) {
+        console.warn('[KB] bundle index 加载失败,降级逐个 fetch');
+        _bundleIndex = {};
+        return _bundleIndex;
+      }
+      _bundleIndex = await r.json();
+      return _bundleIndex;
+    } catch (e) {
+      console.warn('[KB] bundle index 加载异常:', e.message);
+      _bundleIndex = {};
+      return _bundleIndex;
+    }
+  })();
+  return _bundleIndexPromise;
+}
 
 // 内部：按 key 列表加载（跳过已加载的）
+// v2.0.2: 先用 bundle index 合并 key → bundle,再并发拉所有需要的 bundle
 async function _loadKBByKeys(keys) {
   const toLoad = keys.filter(k => !_kb[k] && KB_PATHS[k]);
   if (toLoad.length === 0) return;
-  const entries = await Promise.all(
-    toLoad.map(async k => {
-      try {
-        const r = await fetch(KB_PATHS[k]);
-        if (!r.ok) return [k, {}];
-        return [k, await r.json()];
-      } catch { return [k, {}]; }
-    })
-  );
-  Object.assign(_kb, Object.fromEntries(entries));
+
+  // 取 bundle index(若失败则降级逐个 fetch)
+  const idx = await _loadBundleIndex();
+  const useBundle = Object.keys(idx).length > 0;
+
+  if (useBundle) {
+    // 1) 找 toLoad 中每个 key 在哪个 bundle
+    const bundleToKeys = {};
+    for (const k of toLoad) {
+      const bundle = idx[k];
+      if (bundle) {
+        if (!bundleToKeys[bundle]) bundleToKeys[bundle] = [];
+        bundleToKeys[bundle].push(k);
+      } else {
+        // 索引没有 → 逐个 fetch(罕见:新增 KB 未打包)
+        bundleToKeys[`__single__${k}`] = [k];
+      }
+    }
+    // 2) 拉所有需要的 bundle
+    const fetchPromises = Object.entries(bundleToKeys).map(async ([bundle, kList]) => {
+      if (bundle.startsWith('__single__')) {
+        // 单文件 fallback
+        const k = kList[0];
+        try {
+          const r = await fetch(KB_PATHS[k]);
+          if (r.ok) return [k, await r.json()];
+        } catch {}
+        return [k, {}];
+      }
+      if (!_bundleCache[bundle]) {
+        try {
+          const r = await fetch(`kb_data/_bundles/${bundle}`);
+          if (r.ok) _bundleCache[bundle] = await r.json();
+          else _bundleCache[bundle] = {};
+        } catch { _bundleCache[bundle] = {}; }
+      }
+      const data = _bundleCache[bundle];
+      const out = {};
+      for (const k of kList) {
+        if (data[k] !== undefined) out[k] = data[k];
+      }
+      return kList.map(k => [k, out[k] || {}]);
+    });
+    const results = await Promise.all(fetchPromises);
+    const flat = results.flat();
+    Object.assign(_kb, Object.fromEntries(flat));
+  } else {
+    // 降级: 逐个 fetch (v1.x 行为)
+    const entries = await Promise.all(
+      toLoad.map(async k => {
+        try {
+          const r = await fetch(KB_PATHS[k]);
+          if (!r.ok) return [k, {}];
+          return [k, await r.json()];
+        } catch { return [k, {}]; }
+      })
+    );
+    Object.assign(_kb, Object.fromEntries(entries));
+  }
 }
 
 // 加载 core 组（首屏必调）

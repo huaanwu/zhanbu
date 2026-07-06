@@ -8,6 +8,7 @@
 /build
 /www/dist
 /www/assets
+/www/kb_data/_bundles
 
 # extracted/generated
 /extracted

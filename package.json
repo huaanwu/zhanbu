@@ -5,8 +5,9 @@
   "main": "www/index.html",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/build-web.mjs",
+    "build": "node scripts/build-kb-bundles.mjs && vite build && node scripts/build-web.mjs",
     "build:web": "node scripts/build-web.mjs",
+    "build:kb": "node scripts/build-kb-bundles.mjs",
     "sync": "npm run build && npx cap sync android"
   },
   "dependencies": {
