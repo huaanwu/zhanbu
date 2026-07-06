@@ -1,6 +1,6 @@
 {
   "name": "ai-divination-master",
-  "version": "1.0.0",
+  "version": "3.0.4",
   "description": "AI占卜大师 - 八字、卦象、奇门、紫微斗数",
   "main": "www/index.html",
   "scripts": {
