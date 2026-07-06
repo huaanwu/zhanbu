@@ -14,6 +14,7 @@ var tests = [
   'test_crypto.js',
   'test_chat.js',
   'test_rag_embedding.js',
+  'test_ts_demo.js',
   'test_accuracy.js'
 ];
 

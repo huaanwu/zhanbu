@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    /* v2.0.4: 渐进式 TypeScript - 允许 JS + 类型检查,不输出 */
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "strict": false,
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noImplicitAny": false,
+    "allowJs": true,
+    "checkJs": false,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "jsx": "preserve",
+
+    /* 渐进式: 打开后用 // @ts-check 在单个文件启用检查 */
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "www/**/*.js",
+    "www/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "android",
+    "www/lib",
+    "www/dist",
+    "www/assets"
+  ]
+}
