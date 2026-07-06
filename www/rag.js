@@ -175,6 +175,8 @@ class BM25Index {
 const RAG = {
   index: null,
   ready: false,
+  // v2.0.3: embedding backend ('semantic' 真API / 'random' 客户端随机投影)
+  embeddingBackend: null, // build 后会被覆盖
 
   async build() {
     if (this.ready) return;
@@ -230,16 +232,71 @@ const RAG = {
     this.index = new BM25Index();
     this.index.add(all);
 
-    // 构建向量索引（统一用客户端随机投影，零依赖、一致性 guaranteed）
-    // API embedding（本地/网络）保留在 getEmbedding() 中供未来扩展
-    this.vectorIndex = new VectorIndex(VECTOR_DIM);
-    this.vectorIndex.add(all);
+    // v2.0.3: 选择 embedding backend
+    // 优先用真 embedding (需 API key),否则随机投影兜底
+    const apiKey = localStorage.getItem('ds_api_key');
+    const useSemantic = apiKey && apiKey.length > 20;
+    this.embeddingBackend = useSemantic ? 'semantic' : 'random';
+    console.log(`[RAG] embedding backend: ${this.embeddingBackend}${useSemantic ? ' (云端 API)' : ' (本地随机投影)'}`);
+
+    if (useSemantic) {
+      this.vectorIndex = await this._buildSemanticIndex(all);
+    } else {
+      this.vectorIndex = new VectorIndex(VECTOR_DIM);
+      this.vectorIndex.add(all);
+    }
 
     this.ready = true;
     this._building = null;
-    console.log(`RAG 混合索引建立完成: ${all.length} 个文档片段（BM25 + 向量${VECTOR_DIM}维）`);
+    console.log(`RAG 混合索引建立完成: ${all.length} 个文档片段（BM25 + 向量${this.vectorIndex?.dim || VECTOR_DIM}维 ${this.embeddingBackend}）`);
     })();
     return this._building;
+  },
+
+  // v2.0.3: 真 embedding 索引构建 (调云端 API)
+  // 失败自动降级到随机投影
+  async _buildSemanticIndex(docs) {
+    const index = new VectorIndex(VECTOR_DIM);
+    const apiKey = localStorage.getItem('ds_api_key');
+    const networkUrl = localStorage.getItem('embedding_url') || 'https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding';
+    index.setSemantic(apiKey, networkUrl);
+    const BATCH = 10;
+    let okCount = 0;
+    try {
+      for (let i = 0; i < docs.length; i += BATCH) {
+        const batch = docs.slice(i, i + BATCH);
+        // 逐个调(API 通常支持 batch,但简单起见逐个,失败不影响其他)
+        const results = await Promise.all(batch.map(async d => {
+          try {
+            const r = await getEmbedding(d.text, { apiKey, networkUrl });
+            if (r.source !== 'local-fallback' && r.vector.length > 0) {
+              okCount++;
+              return r.vector;
+            }
+            return null;
+          } catch (e) {
+            return null;
+          }
+        }));
+        for (let j = 0; j < batch.length; j++) {
+          if (results[j]) {
+            index.docs.push(batch[j]);
+            index.vectors.push(results[j]);
+          } else {
+            // 失败条目用 random 投影填充,确保 index 完整
+            index.docs.push(batch[j]);
+            index.vectors.push(textToVector(batch[j].text, VECTOR_DIM));
+          }
+        }
+      }
+      console.log(`[RAG] semantic index: ${okCount}/${docs.length} 用真 embedding, 余用 random 兜底`);
+      return index;
+    } catch (e) {
+      console.warn('[RAG] semantic build 失败,完全降级 random:', e.message);
+      const fallback = new VectorIndex(VECTOR_DIM);
+      fallback.add(docs);
+      return fallback;
+    }
   },
 
   // v1.4 预热: 在浏览器空闲时提前构建,消除首次 AI 解读的 1-3s 等待
@@ -450,9 +507,20 @@ class VectorIndex {
     this.dim = dim;
     this.docs = [];
     this.vectors = [];
+    this.backend = 'random'; // 'random' | 'semantic'
+    this._apiKey = null;
+    this._networkUrl = null;
+  }
+
+  // v2.0.3: 配置为 semantic 模式后,query 用真 embedding
+  setSemantic(apiKey, networkUrl) {
+    this.backend = 'semantic';
+    this._apiKey = apiKey;
+    this._networkUrl = networkUrl;
   }
 
   add(docs) {
+    // random 模式才在这里生成向量;semantic 模式在 _buildSemanticIndex 中已生成
     for (const doc of docs) {
       const vec = textToVector(doc.text, this.dim);
       this.docs.push(doc);
@@ -460,8 +528,19 @@ class VectorIndex {
     }
   }
 
-  search(query, topK = 5) {
-    const qVec = textToVector(query, this.dim);
+  async search(query, topK = 5) {
+    let qVec;
+    if (this.backend === 'semantic' && this._apiKey) {
+      // 真 embedding 查询
+      const r = await getEmbedding(query, { apiKey: this._apiKey, networkUrl: this._networkUrl });
+      qVec = r.source === 'local-fallback' ? textToVector(query, this.dim) : r.vector;
+    } else {
+      qVec = textToVector(query, this.dim);
+    }
+    // L2 归一化(query)
+    const norm = Math.sqrt(qVec.reduce((s, v) => s + v * v, 0)) || 1;
+    if (norm !== 1) for (let i = 0; i < qVec.length; i++) qVec[i] /= norm;
+
     const scores = [];
     for (let i = 0; i < this.vectors.length; i++) {
       const sim = cosineSimilarity(qVec, this.vectors[i]);
