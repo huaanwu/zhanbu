@@ -149,13 +149,22 @@ function postFeishuMessage(token, data) {
 // 从 www/index.html 顶部读 var APP_VERSION = '...'
 function readAppVersion(rootDir) {
   try {
-    const html = fs.readFileSync(path.join(rootDir, 'www', 'index.html'), 'utf-8');
-    const m = html.match(/var\s+APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
-    return m ? m[1] : 'unknown';
+    // v3.0 后 APP_VERSION 在 www/app.js
+    let html = fs.readFileSync(path.join(rootDir, 'www', 'app.js'), 'utf-8');
+    let m = html.match(/var\s+APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+    if (m) return m[1];
   } catch (e) {
-    console.warn('[send-feishu] 读 APP_VERSION 失败:', e.message);
-    return 'unknown';
+    // fallback: 老版本在 www/index.html
+    try {
+      const html = fs.readFileSync(path.join(rootDir, 'www', 'index.html'), 'utf-8');
+      const m = html.match(/var\s+APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+      return m ? m[1] : 'unknown';
+    } catch (e2) {
+      console.warn('[send-feishu] 读 APP_VERSION 失败:', e.message);
+      return 'unknown';
+    }
   }
+  return 'unknown';
 }
 
 // 从 CHANGELOG.md 读最新段(第一个 ## vX.Y.Z 起到下一个 ## vX.Y.Z 之前)
