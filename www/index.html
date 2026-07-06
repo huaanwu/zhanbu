@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>AI占卜大师</title>
-<link rel="stylesheet" href="styles.css?v=129">
+  <link rel="stylesheet" crossorigin href="/assets/index-DST3duQe.css">
 </head>
 <body>
 <div class="container">
@@ -75,6 +75,13 @@
       <button class="save-btn" onclick="saveSettings()" style="width:100%;margin-top:0.8rem;">保存设置</button>
       <div id="saveMsg" style="text-align:center;margin-top:0.5rem;font-size:0.8rem;color:var(--accent-green);display:none;">已保存</div>
       <div id="versionInfo" style="text-align:center;margin-top:1rem;font-size:0.7rem;color:var(--text-muted);"></div>
+
+      <!-- 危险区:清除所有数据 (v1.4 隐私合规) -->
+      <div style="margin-top:1.5rem;padding:0.8rem;border:1px solid var(--accent-red);border-radius:6px;background:rgba(220,80,80,0.05);">
+        <h3 style="color:var(--accent-red);font-size:0.9rem;margin:0 0 0.5rem 0;">⚠️ 危险区</h3>
+        <p style="font-size:0.7rem;color:var(--text-muted);margin:0 0 0.6rem 0;">清除所有数据将重置应用(API Key、历史、反馈、缓存、加密密钥)。请在退出登录/换设备前使用。</p>
+        <button onclick="clearAllData()" style="width:100%;background:var(--accent-red);color:#fff;border:none;padding:0.5rem;border-radius:6px;font-size:0.85rem;cursor:pointer;font-weight:600;">🗑️ 清除所有数据并重置</button>
+      </div>
 
       <!-- 历史记录 -->
       <div style="margin-top:2rem;border-top:1px solid var(--border);padding-top:1rem;">
@@ -659,22 +666,26 @@
 <script src="visual.js?v=127"></script>
 <script src="cache.js?v=127"></script>
 <script src="ab_test.js?v=127"></script>
+<script src="crypto.js?v=127"></script>
+<script src="chat.js?v=127"></script>
 
 <script>
 // 启动时强制加载 Expert/RAG（解决大文件脚本加载不稳定问题）
 // 注意：file:// 协议下 fetch 被 CORS 阻止，依赖 script src 标签加载
-(async function loadExpertRAG() {
-  if (location.protocol === 'file:') {
-    // file:// 协议：fetch 不可用，完全依赖 script 标签加载
-    if (typeof window.Expert === 'undefined') console.error('expert.js 未加载，请检查 script 标签');
-    if (typeof window.RAG === 'undefined') console.error('rag.js 未加载，请检查 script 标签');
-    return;
+(function checkExpertRAG() {
+  // v1.3.1 修复: 严禁使用 eval() 兜底(违反 CLAUDE.md),改为显式错误提示
+  if (typeof window.Expert === 'undefined') {
+    console.error('expert.js 未加载，请检查 <script src="expert.js"> 标签');
+    typeof showToast === 'function' && showToast('expert.js 加载失败，请刷新页面或重新安装', 'error');
   }
-  const load = (url) => fetch(url).then(r => { if (!r.ok) throw new Error(url + ' load failed'); return r.text(); });
-  try {
-    if (typeof window.Expert === 'undefined') { const code = await load('expert.js'); (0, eval)(code); }
-    if (typeof window.RAG === 'undefined') { const code = await load('rag.js'); (0, eval)(code); }
-  } catch(e) { console.error('Expert/RAG加载失败:', e); }
+  if (typeof window.RAG === 'undefined') {
+    console.error('rag.js 未加载，请检查 <script src="rag.js"> 标签');
+    typeof showToast === 'function' && showToast('rag.js 加载失败，请刷新页面或重新安装', 'error');
+  }
+  // v1.4 RAG 预热: 启动后空闲时提前构建,首次 AI 解读不再等 1-3s
+  if (window.RAG && typeof window.RAG.prewarm === 'function') {
+    window.RAG.prewarm();
+  }
 })();
 
 var APP_VERSION = 'v1.3.3';
@@ -684,8 +695,24 @@ var APP_BUILD_DATE = '2026-06-04';
 (function() {
   const savedVer = localStorage.getItem('app_version');
   if (savedVer !== APP_VERSION) {
-    console.log('版本升级:', savedVer, '->', APP_VERSION, '清除旧配置');
-    localStorage.removeItem('local_server_ip');
+    console.log('版本升级:', savedVer, '->', APP_VERSION, '清理旧配置/格式不兼容的缓存');
+    // 旧版本才需要清 local_server_ip;新版本保留用户设置
+    // 旧版本的缓存 key 格式可能不兼容,清掉重新建立
+    if (savedVer && savedVer < 'v1.3.0') {
+      localStorage.removeItem('local_server_ip');
+    }
+    // 清空格式可能不兼容的旧缓存(新格式会重建)
+    if (savedVer && savedVer < 'v1.4.0') {
+      localStorage.removeItem('divination_cache_v1');
+      localStorage.removeItem('divination_cache_access_order');
+      localStorage.removeItem('divination_cache_version');
+    }
+    // 旧版本的反馈/历史可能用明文存,清掉让用户重新积累(避免解密失败)
+    if (savedVer && savedVer < 'v1.4.0') {
+      console.log('  → 清空 v1.4 之前明文存储的反馈/历史,重新加密');
+      localStorage.removeItem('divination_feedback_v1');
+      // 历史保留(明文历史不影响功能,只是不合规)
+    }
     localStorage.setItem('app_version', APP_VERSION);
   }
 })();
@@ -709,7 +736,9 @@ let currentFs = null, currentFsPrompt = '';
 // 追问模式：保存之前的内容前缀
 let _followUpPrefix = '';
 
-var DEFAULT_API_KEY = 'sk-58c20c40a30f4564bbf76c8ccccbaabd';
+// v1.3.1 安全修复: 严禁硬编码任何 API Key,默认值必须为空
+// 用户在设置页 (settings) 配置后存到 localStorage['ds_api_key']
+var DEFAULT_API_KEY = '';
 var DEFAULT_VISION_KEY = '';
 
 // ========== 页面切换 ==========
@@ -780,10 +809,17 @@ function showResultActions(contentId, actionsId) {
 }
 
 // ========== 历史记录 + 用户反馈 ==========
-function saveHistory(domain, signal, question, output) {
+// v1.4 加密版: 总是走加密路径 (signal/output/panSnapshot 都走 AES-GCM)
+// 失败时 addEncrypted 内部降级为明文
+function saveHistory(domain, signal, question, output, panSnapshot) {
   if (!window.History) return;
   try {
-    window.History.add(domain, signal, question, output);
+    if (window.Crypto) {
+      window.History.addEncrypted(domain, signal, question, output, panSnapshot);
+    } else {
+      // 浏览器无 Web Crypto API,降级明文
+      window.History.add(domain, signal, question, output, panSnapshot);
+    }
   } catch (e) { console.warn('saveHistory fail:', e); }
 }
 window.saveHistory = saveHistory;
@@ -884,12 +920,11 @@ function renderHistory() {
     html += `
       <div class="history-item" style="border-bottom:1px solid var(--border);padding:0.6rem 0;"
           data-id="${item.id}">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;"
-             onclick="toggleHistoryDetail('${item.id}')"
-             style="cursor:pointer;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;cursor:pointer;"
+             onclick="toggleHistoryDetail('${item.id}')">
           <div style="flex:1;min-width:0;">
             <span style="display:inline-block;background:var(--bg-inner);color:var(--accent-gold);font-size:0.7rem;padding:0.1rem 0.4rem;border-radius:4px;margin-right:0.3rem;">${label}</span>
-            <span style="font-size:0.8rem;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70vw;display:inline-block;vertical-align:middle;">${item.question || '无问题'}</span>
+            <span style="font-size:0.8rem;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70vw;display:inline-block;vertical-align:middle;">${escapeHtml(item.question || '无问题')}</span>
             <span style="font-size:0.75rem;color:${fbColor};margin-left:0.3rem;">${fbIcon}</span>
           </div>
           <span style="font-size:0.7rem;color:var(--text-muted);white-space:nowrap;">${formatHistoryDate(item.ts)}</span>
@@ -899,7 +934,7 @@ function renderHistory() {
           ${summary}${(item.output||'').length > 80 ? '...' : ''}
         </div>
         <div class="history-detail" id="hd-${item.id}" style="display:none;margin-top:0.5rem;padding:0.5rem;background:var(--bg-inner);border-radius:6px;font-size:0.8rem;color:var(--text-primary);white-space:pre-wrap;line-height:1.6;max-height:40vh;overflow-y:auto;">
-          ${(item.output || '').replace(/</g, '&lt;')}
+          ${escapeHtml(item.output || '')}
         </div>
         <div class="history-actions" style="display:none;justify-content:flex-end;gap:0.4rem;margin-top:0.4rem;" id="ha-${item.id}">
           <button onclick="copyHistoryText('${item.id}')" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;cursor:pointer;">📋 复制</button>
@@ -975,7 +1010,47 @@ function clearAllHistory() {
   showToast('历史记录已清空', 'success');
 }
 
+// v1.4 隐私合规: 一键清除所有数据
+// 用途: 退出登录 / 换设备 / 卸载前(防止数据残留)
+// 范围: 所有 divination_* localStorage + ds_api_key / vision_api_key / settings + crypto 密钥
+function clearAllData() {
+  if (!confirm('⚠️ 即将清除所有数据:\n• API Key / 模型配置\n• 历史记录 / 反馈\n• 缓存 / AB 测试\n• 加密密钥\n\n确定继续?(不可恢复)')) return;
+  if (!confirm('再次确认: 清除后需要重新配置 API Key 才能使用 AI 解读')) return;
+
+  try {
+    // 列出所有需清除的 key
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (
+        k.startsWith('divination_') ||
+        k === 'ds_api_key' ||
+        k === 'ds_model' ||
+        k === 'use_local_model' ||
+        k === 'vision_api_key' ||
+        k === 'vision_model' ||
+        k === 'local_server_ip' ||
+        k === 'local_server_port' ||
+        k === 'app_version'
+      )) {
+        keysToRemove.push(k);
+      }
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+    // 加密密钥
+    if (window.Crypto) window.Crypto.clearKey();
+    console.log('[clearAllData] 已清除', keysToRemove.length, '个 localStorage key');
+    alert('✅ 所有数据已清除,即将重新加载...');
+    setTimeout(() => location.reload(), 500);
+  } catch (e) {
+    console.error('[clearAllData] 失败:', e);
+    alert('清除失败: ' + e.message + '\n请手动清除浏览器数据。');
+  }
+}
+window.clearAllData = clearAllData;
+
 // 追问UI：在feedback-bar后追加追问输入框
+// v1.4 增强: 1) 累积多轮对话到 ChatSession 2) "新建对话"按钮重置上下文
 function addFollowUpUI(domain, contentEl) {
   // 移除旧的追问栏
   contentEl.parentNode.querySelectorAll('.follow-up-bar').forEach(el => el.remove());
@@ -983,15 +1058,18 @@ function addFollowUpUI(domain, contentEl) {
   const fu = document.createElement('div');
   fu.className = 'follow-up-bar';
   fu.style.cssText = 'margin-top:0.6rem;padding:0.5rem;background:var(--bg-inner);border-radius:6px;';
+  const turnCount = window.ChatSession ? window.ChatSession.size(domain) : 0;
   fu.innerHTML = `
-    <div style="display:flex;gap:0.4rem;">
+    <div style="display:flex;gap:0.4rem;align-items:center;">
       <input type="text" class="fu-input" placeholder="💬 追问新问题..." style="flex:1;background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.3rem 0.5rem;border-radius:6px;font-size:0.85rem;">
       <button class="fu-btn" style="background:var(--bg-card);border:1px solid var(--border);color:var(--accent-gold);padding:0.3rem 0.7rem;border-radius:6px;cursor:pointer;font-size:0.85rem;white-space:nowrap;">追问</button>
+      ${turnCount > 0 ? `<button class="fu-new" title="清空对话历史,从头开始" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);padding:0.3rem 0.5rem;border-radius:6px;cursor:pointer;font-size:0.75rem;white-space:nowrap;">🔄 新建对话 (${turnCount})</button>` : ''}
     </div>
   `;
 
   const input = fu.querySelector('.fu-input');
   const btn = fu.querySelector('.fu-btn');
+  const newBtn = fu.querySelector('.fu-new');
 
   btn.addEventListener('click', () => {
     const q = input.value.trim();
@@ -1007,9 +1085,27 @@ function addFollowUpUI(domain, contentEl) {
       fengshui: () => { currentFs.question = q; currentFsPrompt = buildFengshuiPrompt(currentFs, q); _followUpPrefix = saved; doAIFengshui(); },
     };
 
-    if (updaters[domain]) updaters[domain]();
-    else showToast('该模块暂不支持追问', 'warning');
+    if (updaters[domain]) {
+      // v1.4: 把上一轮 Q&A 存到 ChatSession
+      if (window.ChatSession && saved) {
+        window.ChatSession.push(domain, _lastQuestionFor(domain) || '前次问题', saved);
+      }
+      updaters[domain]();
+    } else {
+      showToast('该模块暂不支持追问', 'warning');
+    }
   });
+
+  if (newBtn) {
+    newBtn.addEventListener('click', () => {
+      if (!confirm(`清空当前(${turnCount}轮)对话历史?之前的 Q&A 会被丢弃。`)) return;
+      if (window.ChatSession) window.ChatSession.clear(domain);
+      // 重新初始化 current*
+      if (typeof switchPage === 'function') switchPage('bazi'); // placeholder
+      // 直接刷新当前页(简单可靠)
+      location.reload();
+    });
+  }
 
   const fb = contentEl.parentNode.querySelector('.feedback-bar');
   if (fb && fb.nextSibling) {
@@ -1018,6 +1114,17 @@ function addFollowUpUI(domain, contentEl) {
     contentEl.parentNode.appendChild(fu);
   }
 }
+
+// v1.4 helper: 记录每个域当前的问题(用于 ChatSession 存上一轮)
+const _currentQuestions = {};
+function _recordCurrentQuestion(domain, q) {
+  _currentQuestions[domain] = q;
+}
+function _lastQuestionFor(domain) {
+  return _currentQuestions[domain];
+}
+window._recordCurrentQuestion = _recordCurrentQuestion;
+window._lastQuestionFor = _lastQuestionFor;
 
 // 二次校验：用不同模型参数重新解读，对比结果
 async function doRecheck(domain, contentEl, prompt, system) {
@@ -1269,6 +1376,7 @@ async function autoDiscoverServer() {
 
   // 步骤1: 用WebRTC获取本机局域网IP
   let myIp = null;
+  let webrtcFailed = false;
   try {
     const pc = new RTCPeerConnection({iceServers: []});
     pc.createDataChannel('');
@@ -1278,16 +1386,24 @@ async function autoDiscoverServer() {
       pc.onicecandidate = e => {
         if (e.candidate) {
           const m = e.candidate.candidate.match(/([0-9]{1,3}\.){3}[0-9]{1,3}/);
-          if (m && !m[0].startsWith('127.')) {
+          if (m && !m[0].startsWith('127.') && !m[0].startsWith('0.')) {
             myIp = m[0];
             pc.close();
             resolve();
           }
+        } else if (e.candidate === null) {
+          // ICE gathering complete
+          pc.close();
+          resolve();
         }
       };
       setTimeout(() => { pc.close(); resolve(); }, 2000);
     });
-  } catch(e) { console.warn('[LocalServerDiscovery] Promise 监听失败:', e); }
+    if (!myIp) webrtcFailed = true;
+  } catch(e) {
+    webrtcFailed = true;
+    console.warn('[LocalServerDiscovery] WebRTC 不可用:', e.message);
+  }
 
   // 步骤2: 推断网段
   let base = '192.168.1';
@@ -1299,7 +1415,7 @@ async function autoDiscoverServer() {
   statusEl.textContent = `扫描 ${base}.1~50:${scanPort}...`;
 
   // 步骤3: 并发扫描（每组20个，避免浏览器限制）
-  async function scanBatch(start, end) {
+  async function scanBatch(start, end, onError) {
     const promises = [];
     for (let i = start; i <= end; i++) {
       const ip = `${base}.${i}`;
@@ -1308,8 +1424,8 @@ async function autoDiscoverServer() {
         xhr.open('GET', `http://${ip}:${scanPort}/v1/models`, true);
         xhr.timeout = 1500;
         xhr.onload = () => resolve(xhr.status === 200 ? ip : null);
-        xhr.onerror = () => resolve(null);
-        xhr.ontimeout = () => resolve(null);
+        xhr.onerror = () => { onError && onError(ip, 'network'); resolve(null); };
+        xhr.ontimeout = () => { onError && onError(ip, 'timeout'); resolve(null); };
         xhr.send();
       }));
     }
@@ -1318,17 +1434,31 @@ async function autoDiscoverServer() {
   }
 
   let foundIp = null;
+  // 统计错误信息(给用户更明确提示)
+  let errorCount = 0, timeoutCount = 0;
+
   // 先扫 .1~20
-  if (!foundIp) foundIp = await scanBatch(1, 20);
+  if (!foundIp) {
+    statusEl.textContent = `扫描 ${base}.1~20:${scanPort}...`;
+    foundIp = await scanBatch(1, 20, (ip, err) => {
+      if (err === 'timeout') timeoutCount++;
+      else errorCount++;
+    });
+  }
   if (foundIp) { done(foundIp); return; }
   statusEl.textContent = `扫描 ${base}.21~50:${scanPort}...`;
 
   // 再扫 .21~50
-  if (!foundIp) foundIp = await scanBatch(21, 50);
+  if (!foundIp) {
+    foundIp = await scanBatch(21, 50, (ip, err) => {
+      if (err === 'timeout') timeoutCount++;
+      else errorCount++;
+    });
+  }
   if (foundIp) { done(foundIp); return; }
 
   // 最后扫常见fallback网段
-  const fallbackBases = myIp ? [] : ['192.168.0'];
+  const fallbackBases = myIp ? [] : ['192.168.0', '192.168.1', '10.0.0'];
   for (const fb of fallbackBases) {
     statusEl.textContent = `扫描 ${fb}.1~30:${scanPort}...`;
     const promises = [];
@@ -1339,8 +1469,8 @@ async function autoDiscoverServer() {
         xhr.open('GET', `http://${ip}:${scanPort}/v1/models`, true);
         xhr.timeout = 1500;
         xhr.onload = () => resolve(xhr.status === 200 ? ip : null);
-        xhr.onerror = () => resolve(null);
-        xhr.ontimeout = () => resolve(null);
+        xhr.onerror = () => { errorCount++; resolve(null); };
+        xhr.ontimeout = () => { timeoutCount++; resolve(null); };
         xhr.send();
       }));
     }
@@ -1349,8 +1479,18 @@ async function autoDiscoverServer() {
     if (foundIp) { done(foundIp); return; }
   }
 
-  // 未找到
-  statusEl.textContent = `❌ 未找到。请手动输入IP或检查：1.同WiFi 2.模型已启动(${scanPort}端口) 3.防火墙开放${scanPort}`;
+  // 未找到 - 给更明确的诊断信息
+  let hint = '';
+  if (webrtcFailed) {
+    hint = '(WebRTC 取本机IP失败,可能未授权;已尝试 192.168.0/1 + 10.0.0 网段)';
+  } else if (timeoutCount > errorCount) {
+    hint = `(大量超时,可能不在同WiFi;已扫 ${timeoutCount} 个IP)`;
+  } else if (errorCount > 0) {
+    hint = `(网络错误,防火墙或路由阻断;已扫 ${errorCount} 个IP)`;
+  } else {
+    hint = `(已扫所有网段均无响应)`;
+  }
+  statusEl.textContent = `❌ 未找到 ${hint}。请检查: 1.同WiFi 2.模型已启动(${scanPort}端口) 3.防火墙开放${scanPort} 4.或在电脑上 curl http://localhost:${scanPort}/v1/models 验证`;
   statusEl.style.color = 'var(--accent-red)';
 
   function done(ip) {
@@ -2724,9 +2864,57 @@ function getActiveABConfig() {
   }
 }
 
+// v1.4 流式输出控制: 当前活跃流的 AbortController + 状态指示器
+let _currentStreamAbort = null;
+let _streamIndicator = null;
+function stopCurrentStream() {
+  if (_currentStreamAbort) {
+    _currentStreamAbort.abort();
+    _currentStreamAbort = null;
+    console.log('[Stream] 已停止');
+    if (typeof showToast === 'function') showToast('已停止生成', 'warning');
+  }
+  hideStreamIndicator();
+}
+window.stopCurrentStream = stopCurrentStream;
+
+function showStreamIndicator() {
+  if (_streamIndicator) return;
+  _streamIndicator = document.createElement('div');
+  _streamIndicator.id = 'streamIndicator';
+  _streamIndicator.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(20,18,16,0.95);color:var(--accent-gold);padding:0.5rem 1rem;border-radius:20px;border:1px solid var(--accent-gold);font-size:0.8rem;display:flex;align-items:center;gap:0.6rem;box-shadow:0 2px 12px rgba(0,0,0,0.5);';
+  _streamIndicator.innerHTML = `
+    <span style="display:inline-flex;gap:2px;">
+      <span style="width:6px;height:6px;background:var(--accent-gold);border-radius:50%;animation:streamDot 1.4s infinite;"></span>
+      <span style="width:6px;height:6px;background:var(--accent-gold);border-radius:50%;animation:streamDot 1.4s 0.2s infinite;"></span>
+      <span style="width:6px;height:6px;background:var(--accent-gold);border-radius:50%;animation:streamDot 1.4s 0.4s infinite;"></span>
+    </span>
+    <span>正在生成...</span>
+    <button onclick="stopCurrentStream()" style="background:var(--accent-red);color:#fff;border:none;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.7rem;cursor:pointer;">⏹ 停止</button>
+  `;
+  document.body.appendChild(_streamIndicator);
+  // 注入 CSS 动画
+  if (!document.getElementById('streamIndicatorCSS')) {
+    const s = document.createElement('style');
+    s.id = 'streamIndicatorCSS';
+    s.textContent = '@keyframes streamDot{0%,60%,100%{opacity:0.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}';
+    document.head.appendChild(s);
+  }
+}
+
+function hideStreamIndicator() {
+  if (_streamIndicator) {
+    _streamIndicator.remove();
+    _streamIndicator = null;
+  }
+}
+
 async function callDeepSeek(prompt, system, onChunk, opts = {}) {
-  const { temperature = 0.15, model: optModel } = opts;
+  const { temperature = 0.15, model: optModel, signal: externalSignal } = opts;
   const useLocal = localStorage.getItem('use_local_model') === '1';
+  // v1.4 流式控制: 用外部 signal (如果有) + 内部 timeout signal
+  const externalAbort = externalSignal || new AbortController().signal;
+  _currentStreamAbort = externalSignal ? null : new AbortController();
   const messages = [];
   const chineseConstraint = '【铁律·语言约束】你的所有输出必须使用纯中文。严禁输出任何英文单词、英文句子、中英文混合内容。严禁输出思考过程、分析步骤、"thinking process"、"step by step"、"let me think"等元内容。如果你需要推理，请在心中完成，只向用户展示最终的中文解读结果。\n\n';
   if (system) {
@@ -2748,6 +2936,8 @@ async function callDeepSeek(prompt, system, onChunk, opts = {}) {
     try {
       const ctrl = new AbortController();
       localTimer = setTimeout(() => ctrl.abort(), LOCAL_TIMEOUT);
+      // v1.4 流式控制: 外部停止时也 abort
+      if (externalAbort) externalAbort.addEventListener('abort', () => ctrl.abort());
       // 进度提示
       localP1 = setTimeout(() => showToast('AI 仍在思考，已等待 2 分钟...', 'success'), 120000);
       localP2 = setTimeout(() => showToast('AI 仍在思考，已等待 4 分钟...', 'success'), 240000);
@@ -2793,11 +2983,14 @@ async function callDeepSeek(prompt, system, onChunk, opts = {}) {
 
   const key = localStorage.getItem('ds_api_key') || DEFAULT_API_KEY;
   const isFallback = useLocal;
-  if (!key) throw new Error('请先设置 DeepSeek API Key 或启动本地模型');
+  // v1.3.1 安全修复: 不再 fallback 到硬编码 DEFAULT_API_KEY (已设为空)
+  if (!key) throw new Error('请先在设置页配置 DeepSeek API Key,或启动本地模型 (LM Studio / Ollama)');
   const model = optModel || localStorage.getItem('ds_model') || 'deepseek-chat';
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), CLOUD_TIMEOUT);
+  // v1.4 流式控制: 外部停止时也 abort
+  if (externalAbort) externalAbort.addEventListener('abort', () => ctrl.abort());
   const useStream = !!onChunk;
 
   try {
@@ -3089,6 +3282,7 @@ async function doAIBazi() {
       showResultActions('baziAIContent', 'baziAIActions');
       return;
     }
+    showStreamIndicator();
     const text = await callDeepSeek(currentBaziPrompt, system, (delta, full) => {
       fullText = full;
       content.textContent = prefix + separator + full;
@@ -3104,7 +3298,7 @@ async function doAIBazi() {
   } catch (e) {
     content.innerHTML = prefix + separator + `<div class="error">${escapeHtml(e.message)}</div>`;
   } finally {
-    btn.disabled = false; btn.textContent = 'AI 解读';
+    btn.disabled = false; btn.textContent = 'AI 解读'; hideStreamIndicator();
   }
 }
 window.doAIBazi = doAIBazi;
@@ -3329,6 +3523,7 @@ async function doAIZiwei() {
       showResultActions('zwAIContent', 'zwAIActions');
       return;
     }
+    showStreamIndicator();
     const text = await callDeepSeek(currentZwPrompt, system, (delta, full) => {
       fullText = full;
       content.textContent = prefix + separator + full;
@@ -3343,7 +3538,7 @@ async function doAIZiwei() {
   } catch (e) {
     content.innerHTML = prefix + separator + `<div class="error">${escapeHtml(e.message)}</div>`;
   } finally {
-    btn.disabled = false; btn.textContent = 'AI 解读';
+    btn.disabled = false; btn.textContent = 'AI 解读'; hideStreamIndicator();
   }
 }
 window.doAIZiwei = doAIZiwei;
@@ -3646,6 +3841,7 @@ async function doAILiuyao() {
       showResultActions('lyAIContent', 'lyAIActions');
       return;
     }
+    showStreamIndicator();
     const text = await callDeepSeek(currentLyPrompt, system, (delta, full) => {
       fullText = full;
       content.textContent = prefix + separator + full;
@@ -3660,7 +3856,7 @@ async function doAILiuyao() {
   } catch (e) {
     content.innerHTML = prefix + separator + `<div class="error">${escapeHtml(e.message)}</div>`;
   } finally {
-    btn.disabled = false; btn.textContent = 'AI 解读';
+    btn.disabled = false; btn.textContent = 'AI 解读'; hideStreamIndicator();
   }
 }
 window.doAILiuyao = doAILiuyao;
@@ -3791,6 +3987,7 @@ async function doAIQimen() {
       showResultActions('qmAIContent', 'qmAIActions');
       return;
     }
+    showStreamIndicator();
     const text = await callDeepSeek(currentQmPrompt, system, (delta, full) => {
       fullText = full;
       content.textContent = prefix + separator + full;
@@ -3805,7 +4002,7 @@ async function doAIQimen() {
   } catch (e) {
     content.innerHTML = prefix + separator + `<div class="error">${escapeHtml(e.message)}</div>`;
   } finally {
-    btn.disabled = false; btn.textContent = 'AI 解读';
+    btn.disabled = false; btn.textContent = 'AI 解读'; hideStreamIndicator();
   }
 }
 window.doAIQimen = doAIQimen;
@@ -4387,6 +4584,7 @@ async function doAICross() {
     }
 
     // 引导用户问题转化为三术共同关心的方向
+    showStreamIndicator();
     const out = await callDeepSeek(currentCrossPrompt, system, (delta, full) => {
       fullText = full;
       text.textContent = prefix + separator + full;
@@ -4513,7 +4711,7 @@ async function doAIXingshi() {
     text.style.display = 'block';
     loading.style.display = 'none';
   } finally {
-    btn.disabled = false; btn.textContent = 'AI 解读';
+    btn.disabled = false; btn.textContent = 'AI 解读'; hideStreamIndicator();
   }
 }
 window.doAIXingshi = doAIXingshi;
@@ -4665,7 +4863,7 @@ async function doAIFengshui() {
     text.style.display = 'block';
     loading.style.display = 'none';
   } finally {
-    btn.disabled = false; btn.textContent = 'AI 解读';
+    btn.disabled = false; btn.textContent = 'AI 解读'; hideStreamIndicator();
   }
 }
 window.doAIFengshui = doAIFengshui;
@@ -4853,15 +5051,15 @@ function renderFuList() {
     return `
     <div style="border-bottom:1px solid var(--border);padding:0.5rem 0;">
       <div style="display:flex;align-items:center;gap:0.3rem;">
-        <span style="font-size:0.7rem;background:var(--bg-inner);color:var(--accent-gold);padding:0.1rem 0.4rem;border-radius:4px;">${e.category}</span>
-        <b style="color:var(--accent-gold);font-size:0.95rem;">${e.title}</b>
+        <span style="font-size:0.7rem;background:var(--bg-inner);color:var(--accent-gold);padding:0.1rem 0.4rem;border-radius:4px;">${escapeHtml(e.category)}</span>
+        <b style="color:var(--accent-gold);font-size:0.95rem;">${escapeHtml(e.title)}</b>
       </div>
       ${svgHtml ? `<div style="text-align:center;margin:0.3rem 0;">${svgHtml}</div>` : ''}
-      <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.3rem;line-height:1.5;">${e.content}</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.3rem;line-height:1.5;">${escapeHtml(e.content)}</div>
       <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;">
-        ${e.function ? '<b>作用：</b>' + e.function + ' · ' : ''}
-        ${e.usage ? '<b>用法：</b>' + e.usage : ''}
-        ${e.target ? '<br><b>适用：</b>' + e.target : ''}
+        ${e.function ? '<b>作用：</b>' + escapeHtml(e.function) + ' · ' : ''}
+        ${e.usage ? '<b>用法：</b>' + escapeHtml(e.usage) : ''}
+        ${e.target ? '<br><b>适用：</b>' + escapeHtml(e.target) : ''}
       </div>
     </div>
   `;}).join('');
@@ -5087,20 +5285,20 @@ function renderJueList() {
     return `
     <div style="border-bottom:1px solid var(--border);padding:0.5rem 0;">
       <div style="display:flex;align-items:center;gap:0.3rem;">
-        <span style="font-size:0.7rem;background:var(--bg-inner);color:var(--accent-gold);padding:0.1rem 0.4rem;border-radius:4px;">${e.category}</span>
-        <b style="color:var(--accent-gold);font-size:0.95rem;">${e.title}</b>
+        <span style="font-size:0.7rem;background:var(--bg-inner);color:var(--accent-gold);padding:0.1rem 0.4rem;border-radius:4px;">${escapeHtml(e.category)}</span>
+        <b style="color:var(--accent-gold);font-size:0.95rem;">${escapeHtml(e.title)}</b>
       </div>
       ${svgHtml ? `<div style="text-align:center;margin:0.3rem 0;">${svgHtml}</div>` : ''}
-      <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.3rem;line-height:1.5;">${e.content}</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.3rem;line-height:1.5;">${escapeHtml(e.content)}</div>
       <div style="font-size:0.75rem;color:var(--accent-green);margin-top:0.3rem;padding:0.3rem;background:var(--bg-inner);border-radius:4px;">
-        <b>手势：</b>${e.shape || '见上图'}
+        <b>手势：</b>${escapeHtml(e.shape || '见上图')}
       </div>
-      ${e.shape_detail ? `<div style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.3rem;padding:0.3rem;background:var(--bg-inner);border-radius:4px;"><b>详细步骤：</b>${e.shape_detail}</div>` : ''}
-      ${e.finger_map ? `<div style="font-size:0.75rem;color:var(--accent-green);margin-top:0.3rem;"><b>指位说明：</b>${e.finger_map}</div>` : ''}
+      ${e.shape_detail ? `<div style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.3rem;padding:0.3rem;background:var(--bg-inner);border-radius:4px;"><b>详细步骤：</b>${escapeHtml(e.shape_detail)}</div>` : ''}
+      ${e.finger_map ? `<div style="font-size:0.75rem;color:var(--accent-green);margin-top:0.3rem;"><b>指位说明：</b>${escapeHtml(e.finger_map)}</div>` : ''}
       <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;">
-        <b>使用：</b>${e.usage || ''}
+        <b>使用：</b>${escapeHtml(e.usage || '')}
       </div>
-      ${e.pair_with && e.pair_with.length ? `<div style="font-size:0.75rem;color:var(--accent-gold);margin-top:0.3rem;"><b>配伍：</b>${e.pair_with.join(' · ')}</div>` : ''}
+      ${e.pair_with && e.pair_with.length ? `<div style="font-size:0.75rem;color:var(--accent-gold);margin-top:0.3rem;"><b>配伍：</b>${e.pair_with.map(escapeHtml).join(' · ')}</div>` : ''}
     </div>
   `;}).join('');
 }

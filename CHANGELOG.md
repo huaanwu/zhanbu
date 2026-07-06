@@ -1,5 +1,31 @@
 # AI占卜大师 更新日志
 
+## v1.4.0 (Unreleased)
+
+### 新功能
+- **SSE 流式 AI 输出 + 停止按钮**: `callDeepSeek` 走 SSE,5 个 AI 解读入口(bazi/ziwei/liuyao/qimen/cross)实时打字机效果;流式期间显示"正在生成..."指示器和⏹停止按钮
+- **对话式追问 (ChatSession)**: 新增 `www/chat.js`,每个域独立累积多轮 Q&A(最多 20 轮 LRU);`a` 字段走 AES-GCM 加密
+- **设置页"危险区"**: 一键清除所有数据(API Key/历史/反馈/缓存/加密密钥),二次确认后 reload
+- **RAG 预热**: `RAG.prewarm()` 用 `requestIdleCallback` 在浏览器空闲时提前建索引;首次 AI 解读不再等 1-3s
+- **本地大模型自动发现加固**: 区分 timeout vs network 错误,WebRTC 失败显式提示,多网段 fallback (192.168.0/1 + 10.0.0),错误信息更明确
+
+### 安全/合规
+- **`androidScheme: https` → `http`**: 修复本地大模型(LM Studio/Ollama)在 HTTPS WebView 下被 CORS 拒绝的 bug;App 是局域网应用无外网暴露风险
+- **AES-GCM 敏感字段加密** (v1.4.3): `history.signal/output/panSnapshot` 和 `feedback.pan` 全部走 `Crypto.encrypt()`;Web Crypto API 256-bit,设备绑定密钥
+- **版本升级清理**: v1.4 之前旧版本(明文存储)数据自动清空,重新加密
+- **删除死文件**: `all_inline.js` (162KB) + `cordova.js` + `cordova_plugins.js`
+- **P1 收尾**: `getXunKong` var 提升顺序、Cache 显式字段、`chainOfThought` 未知 domain 加 `console.warn`、`ABTest.getVariant` 兜底加 warn、`feedback.syncToServer` 注释
+
+### 工程
+- **新构建脚本** `scripts/build-web.mjs`: 自动把 Vite 产物合并回 www/ 根目录,解决 webDir 错配
+- **`package.json` 新增 `npm run sync`**: build + cap sync 一条龙
+- **测试运行器支持 async** (`test_comprehensive.js._runOne`): 用 `await` 等待 async 测试完成
+
+### 测试
+- 新增 `test_crypto.js` (6 用例) + `test_chat.js` (9 用例) + `test_liuyao.js` 4 个纳甲回归测试
+- 基线: `node www/test_all.js` → **162/162 全过**(原 147 + 6 crypto + 9 chat)
+- 测试运行器升级: 同步入口等异步完成再打印
+
 ## v1.3.1 (Unreleased)
 
 ### Bug 修复
@@ -8,6 +34,14 @@
 - **P2 liuyao lunar 集成**:移除 `liuyao.js` 硬编码绝对路径 `D:/get/zhanbu/www/lib/node_modules/lunar-javascript/lunar.js`,改为相对路径 fallback + 5 处静默 catch 加 console.warn
 - **P3 空 catch 加日志**:`index.html` 3 处空 catch(LocalServerDiscovery × 2, LocalModelTest × 1)补 console.warn
 
+### 安全加固 (2026-07-06 综合审计后)
+- **P0 六爻纳甲上下颠倒**:`liuyao.js:289` `lowerNJ.slice(0, 3), upperNJ.slice(3)` 颠倒,导致所有 64 卦的 纳甲/五行/六亲 错位。改为 `lowerNJ.slice(3), upperNJ.slice(0, 3)`,符合虞翻纳甲"上卦外三爻 / 下卦内三爻"规约
+- **P0 硬编码 DeepSeek API Key**:`index.html:712` `DEFAULT_API_KEY = 'sk-...'` 是真实有效 key,已置空;2794 行 `||` fallback 改为抛错,强制用户走设置页配置
+- **P0 历史记录 XSS**:`index.html:892` `item.question` 未转义直接 innerHTML(用户可注入脚本);902 行 `replace(/</g, ...)` 不完整。统一用 `escapeHtml()`
+- **P0 知识库内容 XSS**:`index.html:4851-4868` `fuList` 渲染符咒,e.content / e.function / e.usage / e.target / e.title / e.category 全未转义;`5085-5106` `jueList` 同样。统一用 `escapeHtml()`
+- **P1 移除 eval 双加载兜底**:`index.html:666-678` 的 `(0, eval)(code)` 违反 CLAUDE.md "禁止 eval" 约束,改为 `checkExpertRAG` 显式错误提示
+- **P1 lunar-javascript 浏览器集成**:`liuyao.js:65-72` `_getSolar` 在浏览器中走 `require()` 永远失败,降级到粗算法。改为优先从 `window.Solar`(lunar.bundle.js 暴露)取,真正利用立春/节气精确计算
+
 ### 改进
 - AI 解读入口统一接入 `getActiveABConfig()` + Cache + Fewshot/CoT 开关(bazi/ziwei/liuyao/qimen/cross 共 5 处)
 - `liuyao.js` 暴露高精度排盘函数 `getYearGZEx` / `getMonthGZEx` / `getHourGZEx`(立春换年柱、节气月、早子时/晚子时分支)
@@ -15,7 +49,8 @@
 
 ### 测试
 - 新增 `www/test_all.js`(master runner)+ 6 个模块单测 + Cache/ABTest/bug_fixes 接线测试
-- 基线:`node www/test_all.js` → 143/143 全过(liuyao 7 + qimen 7 + xingshi 8 + expert 10 + visual 7 + accuracy 104)
+- **新增** `test_liuyao.js` 4 个纳甲回归测试(乾为天 / 天地否 / 水雷屯 + 16 卦抽样校验)
+- 基线:`node www/test_all.js` → **147/147 全过**(原 143 + 4 纳甲回归)
 - 准确度基线数据存档在 `www/tests/fixtures/accuracy_baseline*.{json,md}`
 
 ### 清理

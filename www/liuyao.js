@@ -58,14 +58,20 @@ var LIU_SHEN_START = { "甲":0,"乙":0,"丙":1,"丁":1,"戊":2,"己":3,"庚":4,"
 var TG = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
 var DZ = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
 // ========== 高精度八字引擎 ==========
-// 使用文件系统路径加载 lunar-javascript 库
-// 支持：立春换年柱、节气月、早子时/晚子时
+// 浏览器:从 window.Solar (由 lib/lunar.bundle.js 暴露) 取
+// Node 测试:从 require('lunar-javascript') 取
+// 三层 fallback:① window.Solar → ② require 包名 → ③ 兜底粗算法
+// 支持:立春换年柱、节气月、早子时/晚子时
 (function() {
   var _Solar = null;
   function _getSolar() {
     if (_Solar) return true;
-    // 三层 fallback:① node_modules 包名解析 → ② 同目录 lib 相对路径 → ③ 兜底
-    // 注意:不要硬编码绝对路径(在 CI/其他机器会失败)
+    // 第一层:浏览器从 globalThis.window.Solar 取(lunar.bundle.js 暴露)
+    if (typeof window !== 'undefined' && window.Solar && typeof window.Solar.fromYmd === 'function') {
+      _Solar = window.Solar;
+      return true;
+    }
+    // 第二层:Node 测试环境
     try { var m = require("lunar-javascript"); if (m && m.Solar) { _Solar = m.Solar; return true; } } catch(e) { console.warn('[lunar-javascript] require 包名失败:', e.message); }
     try { var m = require("./lib/node_modules/lunar-javascript/lunar.js"); if (m && m.Solar) { _Solar = m.Solar; return true; } } catch(e) { console.warn('[lunar-javascript] require 相对路径失败:', e.message); }
     return false;
@@ -134,12 +140,6 @@ var SHI_YING = {
 // 获取纳音
 function getNaYin(gz) { return NA_YIN[gz] || "未知"; }
 
-// 获取旬空
-function getXunKong(dayGZ) {
-  var xun = XUN[dayGZ];
-  return XUN_KONG[xun] || "";
-}
-
 // 获取日柱所属的旬
 var XUN = {
   "甲子":"甲子","乙丑":"甲子","丙寅":"甲子","丁卯":"甲子","戊辰":"甲子","己巳":"甲子","庚午":"甲子","辛未":"甲子","壬申":"甲子","癸酉":"甲子",
@@ -149,6 +149,12 @@ var XUN = {
   "甲辰":"甲辰","乙巳":"甲辰","丙午":"甲辰","丁未":"甲辰","戊申":"甲辰","己酉":"甲辰","庚戌":"甲辰","辛亥":"甲辰","壬子":"甲辰","癸丑":"甲辰",
   "甲寅":"甲寅","乙卯":"甲寅","丙辰":"甲寅","丁巳":"甲寅","戊午":"甲寅","己未":"甲寅","庚申":"甲寅","辛酉":"甲寅","壬戌":"甲寅","癸亥":"甲寅",
 };
+
+// 获取旬空
+function getXunKong(dayGZ) {
+  var xun = XUN[dayGZ];
+  return XUN_KONG[xun] || "";
+}
 
 
 function getGanZhi(offset) { return TG[offset % 10] + DZ[offset % 12]; }
@@ -286,7 +292,10 @@ function arraysEqual(a, b) { return a.length === b.length && a.every((v, i) => v
 function naJia(upperGuaName, lowerGuaName, dongYaoList, dayGan) {
   const upperNJ = NA_JIA[upperGuaName];
   const lowerNJ = NA_JIA[lowerGuaName];
-  const sixYao = [...lowerNJ.slice(0, 3), ...upperNJ.slice(3)];
+  // 虞翻纳甲规约: 卦之上爻(外)用 NA_JIA 表前 3(外三爻), 卦之下爻(内)用 NA_JIA 表后 3(内三爻)
+  // 因此: 当本卦作为 上卦(upper)→ 取首 3; 当作为 下卦(lower)→ 取尾 3
+  // 原代码上下颠倒, 导致所有六爻纳甲/五行/六亲错位
+  const sixYao = [...lowerNJ.slice(3), ...upperNJ.slice(0, 3)];
 
   const guaGongWX = { "乾":"金","兑":"金","离":"火","震":"木","巽":"木","坎":"水","艮":"土","坤":"土" };
   const gongWX = guaGongWX[lowerGuaName] || "土";

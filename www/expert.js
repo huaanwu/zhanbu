@@ -954,7 +954,7 @@ const _CO_CROSS = '三术同参重点：以八字定先天格局、六爻看具�
 
 Expert.chainOfThought = function(domain) {
   const domainRules = {
-    // 中文 key(对齐 index.html / all_inline.js 调用方的实际传参)
+    // 中文 key(对齐 index.html 调用方的实际传参)
     '八字': _CO_BAZI,
     '六爻': _CO_LIUYAO,
     '奇门': _CO_QIMEN,
@@ -970,6 +970,10 @@ Expert.chainOfThought = function(domain) {
     xingshi: _CO_XINGSHI,
     shouxiang: _CO_SHOUXIANG
   };
+
+  if (!domainRules[domain]) {
+    console.warn('[Expert.chainOfThought] 未知 domain:', domain, '回退到通用模板');
+  }
 
   return `【解读要求】
 你是一位精通传统命理的资深专家。基于上方确定事实和知识库，直接给出命理解读。
