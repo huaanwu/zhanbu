@@ -10,8 +10,10 @@
 /www/assets
 /www/kb_data/_bundles
 
-# extracted/generated
-/extracted
+# Vite public 产物(由 build-web 从 www/public 生成,源文件在 www/public/)
+/www/manifest.webmanifest
+/www/icons
+
 
 # misc
 .DS_Store

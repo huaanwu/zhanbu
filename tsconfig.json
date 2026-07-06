@@ -15,10 +15,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noImplicitAny": false,
-    "allowJs": true,
-    "checkJs": false,
     "allowImportingTsExtensions": true,
-    "noEmit": true,
     "jsx": "preserve",
 
     /* 渐进式: 打开后用 // @ts-check 在单个文件启用检查 */

@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>AI占卜大师</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="stylesheet" crossorigin href="/assets/index-DST3duQe.css">
 </head>
 <body>
@@ -75,6 +77,15 @@
       <button class="save-btn" onclick="saveSettings()" style="width:100%;margin-top:0.8rem;">保存设置</button>
       <div id="saveMsg" style="text-align:center;margin-top:0.5rem;font-size:0.8rem;color:var(--accent-green);display:none;">已保存</div>
       <div id="versionInfo" style="text-align:center;margin-top:1rem;font-size:0.7rem;color:var(--text-muted);"></div>
+
+      <!-- v3.0.1: PWA 安装入口 -->
+      <div id="pwaInstallCard" class="setting-item" style="display:none;margin-top:1rem;padding:0.8rem;border:1px solid var(--accent-gold);border-radius:6px;background:rgba(201,168,76,0.05);">
+        <div style="flex:1;">
+          <div class="setting-label" style="color:var(--accent-gold);">📲 安装到桌面</div>
+          <p style="font-size:0.7rem;color:var(--text-muted);margin:0.2rem 0 0.5rem;">像原生 App 一样从桌面启动,离线也能使用本地算法与知识库。</p>
+          <button id="pwaInstallBtn" onclick="promptPWAInstall()" style="width:100%;background:var(--accent-gold);color:#1a1612;border:none;padding:0.5rem;border-radius:6px;font-size:0.85rem;cursor:pointer;font-weight:600;">安装 AI占卜大师</button>
+        </div>
+      </div>
 
       <!-- 危险区:清除所有数据 (v1.4 隐私合规) -->
       <div style="margin-top:1.5rem;padding:0.8rem;border:1px solid var(--accent-red);border-radius:6px;background:rgba(220,80,80,0.05);">
@@ -636,11 +647,11 @@
 </div>
 
 <!-- 八字、紫微本地依赖（离线可用） -->
-<script src="lib/lunar.bundle.js?v=127"></script>
-<script src="lib/iztro.bundle.js?v=127"></script>
+<script src="lib/lunar.bundle.js?v=301"></script>
+<script src="lib/iztro.bundle.js?v=301"></script>
 <!-- kb_embedded.js 已移除 (2026-06-22) - 知识库改用fetch按需加载 -->
-<script src="expert.js?v=127"></script>
-<script src="rag.js?v=127"></script>
+<script src="expert.js?v=301"></script>
+<script src="rag.js?v=301"></script>
 <script>
   // lunar.bundle.js 暴露 LunarLib 全局
   if (window.LunarLib) {
@@ -657,19 +668,82 @@
 </script>
 
 <!-- 六爻、奇门、姓名学算法 -->
-<script src="liuyao.js?v=127"></script>
-<script src="qimen.js?v=127"></script>
-<script src="xingshi.js?v=127"></script>
-<script src="history.js?v=127"></script>
-<script src="feedback.js?v=127"></script>
-<script src="feedback-loop.js?v=127"></script>
-<script src="visual.js?v=127"></script>
-<script src="cache.js?v=127"></script>
-<script src="ab_test.js?v=127"></script>
-<script src="crypto.js?v=127"></script>
-<script src="chat.js?v=127"></script>
+<script src="liuyao.js?v=301"></script>
+<script src="qimen.js?v=301"></script>
+<script src="xingshi.js?v=301"></script>
+<script src="history.js?v=301"></script>
+<script src="feedback.js?v=301"></script>
+<script src="feedback-loop.js?v=301"></script>
+<script src="visual.js?v=301"></script>
+<script src="cache.js?v=301"></script>
+<script src="ab_test.js?v=301"></script>
+<script src="crypto.js?v=301"></script>
+<script src="chat.js?v=301"></script>
 
 <!-- v2.0.1: 主应用逻辑 (4770 行,从原 inline script 拆出) -->
-<script src="app.js?v=127"></script>
+<script src="app.js?v=301"></script>
+
+<!-- v3.0.1: PWA Service Worker 注册与安装提示 -->
+<script>
+(function() {
+  var deferredPrompt = null;
+  var installCard = document.getElementById('pwaInstallCard');
+  var installBtn = document.getElementById('pwaInstallBtn');
+
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (installCard) installCard.style.display = 'flex';
+    console.log('[PWA] beforeinstallprompt captured');
+  });
+
+  window.addEventListener('appinstalled', function() {
+    deferredPrompt = null;
+    if (installCard) installCard.style.display = 'none';
+    console.log('[PWA] app installed');
+  });
+
+  window.promptPWAInstall = function() {
+    if (!deferredPrompt) {
+      console.warn('[PWA] 没有可用的安装提示');
+      return;
+    }
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function(choiceResult) {
+      if (choiceResult.outcome === 'accepted') {
+        if (installCard) installCard.style.display = 'none';
+      }
+      deferredPrompt = null;
+    }).catch(function(e) {
+      console.warn('[PWA] 安装提示错误:', e);
+    });
+  };
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+      .then(function(reg) {
+        console.log('[SW] 注册成功, scope:', reg.scope);
+        // 发现新的 Service Worker 等待时,提示刷新
+        reg.addEventListener('updatefound', function() {
+          var newWorker = reg.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', function() {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('[SW] 新版本已下载,等待激活');
+                if (confirm('发现新版本,是否立即刷新以更新?')) {
+                  window.location.reload();
+                }
+              }
+            });
+          }
+        });
+      })
+      .catch(function(err) {
+        console.warn('[SW] 注册失败:', err);
+      });
+  }
+})();
+</script>
+
 </body>
 </html>

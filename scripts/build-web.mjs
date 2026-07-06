@@ -73,7 +73,22 @@ async function main() {
     console.log('  [cp] dist/assets/* → www/assets/');
   }
 
-  // 3) 清理 dist/
+  // 3) 拷贝 dist/ 下其余 public 文件(如 manifest.webmanifest / icons / sw.js) → www/
+  const distEntries = await fs.readdir(DIST, { withFileTypes: true });
+  for (const e of distEntries) {
+    if (e.name === 'index.html' || e.name === 'assets') continue;
+    const src = path.join(DIST, e.name);
+    const dst = path.join(WWW, e.name);
+    if (e.isDirectory()) {
+      await rimraf(dst);
+      await copyDir(src, dst);
+    } else {
+      await fs.copyFile(src, dst);
+    }
+    console.log(`  [cp] dist/${e.name} → www/${e.name}`);
+  }
+
+  // 4) 清理 dist/
   await rimraf(DIST);
 
   console.log('✅ build-web 完成, www/ 现在包含 Vite 处理后的产物');

@@ -1,0 +1,43 @@
+{
+  "name": "AI占卜大师",
+  "short_name": "占卜",
+  "description": "八字 / 六爻 / 奇门 / 紫微 / 面相 / 手相 / 风水 / 佛道 多流派占卜,DeepSeek/OpenAI/本地大模型解读",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1612",
+  "theme_color": "#1a1612",
+  "lang": "zh-CN",
+  "categories": ["lifestyle", "books"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "八字解读",
+      "short_name": "八字",
+      "description": "立即八字排盘与解读",
+      "url": "./index.html#bazi",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "六爻起卦",
+      "short_name": "六爻",
+      "description": "立即六爻起卦",
+      "url": "./index.html#liuyao",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
