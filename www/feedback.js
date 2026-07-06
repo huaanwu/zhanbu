@@ -14,8 +14,18 @@ const Feedback = {
     }
   },
   
-  // 提交反馈
-  submit(data) {
+  // 提交反馈 (v1.4 加密 pan 字段)
+  async submit(data) {
+    // 加密 pan 字段(包含完整排盘,生辰八字等敏感个人信息)
+    let encPan = data.pan;
+    if (data.pan && window.Crypto) {
+      try {
+        encPan = await window.Crypto.encrypt(JSON.stringify(data.pan));
+      } catch (e) {
+        console.warn('[Feedback.submit] pan 加密失败,降级明文:', e.message);
+      }
+    }
+
     const feedback = {
       id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
       timestamp: new Date().toISOString(),
@@ -26,16 +36,16 @@ const Feedback = {
       accuracy: data.accuracy, // 准确/部分准确/不准确
       comment: data.comment || '',
       userCorrection: data.userCorrection || '',
-      pan: data.pan // 排盘数据（用于分析）
+      pan: encPan // 排盘数据(v1.4 加密)
     };
-    
+
     const list = this.getAll();
     list.push(feedback);
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(list));
-    
-    // 同步到服务器（如果有网络）
+
+    // 同步到服务器(纯前端,空操作)
     this.syncToServer(feedback);
-    
+
     return feedback.id;
   },
   
@@ -85,11 +95,11 @@ const Feedback = {
     return JSON.stringify(this.getAll(), null, 2);
   },
   
-  // 同步到服务器
+  // 同步到服务器(当前为纯前端实现,如未来接入后端,在此实现)
+  // v1.4 暂保留接口签名,实际为空操作
   async syncToServer(feedback) {
-    // 如果有后端API，可以在这里同步
-    // 目前仅本地存储
-    console.log('[Feedback] 已保存反馈:', feedback.id);
+    if (!feedback || !feedback.id) return;
+    console.log('[Feedback] 已保存反馈(纯前端):', feedback.id);
   },
   
   // 生成反馈UI

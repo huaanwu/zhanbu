@@ -7,6 +7,7 @@
 /dist
 /build
 /www/dist
+/www/assets
 
 # extracted/generated
 /extracted

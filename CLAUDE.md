@@ -19,14 +19,21 @@ npm run preview                                        # 预览构建产物
 cd www/lib && ./build_libs.sh                          # 用 esbuild 把 lunar-javascript + iztro 打成 IIFE bundle 到 www/lib/*.bundle.js
 
 # Android 构建(产物: android/app/build/outputs/apk/debug/app-debug.apk)
-npx cap sync android                                   # 把 www/ 同步到 android,先 npm run build
+# v1.4 起: npm run build 自动跑 Vite + scripts/build-web.mjs 把 dist 合并回 www/
+npm run build                                          # vite build + build-web.mjs
+npx cap sync android                                   # 把 www/ 同步到 android
 cd android && ./gradlew assembleDebug
+
+# 一键发布
+npm run sync                                           # build + cap sync 一条龙
 
 # 飞书推送 APK(DevOps)
 node scripts/send-feishu.js <file_path>                # 默认推到武华安群
 ```
 
-**重要:** 不要单独 `vite build` 后直接 `cap sync`,Vite 产物在 `www/dist/`,`cap sync` 会把 `webDir`(默认 `www`)同步到 Android assets,所以 Capacitor 配置的 `webDir` 实际指向 **dist 后的 www**;Capacitor 8 的 `cap sync` 会自动处理 www→android 同步,但需要先有 `npm run build`。
+**重要:** v1.4 起 `npm run build` 已自动跑 Vite + `scripts/build-web.mjs` 把 dist 合并回 www/,直接 `cap sync` 即可。**不要单独 `vite build`**(产物会落到没人用的 www/dist/)。
+
+**v1.4 本地大模型修复:** `androidScheme: http` (从 https 改回)。原因:本地大模型(LM Studio/Ollama)用 HTTP,WebView 在 `https://localhost/` 下 fetch `http://192.168.x.x:port` 会被 CORS 拒绝,导致"自动发现"扫不到。HTTP 协议下 CORS 限制大幅降低,且 app 本就是局域网应用,无外网暴露风险。
 
 ## 架构(一张图)
 

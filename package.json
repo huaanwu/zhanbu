@@ -5,7 +5,9 @@
   "main": "www/index.html",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build && node scripts/build-web.mjs",
+    "build:web": "node scripts/build-web.mjs",
+    "sync": "npm run build && npx cap sync android"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.4",

@@ -7,10 +7,12 @@ var dir = __dirname;
 
 var tests = [
   'test_liuyao.js',
-  'test_qimen.js', 
+  'test_qimen.js',
   'test_xingshi.js',
   'test_expert.js',
   'test_visual.js',
+  'test_crypto.js',
+  'test_chat.js',
   'test_accuracy.js'
 ];
 

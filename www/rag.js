@@ -178,7 +178,9 @@ const RAG = {
 
   async build() {
     if (this.ready) return;
-    // 直接fetch JSON文件，不再依赖KB_EMBEDDED
+    if (this._building) return this._building; // 复用进行中的 build
+    this._building = (async () => {
+      // 直接fetch JSON文件，不再依赖KB_EMBEDDED
     const sources = [
       { key: 'bazi', name: '八字', file: 'kb_data/bazi_kb.json' },
       { key: 'bazi_ext', name: '八字扩展', file: 'kb_data/bazi_ext_kb.json' },
@@ -212,7 +214,22 @@ const RAG = {
     this.vectorIndex.add(all);
 
     this.ready = true;
+    this._building = null;
     console.log(`RAG 混合索引建立完成: ${all.length} 个文档片段（BM25 + 向量${VECTOR_DIM}维）`);
+    })();
+    return this._building;
+  },
+
+  // v1.4 预热: 在浏览器空闲时提前构建,消除首次 AI 解读的 1-3s 等待
+  // 用 requestIdleCallback 优先;不支持时降级 setTimeout
+  prewarm() {
+    if (this.ready || this._building) return;
+    const run = () => this.build().catch(e => console.warn('[RAG.prewarm] 失败:', e));
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(() => run(), { timeout: 3000 });
+    } else {
+      setTimeout(run, 1500);
+    }
   },
 
   // 从查询和排盘结果中提取信号词

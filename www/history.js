@@ -34,6 +34,22 @@ const History = {
     this.save(items);
   },
 
+  // v1.4 加密版本: signal/output/panSnapshot 走 AES-GCM,失败降级明文
+  // 异步 fire-and-forget, 调用方无需 await
+  async addEncrypted(domain, signal, question, output, panSnapshot) {
+    try {
+      const [encSignal, encOutput, encPan] = await Promise.all([
+        window.Crypto ? window.Crypto.encrypt(signal || '') : Promise.resolve(signal || ''),
+        window.Crypto ? window.Crypto.encrypt(output || '') : Promise.resolve(output || ''),
+        panSnapshot && window.Crypto ? window.Crypto.encrypt(JSON.stringify(panSnapshot)) : Promise.resolve(panSnapshot)
+      ]);
+      this.add(domain, encSignal, question || '', encOutput, encPan);
+    } catch (e) {
+      console.warn('[History.addEncrypted] 加密失败,降级明文:', e.message);
+      this.add(domain, signal, question, output, panSnapshot);
+    }
+  },
+
   setFeedback(id, feedback) {
     const items = this.load();
     const idx = items.findIndex(i => i.id === id);

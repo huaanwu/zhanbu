@@ -153,6 +153,7 @@ const ABTest = {
     }
 
     // 兜底返回 0
+    console.warn('[ABTest.getVariant] 未识别的 param, 兜底返回 0:', param);
     return 0;
   },
 
