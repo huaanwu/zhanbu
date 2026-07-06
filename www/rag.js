@@ -262,15 +262,26 @@ const RAG = {
     index.setSemantic(apiKey, networkUrl);
     const BATCH = 10;
     let okCount = 0;
+    let cacheCount = 0;
     try {
       for (let i = 0; i < docs.length; i += BATCH) {
         const batch = docs.slice(i, i + BATCH);
-        // 逐个调(API 通常支持 batch,但简单起见逐个,失败不影响其他)
         const results = await Promise.all(batch.map(async d => {
           try {
+            // v3.0.4: 优先读 IndexedDB 缓存
+            if (window.VectorCache) {
+              const cached = await window.VectorCache.get('doc', d.text, apiKey);
+              if (cached) {
+                cacheCount++;
+                return cached.vector;
+              }
+            }
             const r = await getEmbedding(d.text, { apiKey, networkUrl });
             if (r.source !== 'local-fallback' && r.vector.length > 0) {
               okCount++;
+              if (window.VectorCache) {
+                await window.VectorCache.set('doc', d.text, apiKey, r.vector);
+              }
               return r.vector;
             }
             return null;
@@ -289,7 +300,7 @@ const RAG = {
           }
         }
       }
-      console.log(`[RAG] semantic index: ${okCount}/${docs.length} 用真 embedding, 余用 random 兜底`);
+      console.log(`[RAG] semantic index: ${okCount}/${docs.length} 用真 embedding, ${cacheCount}/${docs.length} 来自缓存, 余用 random 兜底`);
       return index;
     } catch (e) {
       console.warn('[RAG] semantic build 失败,完全降级 random:', e.message);
@@ -531,9 +542,20 @@ class VectorIndex {
   async search(query, topK = 5) {
     let qVec;
     if (this.backend === 'semantic' && this._apiKey) {
-      // 真 embedding 查询
-      const r = await getEmbedding(query, { apiKey: this._apiKey, networkUrl: this._networkUrl });
-      qVec = r.source === 'local-fallback' ? textToVector(query, this.dim) : r.vector;
+      // v3.0.4: 优先读 IndexedDB 查询缓存
+      let cached = null;
+      if (window.VectorCache) {
+        cached = await window.VectorCache.get('query', query, this._apiKey);
+      }
+      if (cached) {
+        qVec = cached.vector;
+      } else {
+        const r = await getEmbedding(query, { apiKey: this._apiKey, networkUrl: this._networkUrl });
+        qVec = r.source === 'local-fallback' ? textToVector(query, this.dim) : r.vector;
+        if (window.VectorCache && r.source !== 'local-fallback') {
+          await window.VectorCache.set('query', query, this._apiKey, qVec);
+        }
+      }
     } else {
       qVec = textToVector(query, this.dim);
     }

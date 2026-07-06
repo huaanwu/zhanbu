@@ -27,7 +27,7 @@
   }
 })();
 
-var APP_VERSION = 'v3.0.1';
+var APP_VERSION = 'v3.0.4';
 var APP_BUILD_DATE = '2026-07-06';
 
 // ========== 版本升级清理旧配置 ==========
