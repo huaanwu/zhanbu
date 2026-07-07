@@ -214,37 +214,26 @@ async function doAIBazi() {
           if (abCfg.useFewshot)         instruction += (instruction ? '\n\n' : '') + window.Expert.fewshot('八字');
           return instruction;
         })();
-    // 缓存查询:相同命盘+问题直接复用(7 天 TTL,LRU 50 条)
-    const cacheKey = window.Cache
-      ? window.Cache.makeKey('bazi', { ...currentBazi, question: currentBazi.question })
-      : null;
-    const cached = cacheKey ? window.Cache.get('bazi', { ...currentBazi, question: currentBazi.question }) : null;
-    if (cached) {
-      fullText = cached;
-      content.textContent = prefix + separator + cached;
-      const finalText0 = prefix + separator + cached;
-      saveHistory('bazi', currentBazi.gz.day, currentBazi.question || '八字解读', finalText0);
-      addFeedbackUI('bazi', content, finalText0, currentBaziPrompt, system);
-      showResultActions('baziAIContent', 'baziAIActions');
-      return;
-    }
-    showStreamIndicator();
-    const text = await callDeepSeek(currentBaziPrompt, system, (delta, full) => {
-      fullText = full;
-      content.textContent = prefix + separator + full;
+    // v3.0.5: 统一 AI 入口(任务 #19)— 缓存查询 + 流式输出 + 事件派发 + abort 由 Core.AI.interpret() 接管
+    const { finalText } = await Core.AI.interpret({
+      domain: 'bazi',
+      prompt: currentBaziPrompt,
+      system,
+      pan: currentBazi,
+      question: currentBazi.question,
+      contentEl: content,
+      prefix,
+      separator,
     });
-    const finalText = prefix + separator + (fullText || text);
-    if (cacheKey && finalText) {
-      try { window.Cache.set('bazi', { ...currentBazi, question: currentBazi.question }, finalText); }
-      catch (e) { console.warn('[Cache] set bazi failed:', e); }
-    }
     saveHistory('bazi', currentBazi.gz.day, currentBazi.question || '八字解读', finalText);
     addFeedbackUI('bazi', content, finalText, currentBaziPrompt, system);
     showResultActions('baziAIContent', 'baziAIActions');
   } catch (e) {
     content.innerHTML = prefix + separator + `<div class="error">${escapeHtml(e.message)}</div>`;
   } finally {
-    btn.disabled = false; btn.textContent = 'AI 解读'; hideStreamIndicator();
+    btn.disabled = false; btn.textContent = 'AI 解读';
+    // v3.0.5: hideStreamIndicator 由 Core.AI.interpret() 内部处理(失败 throw 也已 hide)
+    if (window.Core?.Stream?.hideStreamIndicator) window.Core.Stream.hideStreamIndicator();
   }
 }
 window.doAIBazi = doAIBazi;

@@ -210,9 +210,91 @@
   function setCurrentStreamAbort(c) { _currentStreamAbort = c; }
   function clearCurrentStreamAbort() { _currentStreamAbort = null; }
 
+  /**
+   * 统一 AI 解读入口(任务 #19)
+   *
+   * 封装:缓存查询 + 流式输出 + 事件派发 + Stream indicator 控制 + abort 管理
+   * 调用方只需传入 domain/prompt/system/pan,负责 saveHistory/addFeedbackUI 等 UI 收尾
+   *
+   * @param {object} opts
+   * @param {string} opts.domain              - 领域标识:'bazi'/'ziwei'/'liuyao'/... (用于事件 + 缓存)
+   * @param {string} opts.prompt             - 用户问题提示
+   * @param {string} [opts.system]           - 系统提示
+   * @param {object} [opts.pan]              - 命盘快照(用于缓存 key)
+   * @param {string} [opts.question]         - 提问文本(用于缓存 key + 历史)
+   * @param {HTMLElement} [opts.contentEl]   - 流式输出目标元素(更新 textContent)
+   * @param {string} [opts.prefix]           - 追问前缀(前缀内容,如上次解读)
+   * @param {string} [opts.separator]        - 追问分隔符(默认 '\n\n')
+   * @param {object} [opts.callOpts]         - 透传给 callDeepSeek
+   * @returns {Promise<{ finalText: string, fromCache: boolean, fullText: string }>}
+   */
+  async function interpret(opts) {
+    const {
+      domain, prompt, system, pan, question,
+      contentEl, prefix = '', separator = '',
+      callOpts = {},
+    } = opts || {};
+    if (!domain || !prompt) throw new Error('interpret: domain + prompt 必填');
+
+    const bus = window.EventBus;
+    const events = window.CoreEvents || {};
+    const dispatch = (name, detail) => {
+      if (bus && events[name]) {
+        try { bus.dispatchEvent(new CustomEvent(events[name], { detail })); }
+        catch (e) { console.warn(`[EventBus] ${name} dispatch failed:`, e); }
+      }
+    };
+    const showIndicator = window.Core?.Stream?.showStreamIndicator || function () {};
+    const hideIndicator = window.Core?.Stream?.hideStreamIndicator || function () {};
+    const Cache = window.Cache;
+    const cacheKey = Cache && pan ? Cache.makeKey(domain, { ...pan, question }) : null;
+
+    dispatch('AI_START', { domain });
+
+    // 1) 缓存命中直接返回
+    if (cacheKey) {
+      const cached = Cache.get(domain, { ...pan, question });
+      if (cached) {
+        const finalText = prefix + separator + cached;
+        if (contentEl) contentEl.textContent = finalText;
+        dispatch('AI_COMPLETE', { domain, outputText: cached, prompt, system, contentEl, fromCache: true });
+        return { finalText, fromCache: true, fullText: cached };
+      }
+    }
+
+    // 2) 实时流式
+    showIndicator();
+    let fullText = '';
+    try {
+      const text = await callDeepSeek(prompt, system, (delta, full) => {
+        fullText = full;
+        if (contentEl) contentEl.textContent = prefix + separator + full;
+        dispatch('AI_CHUNK', { domain, text: delta, full });
+      }, callOpts);
+      if (!fullText) fullText = text || '';
+    } catch (e) {
+      hideIndicator();
+      dispatch('AI_ERROR', { domain, error: e });
+      throw e;
+    }
+    hideIndicator();
+
+    // 3) 写缓存
+    if (cacheKey && fullText) {
+      try { Cache.set(domain, { ...pan, question }, fullText); }
+      catch (e) { console.warn('[Cache] set failed:', e); }
+    }
+
+    const finalText = prefix + separator + fullText;
+    if (contentEl) contentEl.textContent = finalText;
+    dispatch('AI_COMPLETE', { domain, outputText: fullText, prompt, system, contentEl, fromCache: false });
+    return { finalText, fromCache: false, fullText };
+  }
+
   window.Core = window.Core || {};
   window.Core.AI = {
     callDeepSeek,
+    interpret,
     readSSE,
     stripThinking,
     getLocalServerUrl,
