@@ -6,50 +6,82 @@
 (function () {
   if (typeof window === 'undefined') return;
 
+  // 过滤模型输出的英文 thinking / 分析过程,只保留中文正文
+  // 比 core 早期版多了对 "Thinking Process:" / "Step by step analysis:" 等的清洗
   function stripThinking(text) {
     if (!text) return '';
-    return text
-      .replace(/<think>[\s\S]*?<\/think>/gi, '')
-      .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
-      .replace(/<reflection>[\s\S]*?<\/reflection>/gi, '')
-      .trim();
+    let t = text;
+    t = t.replace(/Here's\s+a\s+thinking\s*process:.*?(?=## |\n## |^## |【|Output\s*Generation|Generating)/is, '');
+    t = t.replace(/Thinking\s*[Pp]rocess:.*?(?=## |\n## |^## |【|Output\s*Generation|Generating)/is, '');
+    t = t.replace(/Step\s*by\s*step\s+analysis:.*?(?=## |\n## |^## |【|Output\s*Generation|Generating)/is, '');
+    t = t.replace(/Let\s+me\s+analyze\s+this:.*?(?=## |\n## |^## |【|Output\s*Generation|Generating)/is, '');
+    t = t.replace(/\n?Output\s*Generation.*$/is, '');
+    t = t.replace(/\n?\*\(Self-Correction[\s\S]*?\)\*\s*$/is, '');
+    t = t.replace(/\n?\*\*?Self-Correction[\s\S]*?\*\*?\s*$/is, '');
+    // 兜底:剥 <think> / <thinking> / <reflection> 标签
+    t = t.replace(/<think>[\s\S]*?<\/think>/gi, '');
+    t = t.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
+    t = t.replace(/<reflection>[\s\S]*?<\/reflection>/gi, '');
+    return t.trim();
   }
 
+  // SSE 流式读取器(OpenAI 兼容格式),实时过滤 thinking
   async function readSSE(body, onChunk) {
     const reader = body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let full = '';
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || !trimmed.startsWith('data:')) continue;
-        const data = trimmed.slice(5).trim();
-        if (data === '[DONE]') continue;
-        try {
-          const json = JSON.parse(data);
-          const delta = json.choices?.[0]?.delta?.content || json.choices?.[0]?.message?.content || '';
-          if (delta) {
-            full += delta;
-            onChunk && onChunk(delta, full);
-          }
-        } catch (e) {
-          // 非 JSON 行跳过(部分兼容实现)
+    const decoder = new TextDecoder('utf-8');
+    let buf = '';
+    let rawFull = '';
+    let filteredFull = '';
+    let chunkCount = 0;
+    const startTime = Date.now();
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() || '';
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue;
+          const payload = line.slice(5).trim();
+          if (payload === '[DONE]') continue;
+          try {
+            const obj = JSON.parse(payload);
+            // 防御:处理 reasoning_content(Qwen3.x 等模型)
+            const delta = obj.choices?.[0]?.delta?.content || '';
+            const reasoning = obj.choices?.[0]?.delta?.reasoning_content || '';
+            const text = delta || reasoning;
+            if (text) {
+              rawFull += text;
+              chunkCount++;
+              const newFiltered = stripThinking(rawFull);
+              if (newFiltered.length > filteredFull.length) {
+                const passThrough = newFiltered.slice(filteredFull.length);
+                filteredFull = newFiltered;
+                onChunk(passThrough, filteredFull);
+              }
+            }
+          } catch (e) { /* 忽略单行解析错误,继续 */ }
         }
       }
+    } catch (e) {
+      console.error('SSE 读取中断:', e.message);
     }
-    return full;
+    const elapsed = Date.now() - startTime;
+    console.log(`SSE 完成: ${chunkCount} 块, 原始${rawFull.length}字 → 过滤后${filteredFull.length}字, ${elapsed}ms`);
+    return filteredFull;
   }
 
   function getLocalServerUrl() {
-    const ip = localStorage.getItem('local_server_ip') || '127.0.0.1';
-    const port = localStorage.getItem('local_server_port') || '1234';
+    const ip = (localStorage.getItem('local_server_ip') || '192.168.1.3').replace(/\/$/, '');
+    const port = localStorage.getItem('local_server_port') || '8082';
     return `http://${ip}:${port}`;
+  }
+  function getLocalServerIp() {
+    return (localStorage.getItem('local_server_ip') || '192.168.1.3').replace(/\/$/, '');
+  }
+  function getLocalServerPort() {
+    return localStorage.getItem('local_server_port') || '8082';
   }
 
   let _currentStreamAbort = null;
@@ -68,18 +100,22 @@
     }
     messages.push({ role: 'user', content: prompt + '\n\n【再次强调】请用纯中文回答，不要出现任何英文。' });
 
-    const LOCAL_TIMEOUT = 360000;
-    const CLOUD_TIMEOUT = 120000;
+    const LOCAL_TIMEOUT = 360000; // 6 分钟
+    const CLOUD_TIMEOUT = 120000; // 2 分钟
     const MAX_TOKENS = 4096;
     const showToast = window.Core?.Toast?.showToast || function () {};
 
     if (useLocal) {
       showToast('本地模型正在深度思考（最长6分钟），请耐心等待...', 'success');
       const localUrl = `${getLocalServerUrl()}/v1/chat/completions`;
+      let localTimer, localP1, localP2;
       try {
         const ctrl = new AbortController();
-        const localTimer = setTimeout(() => ctrl.abort(), LOCAL_TIMEOUT);
+        localTimer = setTimeout(() => ctrl.abort(), LOCAL_TIMEOUT);
         if (externalAbort) externalAbort.addEventListener('abort', () => ctrl.abort());
+        localP1 = setTimeout(() => showToast('AI 仍在思考，已等待 2 分钟...', 'success'), 120000);
+        localP2 = setTimeout(() => showToast('AI 仍在思考，已等待 4 分钟...', 'success'), 240000);
+
         const res = await fetch(localUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -87,48 +123,86 @@
           signal: ctrl.signal
         });
         clearTimeout(localTimer);
+        clearTimeout(localP1);
+        clearTimeout(localP2);
+
         if (res.ok) {
           if (onChunk && res.body) return await readSSE(res.body, onChunk);
           const data = await res.json();
           if (data.choices?.[0]?.message?.content) {
             const full = data.choices[0].message.content;
-            onChunk && onChunk(full, full);
-            return full;
+            return stripThinking(full);
           }
+          throw new Error('本地模型返回格式异常');
         }
-        showToast('本地模型不可用,已切换到云端', 'error');
+        const errText = await res.text().catch(() => '');
+        console.error('本地模型 HTTP 错误:', res.status, errText);
+        showToast(`本地模型错误 ${res.status}，自动切换云端...`, 'warning');
       } catch (e) {
-        showToast('本地模型连接失败,已切换到云端', 'error');
+        if (localTimer) clearTimeout(localTimer);
+        if (localP1) clearTimeout(localP1);
+        if (localP2) clearTimeout(localP2);
+        console.error('本地模型不可用:', e.message);
+        if (e.name === 'AbortError') {
+          showToast('本地模型超时(6分钟)，自动切换云端...', 'warning');
+        } else {
+          showToast('本地模型不可用，自动切换云端...', 'warning');
+        }
+        // 继续执行云端fallback
       }
     }
 
     // 云端 DeepSeek
-    const apiKey = localStorage.getItem('ds_api_key') || '';
+    const key = localStorage.getItem('ds_api_key') || '';
+    const isFallback = useLocal;
+    if (!key) throw new Error('请先在设置页配置 DeepSeek API Key,或启动本地模型 (LM Studio / Ollama)');
+    const model = optModel || localStorage.getItem('ds_model') || 'deepseek-chat';
+
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), CLOUD_TIMEOUT);
+    if (externalAbort) externalAbort.addEventListener('abort', () => ctrl.abort());
+    const useStream = !!onChunk;
     const baseUrl = (localStorage.getItem('ds_base_url') || 'https://api.deepseek.com/v1').replace(/\/v1\/?$/, '');
-    const ctrl2 = new AbortController();
-    const cloudTimer = setTimeout(() => ctrl2.abort(), CLOUD_TIMEOUT);
-    if (externalAbort) externalAbort.addEventListener('abort', () => ctrl2.abort());
+
     try {
       const res = await fetch(`${baseUrl}/v1/chat/completions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({ model: optModel || localStorage.getItem('ds_model') || 'deepseek-chat', messages, temperature, max_tokens: MAX_TOKENS, stream: !!onChunk }),
-        signal: ctrl2.signal
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + key
+        },
+        body: JSON.stringify({ model, messages, temperature, max_tokens: MAX_TOKENS, stream: useStream }),
+        signal: ctrl.signal
       });
-      clearTimeout(cloudTimer);
+      clearTimeout(timer);
+
       if (!res.ok) {
-        const errText = await res.text().catch(() => '');
+        const err = await res.json().catch(() => ({}));
+        const msg = err.error?.message || `HTTP ${res.status}`;
         if (res.status === 401) throw new Error('API Key 无效,请在设置中检查');
         if (res.status === 429) throw new Error('API 调用频率超限,请稍后再试');
-        throw new Error(`云端 API 错误 ${res.status}: ${errText.slice(0, 200)}`);
+        throw new Error('云端 API 错误: ' + msg);
       }
-      if (onChunk && res.body) return await readSSE(res.body, onChunk);
+
+      if (useStream && res.body) {
+        const full = await readSSE(res.body, onChunk);
+        return isFallback ? '[已自动切换至云端模型]\n\n' + full : full;
+      }
+
       const data = await res.json();
-      const full = data.choices?.[0]?.message?.content || '';
-      onChunk && onChunk(full, full);
-      return full;
-    } finally {
-      clearTimeout(cloudTimer);
+      const text = data.choices?.[0]?.message?.content;
+      if (!text || text.trim().length === 0) {
+        const reasoning = data.choices?.[0]?.message?.reasoning_content;
+        if (reasoning && reasoning.trim().length > 0) {
+          return '[模型返回思维链内容，无正式解读]\n\n' + reasoning;
+        }
+        throw new Error('模型返回空内容，请检查模型参数（如Qwen需加 --reasoning off）');
+      }
+      const cleanText = stripThinking(text);
+      return isFallback ? '[已自动切换至云端模型]\n\n' + cleanText : cleanText;
+    } catch (e) {
+      clearTimeout(timer);
+      throw e;
     }
   }
 
@@ -142,6 +216,8 @@
     readSSE,
     stripThinking,
     getLocalServerUrl,
+    getLocalServerIp,
+    getLocalServerPort,
     getCurrentStreamAbort,
     setCurrentStreamAbort,
     clearCurrentStreamAbort,

@@ -1,6 +1,7 @@
 /**
  * AI 占卜大师 - 主应用逻辑 (v2.0)
  * v2.0.1: 从 index.html 拆出 4770 行 inline JS
+ * v3.0.5: 拆分到 www/core/ 7 个模块 + 按域 app/*.js
  * 包含: 页面切换、状态管理、8 大流派的 UI 绑定 + AI 解读调用
  *
  * 设计原则:
@@ -8,6 +9,26 @@
  *   - 不使用 ES module (避免 onclick 失效)
  *   - 按流派/特性分组,后续可拆分为 ui-bazi.js / ui-ziwei.js ...
  */
+
+// ========== 兼容层: HTML onclick 调用,需在所有 IIFE 之前设置 ==========
+// core/*.js 已在 app.js 之前加载,这里把 Core.* 重新挂到 window 上以匹配 onclick 属性
+// 以及 app/*.js 中的 bare 调用(callDeepSeek/getLocalServerUrl/stripThinking 等)
+window.switchPage = Core.Router.switchPage;
+window.showToast = Core.Toast.showToast;
+window.initDateInputs = Core.Util.initDateInputs;
+window.selCal = Core.Util.selCal;
+window.selLeap = Core.Util.selLeap;
+window.selGender = Core.Util.selGender;
+window.stopCurrentStream = Core.Stream.stopCurrentStream;
+window.escapeHtml = Core.Util.escapeHtml;
+window.judgeWangShuai = Core.Util.judgeWangShuai;
+window.stripThinking = Core.AI.stripThinking;
+window.WX = Core.Util.WX;
+window.callDeepSeek = Core.AI.callDeepSeek;
+window.readSSE = Core.AI.readSSE;
+window.getLocalServerUrl = Core.AI.getLocalServerUrl;
+window.getLocalServerIp = Core.AI.getLocalServerIp;
+window.getLocalServerPort = Core.AI.getLocalServerPort;
 
 // 启动时强制加载 Expert/RAG（解决大文件脚本加载不稳定问题）
 // 注意：file:// 协议下 fetch 被 CORS 阻止，依赖 script src 标签加载
@@ -58,58 +79,7 @@ var APP_BUILD_DATE = '2026-07-06';
 
 
 
-// ========== 全局状态 ==========
-let state = {
-  bazi: { cal:'solar', leap:false, gender:'male' },
-  zw:   { cal:'solar', leap:false, gender:'male' },
-  liuyao: { method:'time', mode:'normal' },
-};
-let currentBazi = null, currentBaziPrompt = '';
-let currentZw = null, currentZwPrompt = '';
-let currentLy = null, currentLyPrompt = '';
-let currentQm = null, currentQmPrompt = '';
-let currentXs = null, currentXsPrompt = '';
-let currentCross = null, currentCrossPrompt = '';
-let currentFs = null, currentFsPrompt = '';
-
-// 追问模式：保存之前的内容前缀
-let _followUpPrefix = '';
-
-// v1.3.1 安全修复: 严禁硬编码任何 API Key,默认值必须为空
-// 用户在设置页 (settings) 配置后存到 localStorage['ds_api_key']
-var DEFAULT_API_KEY = '';
-var DEFAULT_VISION_KEY = '';
-
-// ========== 页面切换 ==========
-function switchPage(name) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.bottom-nav button').forEach(b => b.classList.remove('active'));
-  document.getElementById('page' + name[0].toUpperCase() + name.slice(1)).classList.add('active');
-  document.getElementById('nav' + name[0].toUpperCase() + name.slice(1)).classList.add('active');
-  // v1.2.15 按需预加载对应领域 KB 组（后台加载，不阻塞 UI）
-  ensureCoreKB().catch(e => console.warn('core KB fail:', e));
-  const groups = PAGE_KB_GROUPS[name];
-  if (groups) loadKBGroups(groups).catch(e => console.warn('KB group preload fail:', e));
-  if (name === 'settings') renderHistory();
-}
-window.switchPage = switchPage;
-
-// ========== 通用 UI 函数 ==========
-function showToast(msg, type) {
-  let toast = document.getElementById('toast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'toast';
-    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);color:#fff;padding:10px 20px;border-radius:8px;font-size:0.9rem;z-index:9999;opacity:0;transition:opacity 0.3s;white-space:nowrap;pointer-events:none;';
-    document.body.appendChild(toast);
-  }
-  toast.textContent = msg;
-  toast.style.background = type === 'error' ? '#c94c4c' : type === 'success' ? '#5a9a5a' : '#c9a84c';
-  toast.style.opacity = '1';
-  clearTimeout(toast._timer);
-  toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 3000);
-}
-window.showToast = showToast;
+// ========== 全局状态(已搬到 core/state.js,通过 window.* 引用) ==========
 
 // ========== 结果导出 ==========
 function copyResult(contentId) {
@@ -498,65 +468,8 @@ function getSimilarHistoryPrompt(domain, signal, question) {
 }
 window.getSimilarHistoryPrompt = getSimilarHistoryPrompt;
 
-function initDateInputs() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth() + 1;
-  const d = now.getDate();
-  const h = now.getHours();
-  const zhiIdx = Math.floor((h + 1) / 2) % 12;
-
-  const baziY = document.getElementById('baziYear');
-  const baziM = document.getElementById('baziMonth');
-  const baziD = document.getElementById('baziDay');
-  const baziH = document.getElementById('baziHour');
-  if (baziY) { baziY.value = y; baziM.value = m; baziD.value = d; baziH.value = h; }
-
-  const zwY = document.getElementById('zwYear');
-  const zwM = document.getElementById('zwMonth');
-  const zwD = document.getElementById('zwDay');
-  const zwH = document.getElementById('zwHour');
-  if (zwY) { zwY.value = y; zwM.value = m; zwD.value = d; }
-  if (zwH) zwH.value = zhiIdx;
-
-  const qmY = document.getElementById('qmYear');
-  const qmM = document.getElementById('qmMonth');
-  const qmD = document.getElementById('qmDay');
-  const qmH = document.getElementById('qmHour');
-  if (qmY) { qmY.value = y; qmM.value = m; qmD.value = d; qmH.value = h; }
-
-  // 三术同参
-  const cxY = document.getElementById('cxYear');
-  const cxM = document.getElementById('cxMonth');
-  const cxD = document.getElementById('cxDay');
-  const cxH = document.getElementById('cxHour');
-  if (cxY) { cxY.value = y; cxM.value = m; cxD.value = d; cxH.value = h; }
-}
-window.initDateInputs = initDateInputs;
-
-function selCal(btn, prefix) {
-  document.querySelectorAll(`[data-cal]`).forEach(b => {
-    if(b.closest('#page' + (prefix==='bazi'?'Bazi':'Ziwei'))) b.classList.remove('active');
-  });
-  btn.classList.add('active');
-  state[prefix].cal = btn.dataset.cal;
-  document.getElementById(prefix + 'LeapWrap').style.display = btn.dataset.cal === 'lunar' ? 'block' : 'none';
-}
-function selLeap(btn, prefix) {
-  document.querySelectorAll(`[data-leap]`).forEach(b => {
-    if(b.closest('#page' + (prefix==='bazi'?'Bazi':'Ziwei'))) b.classList.remove('active');
-  });
-  btn.classList.add('active');
-  state[prefix].leap = btn.dataset.leap === 'true';
-}
-function selGender(btn, prefix) {
-  document.querySelectorAll(`[data-gender]`).forEach(b => {
-    if(b.closest('#page' + (prefix==='bazi'?'Bazi':'Ziwei'))) b.classList.remove('active');
-  });
-  btn.classList.add('active');
-  state[prefix].gender = btn.dataset.gender;
-}
-window.selCal = selCal; window.selLeap = selLeap; window.selGender = selGender;
+// initDateInputs / selCal / selLeap / selGender 已搬到 core/util.js
+// 通过顶部 compat shim 在 window 上暴露,保持 HTML onclick 兼容
 
 // ========== 设置 ==========
 function loadSettings() {
@@ -626,86 +539,7 @@ function updateApiStatus(key) {
   dot.className = 'status-dot ' + (key && key.length > 20 ? 'status-ok' : 'status-fail');
 }
 
-// 获取本地服务器IP和端口
-function getLocalServerIp() {
-  return (localStorage.getItem('local_server_ip') || '192.168.1.3').replace(/\/$/, '');
-}
-function getLocalServerPort() {
-  return localStorage.getItem('local_server_port') || '8082';
-}
-function getLocalServerUrl() {
-  return `http://${getLocalServerIp()}:${getLocalServerPort()}`;
-}
-
-// 过滤模型输出的英文 thinking / 分析过程，只保留中文正文
-function stripThinking(text) {
-  if (!text) return '';
-  // 匹配常见的英文 thinking 开头，一直到中文内容开始（## 标题 或 【 或 结论性内容）
-  let t = text;
-  // 模式1: Here's a thinking process: ... 到中文标题前
-  t = t.replace(/Here's\s+a\s+thinking\s*process:.*?(?=## |\n## |^## |【|Output\s*Generation|Generating)/is, '');
-  // 模式2: Thinking Process: ...
-  t = t.replace(/Thinking\s*[Pp]rocess:.*?(?=## |\n## |^## |【|Output\s*Generation|Generating)/is, '');
-  // 模式3: Step by step analysis: ...
-  t = t.replace(/Step\s*by\s*step\s*analysis:.*?(?=## |\n## |^## |【|Output\s*Generation|Generating)/is, '');
-  // 模式4: Let me analyze this: ...
-  t = t.replace(/Let\s+me\s+analyze\s+this:.*?(?=## |\n## |^## |【|Output\s*Generation|Generating)/is, '');
-  // 模式5: 单独的 "Output Generation" / "Generating..." / "Self-Correction" 等元标记
-  t = t.replace(/\n?Output\s*Generation.*$/is, '');
-  t = t.replace(/\n?\*\(Self-Correction[\s\S]*?\)\*\s*$/is, '');
-  t = t.replace(/\n?\*\*?Self-Correction[\s\S]*?\*\*?\s*$/is, '');
-  return t;
-}
-
-// SSE 流式读取器（OpenAI 兼容格式）
-async function readSSE(body, onChunk) {
-  const reader = body.getReader();
-  const decoder = new TextDecoder('utf-8');
-  let buf = '';
-  let rawFull = '';      // 原始累积（含 thinking）
-  let filteredFull = ''; // 过滤后累积（用户看到的内容）
-  let chunkCount = 0;
-  const startTime = Date.now();
-  try {
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-      const lines = buf.split('\n');
-      buf = lines.pop() || '';
-      for (const line of lines) {
-        if (!line.startsWith('data:')) continue;
-        const payload = line.slice(5).trim();
-        if (payload === '[DONE]') continue;
-        try {
-          const obj = JSON.parse(payload);
-          // 防御：处理 reasoning_content（Qwen3.x 等模型）
-          const delta = obj.choices?.[0]?.delta?.content || '';
-          const reasoning = obj.choices?.[0]?.delta?.reasoning_content || '';
-          const text = delta || reasoning;
-          if (text) {
-            rawFull += text;
-            chunkCount++;
-            // 实时过滤 thinking，只传递新增的过滤后内容
-            const newFiltered = stripThinking(rawFull);
-            if (newFiltered.length > filteredFull.length) {
-              const passThrough = newFiltered.slice(filteredFull.length);
-              filteredFull = newFiltered;
-              onChunk(passThrough, filteredFull);
-            }
-            // 如果过滤后没有新增内容，不调用 onChunk（用户看不到 thinking）
-          }
-        } catch (e) { /* 忽略单行解析错误，继续 */ }
-      }
-    }
-  } catch (e) {
-    console.error('SSE 读取中断:', e.message);
-    // 返回已接收的部分内容，不抛错
-  }
-  const elapsed = Date.now() - startTime;
-  console.log(`SSE 完成: ${chunkCount} 块, 原始${rawFull.length}字 → 过滤后${filteredFull.length}字, ${elapsed}ms`);
-  return filteredFull;
-}
+// [MIGRATED] getLocalServerIp/Port/Url → core/ai-service.js (compat shim at top)
 
 // 自动扫描局域网找本地模型服务器
 async function autoDiscoverServer() {
@@ -1247,51 +1081,6 @@ async function ensureKB() {
   await ensureCoreKB();
 }
 
-var WX = { '甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水',
-             '子':'水','丑':'土','寅':'木','卯':'木','辰':'土','巳':'火','午':'火','未':'土','申':'金','酉':'金','戌':'土','亥':'水' };
-
-function judgeWangShuai(dayGan, gz) {
-  const wuXing = WX[dayGan];
-  const monthZhi = gz.month[1];
-  const lingWang = {
-    '木': ['寅','卯'], '火': ['巳','午'], '土': ['辰','戌','丑','未'],
-    '金': ['申','酉'], '水': ['亥','子']
-  };
-  const lingXiang = {
-    '木': ['亥','子'], '火': ['寅','卯'], '土': ['巳','午'],
-    '金': ['辰','戌','丑','未'], '水': ['申','酉']
-  };
-  const lingXiu = {
-    '木': ['巳','午'], '火': ['辰','戌','丑','未'], '土': ['申','酉'],
-    '金': ['亥','子'], '水': ['寅','卯']
-  };
-  const lingJue = {
-    '木': ['申','酉'], '火': ['亥','子'], '土': ['寅','卯'],
-    '金': ['巳','午'], '水': ['辰','戌','丑','未']
-  };
-  let score = 0;
-  if (lingWang[wuXing].includes(monthZhi)) score += 3;
-  else if (lingXiang[wuXing].includes(monthZhi)) score += 2;
-  else if (lingXiu[wuXing].includes(monthZhi)) score += 0;
-  else if (lingJue[wuXing].includes(monthZhi)) score -= 2;
-  else score -= 1;
-  const roots = {
-    '木': ['寅','卯'], '火': ['巳','午'], '土': ['辰','戌','丑','未'],
-    '金': ['申','酉'], '水': ['亥','子']
-  };
-  for (const k of ['year','month','hour']) {
-    if (roots[wuXing].includes(gz[k][1])) score += 1;
-  }
-  const biJie = {
-    '甲': ['甲','乙'], '乙': ['甲','乙'], '丙': ['丙','丁'], '丁': ['丙','丁'],
-    '戊': ['戊','己'], '己': ['戊','己'], '庚': ['庚','辛'], '辛': ['庚','辛'],
-    '壬': ['壬','癸'], '癸': ['壬','癸']
-  };
-  for (const k of ['year','month','hour']) {
-    if (biJie[dayGan].includes(gz[k][0])) score += 1;
-  }
-  return score >= 3 ? '身强' : '身弱';
-}
 
 function kbBazi(pan) {
   const k = _kb?.bazi || {};
@@ -2282,177 +2071,6 @@ function getActiveABConfig() {
   }
 }
 
-// v1.4 流式输出控制: 当前活跃流的 AbortController + 状态指示器
-let _currentStreamAbort = null;
-let _streamIndicator = null;
-function stopCurrentStream() {
-  if (_currentStreamAbort) {
-    _currentStreamAbort.abort();
-    _currentStreamAbort = null;
-    console.log('[Stream] 已停止');
-    if (typeof showToast === 'function') showToast('已停止生成', 'warning');
-  }
-  hideStreamIndicator();
-}
-window.stopCurrentStream = stopCurrentStream;
-
-function showStreamIndicator() {
-  if (_streamIndicator) return;
-  _streamIndicator = document.createElement('div');
-  _streamIndicator.id = 'streamIndicator';
-  _streamIndicator.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(20,18,16,0.95);color:var(--accent-gold);padding:0.5rem 1rem;border-radius:20px;border:1px solid var(--accent-gold);font-size:0.8rem;display:flex;align-items:center;gap:0.6rem;box-shadow:0 2px 12px rgba(0,0,0,0.5);';
-  _streamIndicator.innerHTML = `
-    <span style="display:inline-flex;gap:2px;">
-      <span style="width:6px;height:6px;background:var(--accent-gold);border-radius:50%;animation:streamDot 1.4s infinite;"></span>
-      <span style="width:6px;height:6px;background:var(--accent-gold);border-radius:50%;animation:streamDot 1.4s 0.2s infinite;"></span>
-      <span style="width:6px;height:6px;background:var(--accent-gold);border-radius:50%;animation:streamDot 1.4s 0.4s infinite;"></span>
-    </span>
-    <span>正在生成...</span>
-    <button onclick="stopCurrentStream()" style="background:var(--accent-red);color:#fff;border:none;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.7rem;cursor:pointer;">⏹ 停止</button>
-  `;
-  document.body.appendChild(_streamIndicator);
-  // 注入 CSS 动画
-  if (!document.getElementById('streamIndicatorCSS')) {
-    const s = document.createElement('style');
-    s.id = 'streamIndicatorCSS';
-    s.textContent = '@keyframes streamDot{0%,60%,100%{opacity:0.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}';
-    document.head.appendChild(s);
-  }
-}
-
-function hideStreamIndicator() {
-  if (_streamIndicator) {
-    _streamIndicator.remove();
-    _streamIndicator = null;
-  }
-}
-
-async function callDeepSeek(prompt, system, onChunk, opts = {}) {
-  const { temperature = 0.15, model: optModel, signal: externalSignal } = opts;
-  const useLocal = localStorage.getItem('use_local_model') === '1';
-  // v1.4 流式控制: 用外部 signal (如果有) + 内部 timeout signal
-  const externalAbort = externalSignal || new AbortController().signal;
-  _currentStreamAbort = externalSignal ? null : new AbortController();
-  const messages = [];
-  const chineseConstraint = '【铁律·语言约束】你的所有输出必须使用纯中文。严禁输出任何英文单词、英文句子、中英文混合内容。严禁输出思考过程、分析步骤、"thinking process"、"step by step"、"let me think"等元内容。如果你需要推理，请在心中完成，只向用户展示最终的中文解读结果。\n\n';
-  if (system) {
-    messages.push({ role: 'system', content: chineseConstraint + system });
-  } else {
-    messages.push({ role: 'system', content: chineseConstraint });
-  }
-  messages.push({ role: 'user', content: prompt + '\n\n【再次强调】请用纯中文回答，不要出现任何英文。' });
-
-  // 统一超时配置（本地模型推理慢，但10分钟太长，改为6分钟+优雅降级）
-  const LOCAL_TIMEOUT = 360000; // 6分钟
-  const CLOUD_TIMEOUT = 120000; // 2分钟
-  const MAX_TOKENS = 4096;
-
-  if (useLocal) {
-    showToast('本地模型正在深度思考（最长6分钟），请耐心等待...', 'success');
-    const localUrl = `${getLocalServerUrl()}/v1/chat/completions`;
-    let localTimer, localP1, localP2;
-    try {
-      const ctrl = new AbortController();
-      localTimer = setTimeout(() => ctrl.abort(), LOCAL_TIMEOUT);
-      // v1.4 流式控制: 外部停止时也 abort
-      if (externalAbort) externalAbort.addEventListener('abort', () => ctrl.abort());
-      // 进度提示
-      localP1 = setTimeout(() => showToast('AI 仍在思考，已等待 2 分钟...', 'success'), 120000);
-      localP2 = setTimeout(() => showToast('AI 仍在思考，已等待 4 分钟...', 'success'), 240000);
-
-      const res = await fetch(localUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'local', messages, temperature, max_tokens: MAX_TOKENS, stream: !!onChunk }),
-        signal: ctrl.signal
-      });
-      clearTimeout(localTimer);
-      clearTimeout(localP1);
-      clearTimeout(localP2);
-
-      if (res.ok) {
-        if (onChunk && res.body) {
-          const full = await readSSE(res.body, onChunk);
-          return full;
-        }
-        const data = await res.json();
-        if (data.choices?.[0]?.message?.content) {
-          return stripThinking(data.choices[0].message.content);
-        }
-        throw new Error('本地模型返回格式异常');
-      }
-      const errText = await res.text().catch(() => '');
-      console.error('本地模型 HTTP 错误:', res.status, errText);
-      // 本地失败不抛错，继续fallback到云端
-      showToast(`本地模型错误 ${res.status}，自动切换云端...`, 'warning');
-    } catch (e) {
-      if (localTimer) clearTimeout(localTimer);
-      if (localP1) clearTimeout(localP1);
-      if (localP2) clearTimeout(localP2);
-      console.error('本地模型不可用:', e.message);
-      if (e.name === 'AbortError') {
-        showToast('本地模型超时(6分钟)，自动切换云端...', 'warning');
-      } else {
-        showToast('本地模型不可用，自动切换云端...', 'warning');
-      }
-      // 继续执行云端fallback
-    }
-  }
-
-  const key = localStorage.getItem('ds_api_key') || DEFAULT_API_KEY;
-  const isFallback = useLocal;
-  // v1.3.1 安全修复: 不再 fallback 到硬编码 DEFAULT_API_KEY (已设为空)
-  if (!key) throw new Error('请先在设置页配置 DeepSeek API Key,或启动本地模型 (LM Studio / Ollama)');
-  const model = optModel || localStorage.getItem('ds_model') || 'deepseek-chat';
-
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), CLOUD_TIMEOUT);
-  // v1.4 流式控制: 外部停止时也 abort
-  if (externalAbort) externalAbort.addEventListener('abort', () => ctrl.abort());
-  const useStream = !!onChunk;
-
-  try {
-    const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + key
-      },
-      body: JSON.stringify({ model, messages, temperature, max_tokens: MAX_TOKENS, stream: useStream }),
-      signal: ctrl.signal
-    });
-    clearTimeout(timer);
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error?.message || 'HTTP ' + res.status);
-    }
-
-    if (useStream && res.body) {
-      const full = await readSSE(res.body, onChunk);
-      if (isFallback) return '[已自动切换至云端模型]\n\n' + full;
-      return full;
-    }
-
-    const data = await res.json();
-    // 防御性检查：防止reasoning模型返回空content
-    const text = data.choices?.[0]?.message?.content;
-    if (!text || text.trim().length === 0) {
-      const reasoning = data.choices?.[0]?.message?.reasoning_content;
-      if (reasoning && reasoning.trim().length > 0) {
-        return '[模型返回思维链内容，无正式解读]\n\n' + reasoning;
-      }
-      throw new Error('模型返回空内容，请检查模型参数（如Qwen需加--reasoning off）');
-    }
-
-    const cleanText = stripThinking(text);
-    if (isFallback) return '[已自动切换至云端模型]\n\n' + cleanText;
-    return cleanText;
-  } catch (e) {
-    clearTimeout(timer);
-    throw e;
-  }
-}
 
 
 
@@ -2460,12 +2078,6 @@ async function callDeepSeek(prompt, system, onChunk, opts = {}) {
 
 
 
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
 
 
 document.addEventListener('DOMContentLoaded', () => {
