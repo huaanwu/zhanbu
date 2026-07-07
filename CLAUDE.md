@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# AI 占卜大师 v3.0.4
+# AI 占卜大师 v3.0.5
 
 Capacitor + Vite + 原生 JS 的多流派占卜 Android / PWA 应用。覆盖八字 / 六爻 / 奇门 / 紫微 / 面相 / 手相 / 风水 / 佛道等流派,65+ 知识库 JSON,DeepSeek/OpenAI/本地大模型 解读。
 
@@ -10,6 +10,7 @@ v3.0 主要升级:
 - v1.4: AES-GCM 加密、历史/反馈加密、SSE 流式、ChatSession 追问、本地大模型 CORS 修复
 - v2.0: 知识库 bundle、可选真 embedding、TypeScript 渐进迁移、app.js 从 index.html 拆出
 - v3.0: PWA + Service Worker 离线、GitHub Actions CI、app.js 按域代码分割、IndexedDB embedding 向量缓存
+- v3.0.5: Core 模块拆分(event-bus/toast/ai-service/stream/util/router/state)+ 统一 AI 入口 `Core.AI.interpret()`(缓存 + 流式 + 事件派发)
 
 ## 常用命令
 
@@ -74,7 +75,7 @@ node scripts/send-feishu.js <file_path>                # 默认推到武华安�
 - **隐私层** (`crypto.js` + `chat.js`):敏感 birth/历史/反馈/对话 AES-GCM 加密,设备绑定 key。
 - **持久化层** (`history.js` / `feedback.js` / `cache.js` / `chat.js`):localStorage + IndexedDB;**升级 APP 版本时 cache 自动清空**(通过 `window.APP_VERSION` 触发,见 `www/app.js`)。
 
-## 关键约束(v3.0.4 强制)
+## 关键约束(v3.0.5 强制)
 
 | 项 | 规则 |
 |----|------|

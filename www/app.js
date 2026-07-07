@@ -48,8 +48,8 @@ window.getLocalServerPort = Core.AI.getLocalServerPort;
   }
 })();
 
-var APP_VERSION = 'v3.0.4';
-var APP_BUILD_DATE = '2026-07-06';
+var APP_VERSION = 'v3.0.5';
+var APP_BUILD_DATE = '2026-07-07';
 
 // ========== 版本升级清理旧配置 ==========
 (function() {
