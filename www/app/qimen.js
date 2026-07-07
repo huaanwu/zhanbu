@@ -115,34 +115,25 @@ async function doAIQimen() {
           if (abCfg.useFewshot)         instruction += (instruction ? '\n\n' : '') + window.Expert.fewshot('奇门');
           return instruction;
         })();
-    // 缓存查询
-    const qmParams = { ...currentQm, question: currentQm.question };
-    const cached = window.Cache ? window.Cache.get('qimen', qmParams) : null;
-    if (cached) {
-      fullText = cached;
-      content.textContent = prefix + separator + cached;
-      const finalText0 = prefix + separator + cached;
-      saveHistory('qimen', currentQm.jushu_text, currentQm.question || '奇门解读', finalText0);
-      addFeedbackUI('qimen', content, finalText0, currentQmPrompt, system);
-      showResultActions('qmAIContent', 'qmAIActions');
-      return;
-    }
-    showStreamIndicator();
-    const text = await callDeepSeek(currentQmPrompt, system, (delta, full) => {
-      fullText = full;
-      content.textContent = prefix + separator + full;
+    // v3.0.5: 统一 AI 入口(任务 #19)
+    const { finalText } = await Core.AI.interpret({
+      domain: 'qimen',
+      prompt: currentQmPrompt,
+      system,
+      pan: currentQm,
+      question: currentQm.question,
+      contentEl: content,
+      prefix,
+      separator,
     });
-    const finalText = prefix + separator + (fullText || text);
-    if (window.Cache && finalText) {
-      try { window.Cache.set('qimen', qmParams, finalText); } catch (e) { console.warn('[Cache] set qimen failed:', e); }
-    }
     saveHistory('qimen', currentQm.jushu_text, currentQm.question || '奇门解读', finalText);
     addFeedbackUI('qimen', content, finalText, currentQmPrompt, system);
     showResultActions('qmAIContent', 'qmAIActions');
   } catch (e) {
     content.innerHTML = prefix + separator + `<div class="error">${escapeHtml(e.message)}</div>`;
   } finally {
-    btn.disabled = false; btn.textContent = 'AI 解读'; hideStreamIndicator();
+    btn.disabled = false; btn.textContent = 'AI 解读';
+    if (window.Core?.Stream?.hideStreamIndicator) window.Core.Stream.hideStreamIndicator();
   }
 }
 window.doAIQimen = doAIQimen;

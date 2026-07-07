@@ -392,7 +392,14 @@ ${kbBuddhismDivine()}
 
   const prompt = `我的困扰：${input}\n\n请给出化解方案。`;
   try {
-    const text = await callDeepSeek(prompt, system, null, { temperature: 0.3 });
+    // v3.0.5: 统一 AI 入口(任务 #19)— 单次非流式调用,直接渲染到 result.innerHTML
+    const { finalText: text } = await Core.AI.interpret({
+      domain: 'daofobuddhism',
+      prompt,
+      system,
+      question: input,
+      callOpts: { temperature: 0.3 },
+    });
     result.innerHTML = `<div style="background:var(--bg-inner);border-radius:8px;padding:0.8rem;line-height:1.7;font-size:0.9rem;white-space:pre-wrap;">${text}</div>
       <div style="margin-top:0.5rem;display:flex;gap:0.4rem;justify-content:flex-end;">
         <button onclick="navigator.clipboard.writeText(\`${text.replace(/`/g, '\\`').replace(/\\/g, '\\\\')}\`);showToast('已复制','success');" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:0.3rem 0.6rem;border-radius:4px;font-size:0.75rem;cursor:pointer;">📋 复制</button>

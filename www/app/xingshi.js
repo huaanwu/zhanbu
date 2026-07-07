@@ -90,21 +90,25 @@ async function doAIXingshi() {
   let fullText = '';
   try {
     const sys = '你是一位精通姓名学的命理大师，请根据五格剖象进行专业解读。重点说明人格（主运）、地格（基础）、总格（后运）的吉凶含义，并结合三才配置分析。注意：吉数并非绝对好，需要配合三才平衡。' + kbPrimary('xingshi') + kbExtended('xingshi', currentXs.birth);
-    const out = await callDeepSeek(currentXsPrompt, sys, (delta, full) => {
-      fullText = full;
-      text.textContent = prefix + separator + full;
+    // v3.0.5: 统一 AI 入口(任务 #19)
+    await Core.AI.interpret({
+      domain: 'xingshi',
+      prompt: currentXsPrompt,
+      system: sys,
+      pan: currentXs,
+      question: currentXs.birth || '',
+      contentEl: text,
+      prefix,
+      separator,
     });
-    if (!fullText && out) {
-      fullText = out;
-      text.textContent = prefix + separator + out;
-    }
     showResultActions('xsAIText', 'xsAIActions');
   } catch (e) {
     text.innerHTML = prefix + separator + '<div class="error">解读失败: ' + escapeHtml(e.message) + '</div>';
     text.style.display = 'block';
     loading.style.display = 'none';
   } finally {
-    btn.disabled = false; btn.textContent = 'AI 解读'; hideStreamIndicator();
+    btn.disabled = false; btn.textContent = 'AI 解读';
+    if (window.Core?.Stream?.hideStreamIndicator) window.Core.Stream.hideStreamIndicator();
   }
 }
 window.doAIXingshi = doAIXingshi;

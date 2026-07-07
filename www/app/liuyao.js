@@ -287,34 +287,25 @@ async function doAILiuyao() {
     if ((state.liuyao.mode || 'normal') === 'xunwu') {
       system += '\n\n【此为寻物占】用户正在寻找丢失的物品。重点解读：方位、距离、环境特征、是否还在原处、找回可能性、最佳时间、具体建议。';
     }
-    // 缓存查询
-    const lyParams = { ...currentLy, question: currentLy.question };
-    const cached = window.Cache ? window.Cache.get('liuyao', lyParams) : null;
-    if (cached) {
-      fullText = cached;
-      content.textContent = prefix + separator + cached;
-      const finalText0 = prefix + separator + cached;
-      saveHistory('liuyao', currentLy.gua.name, currentLy.question || '六爻解读', finalText0);
-      addFeedbackUI('liuyao', content, finalText0, currentLyPrompt, system);
-      showResultActions('lyAIContent', 'lyAIActions');
-      return;
-    }
-    showStreamIndicator();
-    const text = await callDeepSeek(currentLyPrompt, system, (delta, full) => {
-      fullText = full;
-      content.textContent = prefix + separator + full;
+    // v3.0.5: 统一 AI 入口(任务 #19)
+    const { finalText } = await Core.AI.interpret({
+      domain: 'liuyao',
+      prompt: currentLyPrompt,
+      system,
+      pan: currentLy,
+      question: currentLy.question,
+      contentEl: content,
+      prefix,
+      separator,
     });
-    const finalText = prefix + separator + (fullText || text);
-    if (window.Cache && finalText) {
-      try { window.Cache.set('liuyao', lyParams, finalText); } catch (e) { console.warn('[Cache] set liuyao failed:', e); }
-    }
     saveHistory('liuyao', currentLy.gua.name, currentLy.question || '六爻解读', finalText);
     addFeedbackUI('liuyao', content, finalText, currentLyPrompt, system);
     showResultActions('lyAIContent', 'lyAIActions');
   } catch (e) {
     content.innerHTML = prefix + separator + `<div class="error">${escapeHtml(e.message)}</div>`;
   } finally {
-    btn.disabled = false; btn.textContent = 'AI 解读'; hideStreamIndicator();
+    btn.disabled = false; btn.textContent = 'AI 解读';
+    if (window.Core?.Stream?.hideStreamIndicator) window.Core.Stream.hideStreamIndicator();
   }
 }
 window.doAILiuyao = doAILiuyao;

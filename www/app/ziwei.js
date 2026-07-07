@@ -206,34 +206,25 @@ async function doAIZiwei() {
           if (abCfg.useFewshot)         instruction += (instruction ? '\n\n' : '') + window.Expert.fewshot('紫微');
           return instruction;
         })();
-    // 缓存查询
-    const zwParams = { ...currentZw, question: currentZw.question };
-    const cached = window.Cache ? window.Cache.get('ziwei', zwParams) : null;
-    if (cached) {
-      fullText = cached;
-      content.textContent = prefix + separator + cached;
-      const finalText0 = prefix + separator + cached;
-      saveHistory('ziwei', currentZw.mingGong.ganzhi, currentZw.question || '紫微解读', finalText0);
-      addFeedbackUI('ziwei', content, finalText0, currentZwPrompt, system);
-      showResultActions('zwAIContent', 'zwAIActions');
-      return;
-    }
-    showStreamIndicator();
-    const text = await callDeepSeek(currentZwPrompt, system, (delta, full) => {
-      fullText = full;
-      content.textContent = prefix + separator + full;
+    // v3.0.5: 统一 AI 入口(任务 #19)
+    const { finalText } = await Core.AI.interpret({
+      domain: 'ziwei',
+      prompt: currentZwPrompt,
+      system,
+      pan: currentZw,
+      question: currentZw.question,
+      contentEl: content,
+      prefix,
+      separator,
     });
-    const finalText = prefix + separator + (fullText || text);
-    if (window.Cache && finalText) {
-      try { window.Cache.set('ziwei', zwParams, finalText); } catch (e) { console.warn('[Cache] set ziwei failed:', e); }
-    }
     saveHistory('ziwei', currentZw.mingGong.ganzhi, currentZw.question || '紫微解读', finalText);
     addFeedbackUI('ziwei', content, finalText, currentZwPrompt, system);
     showResultActions('zwAIContent', 'zwAIActions');
   } catch (e) {
     content.innerHTML = prefix + separator + `<div class="error">${escapeHtml(e.message)}</div>`;
   } finally {
-    btn.disabled = false; btn.textContent = 'AI 解读'; hideStreamIndicator();
+    btn.disabled = false; btn.textContent = 'AI 解读';
+    if (window.Core?.Stream?.hideStreamIndicator) window.Core.Stream.hideStreamIndicator();
   }
 }
 window.doAIZiwei = doAIZiwei;

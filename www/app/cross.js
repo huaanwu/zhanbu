@@ -277,39 +277,20 @@ async function doAICross() {
           return instruction;
         })();
 
-    // 缓存查询(三术同参用 cross key)
-    const crossParams = { bazi: currentCross.bazi, liuyao: currentCross.liuyao, question: currentCross.question };
-    const cached = window.Cache ? window.Cache.get('cross', crossParams) : null;
-    if (cached) {
-      fullText = cached;
-      text.textContent = prefix + separator + cached;
-      const finalText0 = prefix + separator + cached;
-      saveHistory('cross', currentCross.bazi.gz.day, currentCross.question || '三术同参', finalText0);
-      addFeedbackUI('cross', text, finalText0, currentCrossPrompt, system);
-      showResultActions('crossAIContent', 'crossAIActions');
-      return;
-    }
-
     // 引导用户问题转化为三术共同关心的方向
-    showStreamIndicator();
-    const out = await callDeepSeek(currentCrossPrompt, system, (delta, full) => {
-      fullText = full;
-      text.textContent = prefix + separator + full;
+    // v3.0.5: 统一 AI 入口(任务 #19)— 三术同参用 crossParams 作为 cache key
+    const { finalText: outFinal } = await Core.AI.interpret({
+      domain: 'cross',
+      prompt: currentCrossPrompt,
+      system,
+      pan: { bazi: currentCross.bazi, liuyao: currentCross.liuyao },
+      question: currentCross.question,
+      contentEl: text,
+      prefix,
+      separator,
     });
-    // 流式失败兜底：用最终返回值
-    if (!fullText && out) {
-      fullText = out;
-      text.textContent = prefix + separator + out;
-    } else if (fullText && out && fullText.length < out.length) {
-      // 流式接收不完整（被截断）
-      text.textContent = prefix + separator + fullText + '\n\n... [内容已截断，完整内容见历史]';
-    }
-    const finalText = prefix + separator + (fullText || out);
-    if (window.Cache && finalText) {
-      try { window.Cache.set('cross', crossParams, finalText); } catch (e) { console.warn('[Cache] set cross failed:', e); }
-    }
-    saveHistory('cross', currentCross.bazi.gz.day, currentCross.question, finalText);
-    addFeedbackUI('cross', text, finalText, currentCrossPrompt, system);
+    saveHistory('cross', currentCross.bazi.gz.day, currentCross.question, outFinal);
+    addFeedbackUI('cross', text, outFinal, currentCrossPrompt, system);
     showResultActions('cxAIText', 'cxAIActions');
   } catch (e) {
     text.innerHTML = prefix + separator + '<div class="error">综合解读失败: ' + escapeHtml(e.message) + '</div>';
@@ -317,6 +298,7 @@ async function doAICross() {
     loading.style.display = 'none';
   } finally {
     btn.disabled = false; btn.textContent = 'AI 综合解读';
+    if (window.Core?.Stream?.hideStreamIndicator) window.Core.Stream.hideStreamIndicator();
   }
 }
 window.doAICross = doAICross;

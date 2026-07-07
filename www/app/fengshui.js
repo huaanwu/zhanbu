@@ -130,21 +130,25 @@ async function doAIFengshui() {
   let fullText = '';
   try {
     const sys = '你是一位精通八宅风水的大师，请根据命卦、宅卦、户型进行详细分析。重点说明：1.命卦与宅卦是否相合 2.四吉方如何利用 3.四凶方如何化解 4.卧室/客厅/厨房/书房的最佳布局建议。' + kbPrimary('fengshui') + kbExtended('fengshui', '');
-    const out = await callDeepSeek(currentFsPrompt, sys, (delta, full) => {
-      fullText = full;
-      text.textContent = prefix + separator + full;
+    // v3.0.5: 统一 AI 入口(任务 #19)
+    await Core.AI.interpret({
+      domain: 'fengshui',
+      prompt: currentFsPrompt,
+      system: sys,
+      pan: currentFs,
+      question: '',
+      contentEl: text,
+      prefix,
+      separator,
     });
-    if (!fullText && out) {
-      fullText = out;
-      text.textContent = prefix + separator + out;
-    }
     showResultActions('fsAIText', 'fsAIActions');
   } catch (e) {
     text.innerHTML = prefix + separator + '<div class="error">解读失败: ' + escapeHtml(e.message) + '</div>';
     text.style.display = 'block';
     loading.style.display = 'none';
   } finally {
-    btn.disabled = false; btn.textContent = 'AI 解读'; hideStreamIndicator();
+    btn.disabled = false; btn.textContent = 'AI 解读';
+    if (window.Core?.Stream?.hideStreamIndicator) window.Core.Stream.hideStreamIndicator();
   }
 }
 window.doAIFengshui = doAIFengshui;
