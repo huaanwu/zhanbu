@@ -402,10 +402,14 @@ ${kbBuddhismDivine()}
       question: input,
       callOpts: { temperature: 0.3 },
     });
-    result.innerHTML = `<div style="background:var(--bg-inner);border-radius:8px;padding:0.8rem;line-height:1.7;font-size:0.9rem;white-space:pre-wrap;">${text}</div>
+    const safeText = escapeHtml(text);
+    result.innerHTML = `<div style="background:var(--bg-inner);border-radius:8px;padding:0.8rem;line-height:1.7;font-size:0.9rem;white-space:pre-wrap;">${safeText}</div>
       <div style="margin-top:0.5rem;display:flex;gap:0.4rem;justify-content:flex-end;">
-        <button onclick="navigator.clipboard.writeText(\`${text.replace(/`/g, '\\`').replace(/\\/g, '\\\\')}\`);showToast('已复制','success');" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:0.3rem 0.6rem;border-radius:4px;font-size:0.75rem;cursor:pointer;">📋 复制</button>
+        <button class="dao-copy-btn" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:0.3rem 0.6rem;border-radius:4px;font-size:0.75rem;cursor:pointer;">📋 复制</button>
       </div>`;
+    result.querySelector('.dao-copy-btn').addEventListener('click', () => {
+      navigator.clipboard.writeText(text).then(() => showToast('已复制', 'success'));
+    });
   } catch (e) {
     result.innerHTML = `<div class="error">化解生成失败：${escapeHtml(e.message)}</div>`;
   }

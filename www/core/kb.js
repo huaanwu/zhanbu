@@ -237,19 +237,19 @@ async function _loadKBByKeys(keys) {
       if (bundle.startsWith('__single__')) {
         // 单文件 fallback
         const k = kList[0];
-        try {
-          const r = await fetch(KB_PATHS[k]);
-          if (r.ok) return [k, await r.json()];
-        } catch {}
-        return [k, {}];
-      }
-      if (!_bundleCache[bundle]) {
-        try {
-          const r = await fetch(`kb_data/_bundles/${bundle}`);
-          if (r.ok) _bundleCache[bundle] = await r.json();
-          else _bundleCache[bundle] = {};
-        } catch { _bundleCache[bundle] = {}; }
-      }
+       try {
+         const r = await fetch(KB_PATHS[k]);
+         if (r.ok) return [k, await r.json()];
+        } catch (e) { console.warn('[KB] 单文件加载失败:', e); }
+       return [k, {}];
+     }
+     if (!_bundleCache[bundle]) {
+       try {
+         const r = await fetch(`kb_data/_bundles/${bundle}`);
+         if (r.ok) _bundleCache[bundle] = await r.json();
+         else _bundleCache[bundle] = {};
+        } catch (e) { console.warn('[KB] bundle 加载失败:', e); _bundleCache[bundle] = {}; }
+     }
       const data = _bundleCache[bundle];
       const out = {};
       for (const k of kList) {

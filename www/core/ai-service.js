@@ -26,8 +26,13 @@
   }
 
   // SSE 流式读取器(OpenAI 兼容格式),实时过滤 thinking
-  async function readSSE(body, onChunk) {
+  async function readSSE(body, onChunk, signal = null) {
     const reader = body.getReader();
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        reader.cancel().catch(err => console.warn('[readSSE] reader.cancel 失败:', err));
+      });
+    }
     const decoder = new TextDecoder('utf-8');
     let buf = '';
     let rawFull = '';
@@ -61,11 +66,12 @@
                 onChunk(passThrough, filteredFull);
               }
             }
-          } catch (e) { /* 忽略单行解析错误,继续 */ }
+          } catch (e) { console.warn('[AI-SERVICE] SSE 单行解析错误:', e.message); }
         }
       }
     } catch (e) {
       console.error('SSE 读取中断:', e.message);
+      if (e.name === 'AbortError') throw e;
     }
     const elapsed = Date.now() - startTime;
     console.log(`SSE 完成: ${chunkCount} 块, 原始${rawFull.length}字 → 过滤后${filteredFull.length}字, ${elapsed}ms`);
@@ -127,7 +133,7 @@
         clearTimeout(localP2);
 
         if (res.ok) {
-          if (onChunk && res.body) return await readSSE(res.body, onChunk);
+          if (onChunk && res.body) return await readSSE(res.body, onChunk, ctrl.signal);
           const data = await res.json();
           if (data.choices?.[0]?.message?.content) {
             const full = data.choices[0].message.content;
@@ -185,7 +191,7 @@
       }
 
       if (useStream && res.body) {
-        const full = await readSSE(res.body, onChunk);
+        const full = await readSSE(res.body, onChunk, ctrl.signal);
         return isFallback ? '[已自动切换至云端模型]\n\n' + full : full;
       }
 

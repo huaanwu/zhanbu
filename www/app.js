@@ -55,8 +55,6 @@ window.kbDaoismBuddhismOnDemand = Core.KB.kbDaoismBuddhismOnDemand;
   }
 })();
 
-var APP_VERSION = 'v3.0.5';
-var APP_BUILD_DATE = '2026-07-07';
 
 // ========== 版本升级清理旧配置 ==========
 (function() {
@@ -229,10 +227,10 @@ function renderHistory() {
 
   let html = '';
   for (const item of items.slice(0, 50)) {
-    const label = DOMAIN_LABELS[item.domain] || item.domain;
-    const fbIcon = item.feedback === 'good' ? '✓' : item.feedback === 'partial' ? '≈' : item.feedback === 'bad' ? '✗' : '○';
-    const fbColor = item.feedback === 'good' ? 'var(--accent-green)' : item.feedback === 'partial' ? 'var(--accent-gold)' : item.feedback === 'bad' ? 'var(--accent-red)' : 'var(--text-muted)';
-    const summary = (item.output || '').slice(0, 80).replace(/\n/g, ' ');
+    const label = escapeHtml(DOMAIN_LABELS[item.domain] || item.domain);
+   const fbIcon = item.feedback === 'good' ? '✓' : item.feedback === 'partial' ? '≈' : item.feedback === 'bad' ? '✗' : '○';
+   const fbColor = item.feedback === 'good' ? 'var(--accent-green)' : item.feedback === 'partial' ? 'var(--accent-gold)' : item.feedback === 'bad' ? 'var(--accent-red)' : 'var(--text-muted)';
+    const summary = escapeHtml((item.output || '').slice(0, 80).replace(/\n/g, ' '));
     html += `
       <div class="history-item" style="border-bottom:1px solid var(--border);padding:0.6rem 0;"
           data-id="${item.id}">
@@ -483,7 +481,7 @@ function loadSettings() {
   const key = localStorage.getItem('ds_api_key') || '';
   const model = localStorage.getItem('ds_model') || 'deepseek-chat';
   const useLocal = localStorage.getItem('use_local_model') === '1';
-  const vKey = localStorage.getItem('vision_api_key') || DEFAULT_VISION_KEY;
+  const vKey = localStorage.getItem('vision_api_key') || '';
   const vModel = localStorage.getItem('vision_model') || 'qwen-vl-plus';
   const savedIp = localStorage.getItem('local_server_ip');
   const savedPort = localStorage.getItem('local_server_port');
@@ -906,4 +904,3 @@ function smartRoute() {
   }, 200);
 }
 window.smartRoute = smartRoute;
-

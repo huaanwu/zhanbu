@@ -57,7 +57,14 @@ function flattenKB(kb, sourceName) {
     '周易': ['经典', '周易'],
     '中医': ['中医', '养生'],
     '倪海厦': ['经验', '实战'],
-    '哲学': ['理论', '哲学']
+    '哲学': ['理论', '哲学'],
+    '道教': ['佛道', '道教', '化解', '符咒', '法术'],
+    '佛教': ['佛道', '佛教', '化解', '真言'],
+    '梅花': ['占卜', '梅花', '周易'],
+    '万年历': ['历法', '择吉'],
+    '气色': ['气色', '面相'],
+    '骨相': ['骨相', '相术'],
+    '声相': ['声相', '相术']
   };
   // 提取标签
   let tags = [];
@@ -185,47 +192,73 @@ const RAG = {
       // v2.0.2: 直接 fetch kb_core bundle,不再 11 个并发请求
       // bundle 内仍按 key 区分, flattenKB 的 source tag 仍用 key 名
     const all = [];
+    // v2.0.4: 加载全部 3 个 bundle,避免佛道/风水/面相/梅花等知识库缺失
+    const bundles = ['kb_core.json', 'kb_extended.json', 'kb_specialty.json'];
+    const nameMap = {
+      // core
+      bazi: '八字', bazi_ext: '八字扩展', gua: '六爻', liuyao_ext: '六爻高级',
+      qimen: '奇门', qimen_ext: '奇门扩展', ziwei: '紫微', ziwei_ext: '紫微扩展',
+      shouxiang: '手相', xingshi: '姓名', nihai_xia: '倪海厦',
+      // core extras
+      wannianli: '万年历', bazi_shensha: '八字神煞', ziwei_gongwei: '紫微宫位',
+      liuyao_liushen: '六爻六神', liuyao_xunkong: '六爻旬空', liuyao_najia: '六爻纳甲', liuyao_liuqin: '六爻六亲',
+      qimen_xingmen: '奇门星门', xingshi_ext: '姓名扩展', nihai_xia_ext: '倪海厦扩展',
+      daoism_fuzhou: '道教符咒', daoism_zhoushu: '道教咒术', daoism_shoujue: '道教手诀',
+      buddhism_mantra: '佛教真言', buddhism_divine: '佛教占卜',
+      fengshui_base: '风水基础', fengshui_ext: '风水扩展',
+      // extended
+      bazi_geju: '八字格局', bazi_tiaohou: '八字调候', bazi_dayun: '八字大运', bazi_shishen: '八字十神', bazi_shensha2: '八字神煞2', bazi_hehun: '八字合婚', bazi_ziwei_hecan: '八字紫微合参',
+      ziwei_ext2: '紫微扩展2', ziwei_daxian: '紫微大限', ziwei_daxian2: '紫微大限2', ziwei_fuxing: '紫微辅星', ziwei_geju: '紫微格局', ziwei_zuhe: '紫微双星组合', ziwei_sihua: '紫微四化',
+      liuyao_jintui: '六爻进退', liuyao_cases: '六爻案例', liuyao_meihua_hucan: '六爻梅花互参',
+      qimen_geju: '奇门格局', qimen_zhanji: '奇门占吉', qimen_paipan: '奇门排盘', qimen_yongshen: '奇门用神', qimen_fengshui_jiehe: '奇门风水结合',
+      xingshi_cases: '姓名案例',
+      daoism_zhaijiao: '道教斋醮', daoism_jiuhuo: '道教救火', fengshui_luopan: '风水罗盘', zeri_ext: '择日扩展', zeri_jixiong: '择日吉凶',
+      // specialty
+      meihua_ext: '梅花易数扩展', meihua_lei_xiang: '梅花易数类象', mianxiang_ext: '面相扩展', mianxiang_qise: '面相气色', mianxiang_qise2: '面相气色2', shouxiang_wenli: '手相纹理', shengxiang: '声相', qise: '气色', guxiang: '骨相'
+    };
     try {
-      const r = await fetch('kb_data/_bundles/kb_core.json');
-      if (r.ok) {
-        const bundle = await r.json();
-        for (const [key, kb] of Object.entries(bundle)) {
-          // tag 用原始 key 名(去 _kb 后缀),例如 bazi → "八字"
-          const nameMap = {
-            bazi: '八字', bazi_ext: '八字扩展', gua: '六爻', liuyao_ext: '六爻高级',
-            qimen: '奇门', qimen_ext: '奇门扩展', ziwei: '紫微', ziwei_ext: '紫微扩展',
-            shouxiang: '手相', xingshi: '姓名', nihai_xia: '倪海厦'
-          };
-          const name = nameMap[key] || key;
-          all.push(...flattenKB(kb, name));
-        }
-      } else {
-        console.warn('[RAG] kb_core bundle 加载失败,降级逐个 fetch');
-        // 降级: 11 个并发 fetch
-        const sources = [
-          { key: 'bazi', name: '八字', file: 'kb_data/bazi_kb.json' },
-          { key: 'bazi_ext', name: '八字扩展', file: 'kb_data/bazi_ext_kb.json' },
-          { key: 'gua', name: '六爻', file: 'kb_data/gua_kb.json' },
-          { key: 'liuyao_ext', name: '六爻高级', file: 'kb_data/liuyao_ext_kb.json' },
-          { key: 'qimen', name: '奇门', file: 'kb_data/qimen_kb.json' },
-          { key: 'qimen_ext', name: '奇门扩展', file: 'kb_data/qimen_ext_kb.json' },
-          { key: 'ziwei', name: '紫微', file: 'kb_data/ziwei_kb.json' },
-          { key: 'ziwei_ext', name: '紫微扩展', file: 'kb_data/ziwei_ext_kb.json' },
-          { key: 'shouxiang', name: '手相', file: 'kb_data/shouxiang_kb.json' },
-          { key: 'xingshi', name: '姓名', file: 'kb_data/xingshi_kb.json' },
-          { key: 'nihai_xia', name: '倪海厦', file: 'kb_data/nihai_xia_kb.json' }
-        ];
-        await Promise.all(sources.map(async ({ key, name, file }) => {
-          try {
-            const r = await fetch(file);
-            if (!r.ok) return;
-            const kb = await r.json();
+      const results = await Promise.all(bundles.map(b => fetch(`kb_data/_bundles/${b}`)));
+      let loadedBundles = 0;
+      for (const r of results) {
+        if (r.ok) {
+          const bundle = await r.json();
+          loadedBundles++;
+          for (const [key, kb] of Object.entries(bundle)) {
+            const name = nameMap[key] || key;
             all.push(...flattenKB(kb, name));
-          } catch (e) { console.warn('KB flatten fail:', key, e); }
-        }));
+          }
+        } else {
+          console.warn(`[RAG] bundle 加载失败: ${r.url}`);
+        }
+      }
+      if (loadedBundles === 0) {
+        console.warn('[RAG] 所有 bundle 加载失败,降级逐个 fetch');
+        throw new Error('all bundles failed');
       }
     } catch (e) {
       console.warn('[RAG] bundle 加载异常,降级逐个 fetch:', e.message);
+      // 降级: 核心 11 个并发 fetch
+      const sources = [
+        { key: 'bazi', name: '八字', file: 'kb_data/bazi_kb.json' },
+        { key: 'bazi_ext', name: '八字扩展', file: 'kb_data/bazi_ext_kb.json' },
+        { key: 'gua', name: '六爻', file: 'kb_data/gua_kb.json' },
+        { key: 'liuyao_ext', name: '六爻高级', file: 'kb_data/liuyao_ext_kb.json' },
+        { key: 'qimen', name: '奇门', file: 'kb_data/qimen_kb.json' },
+        { key: 'qimen_ext', name: '奇门扩展', file: 'kb_data/qimen_ext_kb.json' },
+        { key: 'ziwei', name: '紫微', file: 'kb_data/ziwei_kb.json' },
+        { key: 'ziwei_ext', name: '紫微扩展', file: 'kb_data/ziwei_ext_kb.json' },
+        { key: 'shouxiang', name: '手相', file: 'kb_data/shouxiang_kb.json' },
+        { key: 'xingshi', name: '姓名', file: 'kb_data/xingshi_kb.json' },
+        { key: 'nihai_xia', name: '倪海厦', file: 'kb_data/nihai_xia_kb.json' }
+      ];
+      await Promise.all(sources.map(async ({ key, name, file }) => {
+        try {
+          const r = await fetch(file);
+          if (!r.ok) return;
+          const kb = await r.json();
+          all.push(...flattenKB(kb, name));
+        } catch (err) { console.warn('KB flatten fail:', key, err); }
+      }));
     }
 
     // 构建 BM25 索引
