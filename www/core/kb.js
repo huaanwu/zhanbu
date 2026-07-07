@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 知识库加载与注入 — 从 app.js 拆出 (v3.0.6)
  * 负责: KB bundle 索引、按需加载、按领域/问题注入知识库文本
  */
@@ -1333,7 +1333,9 @@ function kbDaoismBuddhismOnDemand(question) {
   // 兼容层:router.js / ai-service.js 仍通过 window.* 访问
   window.PAGE_KB_GROUPS = PAGE_KB_GROUPS;
   window.ensureCoreKB = ensureCoreKB;
+  window.ensureKB = ensureKB;
   window.loadKBGroups = loadKBGroups;
+  window.loadKBGroup = loadKBGroup;
   window.kbPrimary = kbPrimary;
   window.kbExtended = kbExtended;
   window.kbDaoismBuddhismOnDemand = kbDaoismBuddhismOnDemand;
