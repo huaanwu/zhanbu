@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AI 服务层 — 从 app.js 拆出
  * 封装 callDeepSeek / readSSE / stripThinking,提供 interpret() 统一入口
  * 阶段 2: 只搬代码;阶段 5: 加 interpret() 统一封装 + 缓存
@@ -300,7 +300,7 @@
   /**
    * 统一 system prompt 构建(任务 #23)
    *
-   * 自动组装 Expert 事实 + RAG + 历史 + 反馈校准 + KB + chainOfThought/fewshot
+   * 自动组装 Expert 事实 + 历史 + 反馈校准 + KB + chainOfThought/fewshot
    * 消除 8 个 doAIXxx 中重复的 ~20 行 system 构建样板
    *
    * @param {object} opts
@@ -314,15 +314,15 @@
     const { domain, pan, question, extraSystem = '' } = opts || {};
     if (!domain) return extraSystem || '';
 
-    // 领域配置:expert 方法名 + 中文标签 + RAG source + signal 提取函数
+    // 领域配置:expert 方法名 + 中文标签 + module config + signal 提取函数
     // kbFlags 控制是否加载 kbPrimary/kbExtended/kbDaoismBuddhismOnDemand(默认全部 true)
     // isCross:三术同参用多 Expert + 交叉验证;isCustom:自定义模块只加 kbPrimary+kbExtended
     var CFG = {
-      bazi:   { expert: 'bazi',   label: '八字',     source: '八字',     signalFn: function(p) { return p.gz?.day; } },
-      ziwei:  { expert: 'ziwei',  label: '紫微',     source: '紫微',     signalFn: function(p) { return p.mingGong?.ganzhi; } },
-      liuyao: { expert: 'liuyao', label: '六爻',     source: '六爻',     signalFn: function(p) { return p.gua?.name; } },
-      qimen:  { expert: 'qimen',  label: '奇门',     source: '奇门',     signalFn: function(p) { return p.jushu_text; } },
-      cross:  { label: '三术同参', source: '三术同参', signalFn: function(p) { return p.bazi?.gz?.day; }, isCross: true, kbFlags: { primary: false, extended: false, daoism: true } },
+      bazi:   { expert: 'bazi',   label: '八字',     signalFn: function(p) { return p.gz?.day; } },
+      ziwei:  { expert: 'ziwei',  label: '紫微',     signalFn: function(p) { return p.mingGong?.ganzhi; } },
+      liuyao: { expert: 'liuyao', label: '六爻',     signalFn: function(p) { return p.gua?.name; } },
+      qimen:  { expert: 'qimen',  label: '奇门',     signalFn: function(p) { return p.jushu_text; } },
+      cross:  { label: '三术同参', signalFn: function(p) { return p.bazi?.gz?.day; }, isCross: true, kbFlags: { primary: false, extended: false, daoism: true } },
       fengshui:  { label: '风水',     isCustom: true, kbFlags: { daoism: false, chainOfThought: false } },
       xingshi:   { label: '姓名学',   isCustom: true, kbFlags: { daoism: false, chainOfThought: false } },
       daofobuddhism: { label: '道佛化解', isCustom: true, kbFlags: { primary: false, extended: false, daoism: false, chainOfThought: false } },
@@ -337,35 +337,6 @@
     }
 
     var Expert = window.Expert;
-    var RAG = window.RAG;
-    var FeedbackLoop = window.FeedbackLoop;
-    var q = question || '';
-
-    // 1) Expert 事实
-    var facts = '';
-    if (cfg.isCross) {
-      if (pan && pan.bazi && Expert?.bazi) facts += '【八字事实·100%准确】\n' + Expert.bazi(pan.bazi) + '\n';
-      if (pan && pan.ziwei && Expert?.ziwei) facts += '【紫微事实·100%准确】\n' + Expert.ziwei(pan.ziwei) + '\n';
-      if (pan && pan.liuyao && Expert?.liuyao) facts += '【六爻事实·100%准确】\n' + Expert.liuyao(pan.liuyao) + '\n';
-      if (Expert?.crossValidate) facts += '【交叉验证】\n' + Expert.crossValidate(pan) + '\n';
-    } else if (!cfg.isCustom && cfg.expert && Expert?.[cfg.expert] && pan) {
-      facts = Expert[cfg.expert](pan);
-    }
-
-    // 2) RAG
-    var ragContent = '';
-    if (!cfg.isCustom && RAG && cfg.source && pan) {
-      try {
-        var searchPan = cfg.isCross ? (pan.bazi || pan) : pan;
-        var crossMax = cfg.isCross ? Math.min(abCfg.maxChars, 2000) : abCfg.maxChars;
-        var crossTopK = cfg.isCross ? Math.min(abCfg.topK, 8) : abCfg.topK;
-        ragContent = RAG.search(searchPan, q, {
-          topK: crossTopK,
-          maxChars: crossMax,
-          source: cfg.source
-        });
-      } catch (e) { console.warn('[buildSystemPrompt] RAG fail:', e); }
-    }
 
     // 3) 历史
     var historyPrompt = '';
@@ -410,8 +381,7 @@
     var system = extraSystem || crossPrefix;
     if (!cfg.isCross && facts) system += '【确定事实·100%准确】\n' + facts + '\n';
     if (cfg.isCross) system += facts;  // facts already has headers
-    system += (ragContent || '')
-      + (historyPrompt || '')
+    + (historyPrompt || '')
       + (feedbackCalib || '')
       + (riskPrompt || '')
       + kbP + kbE + kbDao;

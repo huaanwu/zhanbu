@@ -1,4 +1,4 @@
-// ========== 三术同参（八字+紫微+六爻） ==========
+﻿// ========== 三术同参（八字+紫微+六爻） ==========
 let cxGender = 'male';
 let cxCal = 'solar', cxLeap = false;
 let cxState = { cal: 'solar', leap: false, gender: 'male', modules: ['bazi', 'ziwei', 'liuyao'] };
@@ -222,7 +222,6 @@ async function doAICross() {
     await loadPrimaryKbs(m);
     await loadExtendedKbsByQuestion(m, currentCross.question);
   }
-  await window.RAG.build();
   const btn = document.getElementById('cxAIBtn');
   const loading = document.getElementById('cxAILoading');
   const text = document.getElementById('cxAIText');

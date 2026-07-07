@@ -1,4 +1,4 @@
-// ========== 看手相 ==========
+﻿// ========== 看手相 ==========
 let sxLeftBase64 = '', sxRightBase64 = '', sxGender = 'male';
 
 function compressImage(base64, maxWidth = 800, quality = 0.7) {

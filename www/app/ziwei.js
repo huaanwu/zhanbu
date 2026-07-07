@@ -1,4 +1,4 @@
-// ========== 紫微 ==========
+﻿// ========== 紫微 ==========
 async function doZiwei() {
   const btn = document.getElementById('zwBtn');
   btn.disabled = true; btn.textContent = '排盘中...';
@@ -169,7 +169,6 @@ async function doAIZiwei() {
   if (!currentZwPrompt) return;
   await ensureKB();
   await loadKBGroup('ziwei');
-  await window.RAG.build();
   const btn = document.getElementById('zwAIBtn');
   const content = document.getElementById('zwAIContent');
   btn.disabled = true; btn.textContent = '解读中...';

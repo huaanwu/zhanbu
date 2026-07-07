@@ -39,23 +39,7 @@ window.kbPrimary = Core.KB.kbPrimary;
 window.kbExtended = Core.KB.kbExtended;
 window.kbDaoismBuddhismOnDemand = Core.KB.kbDaoismBuddhismOnDemand;
 
-// 启动时强制加载 Expert/RAG（解决大文件脚本加载不稳定问题）
-// 注意：file:// 协议下 fetch 被 CORS 阻止，依赖 script src 标签加载
-(function checkExpertRAG() {
-  // v1.3.1 修复: 严禁使用 eval() 兜底(违反 CLAUDE.md),改为显式错误提示
-  if (typeof window.Expert === 'undefined') {
-    console.error('expert.js 未加载，请检查 <script src="expert.js"> 标签');
-    typeof showToast === 'function' && showToast('expert.js 加载失败，请刷新页面或重新安装', 'error');
-  }
-  if (typeof window.RAG === 'undefined') {
-    console.error('rag.js 未加载，请检查 <script src="rag.js"> 标签');
-    typeof showToast === 'function' && showToast('rag.js 加载失败，请刷新页面或重新安装', 'error');
-  }
-  // v1.4 RAG 预热: 启动后空闲时提前构建,首次 AI 解读不再等 1-3s
-  if (window.RAG && typeof window.RAG.prewarm === 'function') {
-    window.RAG.prewarm();
-  }
-})();
+
 
 
 // ========== 版本升级清理旧配置 ==========

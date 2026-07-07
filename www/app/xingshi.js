@@ -1,4 +1,4 @@
-// ========== 姓名学 ==========
+﻿// ========== 姓名学 ==========
 let xsGender = 'male';
 function selXsGender(btn) {
   document.querySelectorAll('#pageXingshi [data-gender]').forEach(b => b.classList.remove('active'));
@@ -78,8 +78,7 @@ async function doAIXingshi() {
   const btn = document.getElementById('xsAIBtn');
   const loading = document.getElementById('xsAILoading');
   const text = document.getElementById('xsAIText');
-  btn.disabled = true; btn.textContent = '解读中...';
-  loading.style.display = 'none';
+  btn.disabled = true; loading.style.display = 'none';
   text.style.display = 'block';
 
   const prefix = _followUpPrefix;

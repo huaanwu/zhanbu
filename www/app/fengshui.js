@@ -1,4 +1,4 @@
-function buildFengshuiPrompt(pan, question) {
+﻿function buildFengshuiPrompt(pan, question) {
   let s = "=== 风水咨询 ===\n";
   if (pan.address) s += "地址/户型：" + pan.address + "\n";
   if (pan.mingGua) s += "命卦：" + pan.mingGua + "\n";
@@ -118,8 +118,7 @@ async function doAIFengshui() {
   const btn = document.getElementById('fsAIBtn');
   const loading = document.getElementById('fsAILoading');
   const text = document.getElementById('fsAIText');
-  btn.disabled = true; btn.textContent = '解读中...';
-  loading.style.display = 'none';
+  btn.disabled = true; loading.style.display = 'none';
   text.style.display = 'block';
 
   const prefix = _followUpPrefix;
