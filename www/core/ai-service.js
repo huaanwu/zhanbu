@@ -337,6 +337,16 @@
     }
 
     var Expert = window.Expert;
+    var q = question || '';
+    var facts = '';
+    if (cfg.isCross) {
+      if (pan && pan.bazi && Expert?.bazi) facts += '【八字事实·100%准确】\n' + Expert.bazi(pan.bazi) + '\n';
+      if (pan && pan.ziwei && Expert?.ziwei) facts += '【紫微事实·100%准确】\n' + Expert.ziwei(pan.ziwei) + '\n';
+      if (pan && pan.liuyao && Expert?.liuyao) facts += '【六爻事实·100%准确】\n' + Expert.liuyao(pan.liuyao) + '\n';
+      if (Expert?.crossValidate) facts += '【交叉验证】\n' + Expert.crossValidate(pan) + '\n';
+    } else if (!cfg.isCustom && cfg.expert && Expert?.[cfg.expert] && pan) {
+      facts = Expert[cfg.expert](pan);
+    }
 
     // 3) 历史
     var historyPrompt = '';
@@ -374,14 +384,13 @@
         + '4. 给每条结论标注：八字+紫微+六爻 三/二/一 术支持\n'
         + '5. 优先采信交叉验证中"高置信度"结论\n'
         + '6. 用神一致时结论更可靠，用神不一致时需分别说明各术视角\n\n';
-      // crossCheck formatted 已包含在 facts 的 crossValidate 部分
     }
 
     // 8) 组装
     var system = extraSystem || crossPrefix;
     if (!cfg.isCross && facts) system += '【确定事实·100%准确】\n' + facts + '\n';
-    if (cfg.isCross) system += facts;  // facts already has headers
-    + (historyPrompt || '')
+    if (cfg.isCross) system += facts;
+    system += (historyPrompt || '')
       + (feedbackCalib || '')
       + (riskPrompt || '')
       + kbP + kbE + kbDao;
@@ -389,7 +398,6 @@
 
     return system;
   }
-
   window.Core = window.Core || {};
   window.Core.AI = {
     callDeepSeek,
