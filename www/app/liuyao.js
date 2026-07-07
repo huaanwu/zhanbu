@@ -1,4 +1,4 @@
-function buildLiuyaoPrompt(pan, question) {
+﻿function buildLiuyaoPrompt(pan, question) {
   return window.liuyao ? window.liuyao.formatLiuyaoPrompt(pan, question) : "";
 }
 // ========== 六爻 ==========
@@ -247,7 +247,6 @@ async function doAILiuyao() {
   if (!currentLyPrompt) return;
   await ensureKB();
   await loadKBGroup('liuyao');
-  await window.RAG.build();
   const btn = document.getElementById('lyAIBtn');
   const content = document.getElementById('lyAIContent');
   btn.disabled = true; btn.textContent = '解读中...';

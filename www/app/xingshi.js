@@ -1,4 +1,4 @@
-// ========== 姓名学 ==========
+﻿// ========== 姓名学 ==========
 let xsGender = 'male';
 function selXsGender(btn) {
   document.querySelectorAll('#pageXingshi [data-gender]').forEach(b => b.classList.remove('active'));
@@ -33,7 +33,7 @@ function doXingshi() {
     result.innerHTML = `
       <h3 style="color:var(--accent-gold);">📜 姓名五格排盘</h3>
       <div style="background:var(--bg-inner);padding:0.8rem;border-radius:8px;margin-top:0.5rem;">
-        <div style="font-size:1.3rem;font-weight:600;color:var(--accent-gold);">${surname}${name}</div>
+        <div style="font-size:1.3rem;font-weight:600;color:var(--accent-gold);">${escapeHtml(surname)}${escapeHtml(name)}</div>
         <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.3rem;">
           姓「${data.surname.split('').map(c => c + '(' + window.Xingshi.getCharBihua(c) + ')').join('、')}」 ·
           名「${data.name.split('').map(c => c + '(' + window.Xingshi.getCharBihua(c) + ')').join('、')}」
@@ -78,8 +78,7 @@ async function doAIXingshi() {
   const btn = document.getElementById('xsAIBtn');
   const loading = document.getElementById('xsAILoading');
   const text = document.getElementById('xsAIText');
-  btn.disabled = true; btn.textContent = '解读中...';
-  loading.style.display = 'none';
+  btn.disabled = true; loading.style.display = 'none';
   text.style.display = 'block';
 
   const prefix = _followUpPrefix;

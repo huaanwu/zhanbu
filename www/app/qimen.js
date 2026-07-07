@@ -1,4 +1,4 @@
-function buildQimenPrompt(pan, question) {
+﻿function buildQimenPrompt(pan, question) {
   return window.qimen ? window.qimen.formatQimenPrompt(pan, question) : "";
 }
 // ========== 奇门 ==========
@@ -78,7 +78,6 @@ async function doAIQimen() {
   if (!currentQmPrompt) return;
   await ensureKB();
   await loadKBGroup('qimen');
-  await window.RAG.build();
   const btn = document.getElementById('qmAIBtn');
   const content = document.getElementById('qmAIContent');
   btn.disabled = true; btn.textContent = '解读中...';

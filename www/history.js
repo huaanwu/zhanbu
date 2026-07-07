@@ -11,7 +11,7 @@ const History = {
 
   load() {
     try { return JSON.parse(localStorage.getItem(this.KEY) || '[]'); }
-    catch (e) { return []; }
+    catch (e) { console.warn('[History] 加载失败:', e); return []; }
   },
 
   save(items) {

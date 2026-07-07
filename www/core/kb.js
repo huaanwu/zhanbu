@@ -77,13 +77,17 @@ const KB_PATHS = {
 
 // KB 分组：core 必加载，其余按页面/AI 调用按需加载
 const KB_GROUPS = {
-  core: ['nihai_xia', 'nihai_xia_ext'],
+  core: ['bazi', 'ziwei', 'gua', 'liuyao_ext', 'qimen', 'shouxiang', 'xingshi', 'wannianli', 'nihai_xia', 'nihai_xia_ext', 'meihua_ext', 'meihua_lei_xiang'],
   bazi: ['bazi', 'bazi_ext', 'bazi_geju', 'bazi_shensha', 'bazi_shensha2', 'bazi_tiaohou', 'bazi_dayun', 'bazi_shishen', 'bazi_hehun', 'wannianli'],
   ziwei: ['ziwei', 'ziwei_ext', 'ziwei_ext2', 'ziwei_daxian', 'ziwei_daxian2', 'ziwei_fuxing', 'ziwei_geju', 'ziwei_gongwei', 'ziwei_zuhe', 'ziwei_sihua', 'wannianli'],
   liuyao: ['gua', 'liuyao_ext', 'liuyao_liushen', 'liuyao_xunkong', 'liuyao_jintui', 'liuyao_najia', 'liuyao_cases', 'liuyao_liuqin', 'wannianli'],
   qimen: ['qimen', 'qimen_ext', 'qimen_geju', 'qimen_xingmen', 'qimen_zhanji', 'qimen_paipan', 'qimen_yongshen', 'wannianli'],
-  fengshui: ['fengshui_ext', 'fengshui_base', 'fengshui_luopan', 'zeri_ext', 'zeri_jixiong', 'meihua_ext', 'meihua_lei_xiang', 'mianxiang_ext', 'mianxiang_qise', 'mianxiang_qise2'],
+  fengshui: ['fengshui_ext', 'fengshui_base', 'fengshui_luopan', 'zeri_ext', 'zeri_jixiong', 'mianxiang_ext', 'mianxiang_qise', 'mianxiang_qise2', 'qimen_fengshui_jiehe'],
+  meihua: ['meihua_ext', 'meihua_lei_xiang', 'liuyao_meihua_hucan', 'wannianli'],
   xingshi: ['xingshi', 'xingshi_ext', 'xingshi_cases'],
+  meihua: [
+    { re: /体用|生克|互卦|变卦|本卦|类象|起卦|梅花|八卦|万物|邵雍|射覆/, libs: ['meihua_ext', 'meihua_lei_xiang'] },
+  ],
   daofobuddhism: ['daoism_fuzhou', 'daoism_zhoushu', 'daoism_shoujue', 'daoism_zhaijiao', 'buddhism_mantra', 'buddhism_divine', 'daoism_jiuhuo']
 };
 
@@ -98,6 +102,7 @@ const KB_TIERS = {
     qimen: ['qimen', 'qimen_ext', 'qimen_xingmen'],
     fengshui: ['fengshui_ext', 'fengshui_base'],
     shouxiang: ['shouxiang', 'guxiang'],
+    meihua: ['meihua_ext', 'meihua_lei_xiang'],
     xingshi: ['xingshi', 'xingshi_ext'],
     daofobuddhism: ['daoism_fuzhou', 'daoism_zhoushu', 'daoism_shoujue', 'buddhism_mantra', 'buddhism_divine'],
     cross: ['bazi', 'ziwei', 'liuyao', 'qimen', 'nihai_xia']
@@ -109,6 +114,7 @@ const KB_TIERS = {
     qimen: ['qimen_geju', 'qimen_zhanji', 'qimen_paipan', 'qimen_yongshen', 'wannianli'],
     fengshui: ['fengshui_luopan', 'zeri_ext', 'zeri_jixiong', 'meihua_ext', 'meihua_lei_xiang', 'mianxiang_ext', 'mianxiang_qise', 'mianxiang_qise2', 'qimen_fengshui_jiehe'],
     shouxiang: ['shengxiang', 'qise', 'shouxiang_wenli'],
+    meihua: ['liuyao_meihua_hucan'],
     xingshi: ['xingshi_cases'],
     daofobuddhism: ['daoism_zhaijiao', 'daoism_jiuhuo']
   }
@@ -173,6 +179,7 @@ const PAGE_KB_GROUPS = {
   ziwei: ['ziwei'],
   liuyao: ['liuyao'],
   qimen: ['qimen'],
+  meihua: ['meihua'],
   shouxiang: ['shouxiang'],
   xingshi: ['xingshi'],
   fengshui: ['fengshui'],
@@ -237,19 +244,19 @@ async function _loadKBByKeys(keys) {
       if (bundle.startsWith('__single__')) {
         // 单文件 fallback
         const k = kList[0];
-        try {
-          const r = await fetch(KB_PATHS[k]);
-          if (r.ok) return [k, await r.json()];
-        } catch {}
-        return [k, {}];
-      }
-      if (!_bundleCache[bundle]) {
-        try {
-          const r = await fetch(`kb_data/_bundles/${bundle}`);
-          if (r.ok) _bundleCache[bundle] = await r.json();
-          else _bundleCache[bundle] = {};
-        } catch { _bundleCache[bundle] = {}; }
-      }
+       try {
+         const r = await fetch(KB_PATHS[k]);
+         if (r.ok) return [k, await r.json()];
+        } catch (e) { console.warn('[KB] 单文件加载失败:', e); }
+       return [k, {}];
+     }
+     if (!_bundleCache[bundle]) {
+       try {
+         const r = await fetch(`kb_data/_bundles/${bundle}`);
+         if (r.ok) _bundleCache[bundle] = await r.json();
+         else _bundleCache[bundle] = {};
+        } catch (e) { console.warn('[KB] bundle 加载失败:', e); _bundleCache[bundle] = {}; }
+     }
       const data = _bundleCache[bundle];
       const out = {};
       for (const k of kList) {
@@ -1320,6 +1327,7 @@ function kbDaoismBuddhismOnDemand(question) {
   window.Core.KB = {
     PAGE_KB_GROUPS,
     ensureCoreKB,
+    ensureKB,
     loadKBGroup,
     loadKBGroups,
     loadPrimaryKbs,
@@ -1333,7 +1341,9 @@ function kbDaoismBuddhismOnDemand(question) {
   // 兼容层:router.js / ai-service.js 仍通过 window.* 访问
   window.PAGE_KB_GROUPS = PAGE_KB_GROUPS;
   window.ensureCoreKB = ensureCoreKB;
+  window.ensureKB = ensureKB;
   window.loadKBGroups = loadKBGroups;
+  window.loadKBGroup = loadKBGroup;
   window.kbPrimary = kbPrimary;
   window.kbExtended = kbExtended;
   window.kbDaoismBuddhismOnDemand = kbDaoismBuddhismOnDemand;

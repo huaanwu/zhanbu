@@ -1,4 +1,4 @@
-// ========== 看手相 ==========
+﻿// ========== 看手相 ==========
 let sxLeftBase64 = '', sxRightBase64 = '', sxGender = 'male';
 
 function compressImage(base64, maxWidth = 800, quality = 0.7) {
@@ -233,7 +233,7 @@ ${isMale ? '男性手相：左手代表先天命格（天生底子），右手�
   }
 
   // ========== Fallback: 云端 VL 一把搞定 ==========
-  const vKey = localStorage.getItem('vision_api_key') || DEFAULT_VISION_KEY;
+  const vKey = localStorage.getItem('vision_api_key') || '';
   if (!vKey) {
     resultEl.innerHTML = `<div class="error">本地识图服务未启动(${localPort})，且未配置识图 API Key。<br>请在设置页填写阿里云百炼 API Key，或启动本地 VL 模型。</div>`;
     return;

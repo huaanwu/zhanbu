@@ -1,4 +1,4 @@
-// ========== 八字 ==========
+﻿// ========== 八字 ==========
 
 var DI_ZHI_CANG_GAN = {
   '子': ['癸'], '丑': ['己','癸','辛'], '寅': ['甲','丙','戊'], '卯': ['乙'],
@@ -177,9 +177,6 @@ async function doAIBazi() {
 
   await ensureKB();
   await loadKBGroup('bazi');
-  btn.textContent = '解读中...';
-  content.textContent = '正在构建索引...';
-  await window.RAG.build();
   btn.textContent = '解读中...';
 
   const prefix = _followUpPrefix;

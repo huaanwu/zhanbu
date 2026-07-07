@@ -13,7 +13,6 @@ var tests = [
   'test_visual.js',
   'test_crypto.js',
   'test_chat.js',
-  'test_rag_embedding.js',
   'test_ai_interpret.js',
   'test_ts_demo.js',
   'test_accuracy.js'
