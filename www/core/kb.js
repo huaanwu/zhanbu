@@ -1320,6 +1320,7 @@ function kbDaoismBuddhismOnDemand(question) {
   window.Core.KB = {
     PAGE_KB_GROUPS,
     ensureCoreKB,
+    ensureKB,
     loadKBGroup,
     loadKBGroups,
     loadPrimaryKbs,

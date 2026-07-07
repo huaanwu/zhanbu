@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AI 占卜大师 - 主应用逻辑 (v2.0)
  * v2.0.1: 从 index.html 拆出 4770 行 inline JS
  * v3.0.5: 拆分到 www/core/ 7 个模块 + 按域 app/*.js
@@ -32,7 +32,9 @@ window.getLocalServerPort = Core.AI.getLocalServerPort;
 
 // 知识库入口兼容(core/kb.js 已加载)
 window.ensureCoreKB = Core.KB.ensureCoreKB;
+window.ensureKB = Core.KB.ensureKB;
 window.loadKBGroups = Core.KB.loadKBGroups;
+window.loadKBGroup = Core.KB.loadKBGroup;
 window.kbPrimary = Core.KB.kbPrimary;
 window.kbExtended = Core.KB.kbExtended;
 window.kbDaoismBuddhismOnDemand = Core.KB.kbDaoismBuddhismOnDemand;
