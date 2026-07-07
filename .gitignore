@@ -35,3 +35,13 @@ yarn-error.log*
 # capacitor
 /android
 /ios
+
+# APK 解压产物(调试用,占 31MB)
+/extracted
+
+# APK 产物
+/*.apk
+/www/all_inline.js
+
+# KB 手动备份(日期格式)
+/www/kb_data/*.bak-*
