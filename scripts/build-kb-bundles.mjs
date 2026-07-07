@@ -30,50 +30,44 @@ const BUNDLE_DIR = path.join(KB_DIR, '_bundles');
 // === 三个 bundle 的 KB key 配置 ===
 const BUNDLE_KEYS = {
   'kb_core.json': [
-    // RAG 11 个 (启动必加载)
-    'bazi', 'bazi_ext', 'gua', 'liuyao_ext', 'qimen', 'qimen_ext',
-    'ziwei', 'ziwei_ext', 'shouxiang', 'xingshi', 'nihai_xia',
-    // 八卦主 KB
-    'wannianli',
-    // 八字主 (来自 KB_TIERS.primary)
-    'bazi_shensha',
-    // 紫微主
-    'ziwei_gongwei',
-    // 六爻主
-    'liuyao_liushen', 'liuyao_xunkong', 'liuyao_najia', 'liuyao_liuqin',
-    // 奇门主
-    'qimen_xingmen',
-    // 姓名扩展
-    'xingshi_ext',
-    // 倪海厦扩展
-    'nihai_xia_ext',
-    // 道佛基础 (页面常驻)
-    'daoism_fuzhou', 'daoism_zhoushu', 'daoism_shoujue', 'buddhism_mantra', 'buddhism_divine',
-    // 风水基础
-    'fengshui_base', 'fengshui_ext'
+    // 八字核心
+    'bazi', 'bazi_ext', 'bazi_shensha', 'bazi_shishen', 'bazi_geju',
+    // 紫微核心
+    'ziwei', 'ziwei_ext', 'ziwei_gongwei', 'ziwei_sihua', 'ziwei_geju',
+    // 六爻核心
+    'gua', 'liuyao_ext', 'liuyao_liushen', 'liuyao_xunkong', 'liuyao_najia', 'liuyao_liuqin', 'liuyao_jintui',
+    // 奇门核心
+    'qimen', 'qimen_ext', 'qimen_xingmen', 'qimen_geju',
+    // 梅花易数（新增入 core）
+    'meihua_ext', 'meihua_lei_xiang',
+    // 姓名/手相/倪海厦 核心
+    'xingshi', 'xingshi_ext', 'shouxiang', 'nihai_xia', 'nihai_xia_ext',
+    // 基础工具
+    'wannianli'
   ],
   'kb_extended.json': [
     // 八字扩展
-    'bazi_geju', 'bazi_tiaohou', 'bazi_dayun', 'bazi_shishen', 'bazi_shensha2', 'bazi_hehun', 'bazi_ziwei_hecan',
+    'bazi_tiaohou', 'bazi_dayun', 'bazi_shensha2', 'bazi_hehun', 'bazi_ziwei_hecan',
     // 紫微扩展
-    'ziwei_ext2', 'ziwei_daxian', 'ziwei_daxian2', 'ziwei_fuxing', 'ziwei_geju', 'ziwei_zuhe', 'ziwei_sihua',
+    'ziwei_ext2', 'ziwei_daxian', 'ziwei_daxian2', 'ziwei_fuxing', 'ziwei_zuhe',
     // 六爻扩展
-    'liuyao_jintui', 'liuyao_cases', 'liuyao_meihua_hucan',
+    'liuyao_cases', 'liuyao_meihua_hucan',
     // 奇门扩展
-    'qimen_geju', 'qimen_zhanji', 'qimen_paipan', 'qimen_yongshen', 'qimen_fengshui_jiehe',
+    'qimen_zhanji', 'qimen_paipan', 'qimen_yongshen', 'qimen_fengshui_jiehe',
     // 姓名扩展
     'xingshi_cases',
-    // 道佛扩展
-    'daoism_zhaijiao', 'daoism_jiuhuo',
-    // 风水扩展
-    'fengshui_luopan', 'zeri_ext', 'zeri_jixiong'
+    // 风水
+    'fengshui_base', 'fengshui_ext', 'fengshui_luopan',
+    // 择日
+    'zeri_ext', 'zeri_jixiong'
   ],
   'kb_specialty.json': [
-    // 梅花易数
-    'meihua_ext', 'meihua_lei_xiang',
-    // 面相
+    // 道佛（按需加载）
+    'daoism_fuzhou', 'daoism_zhoushu', 'daoism_shoujue', 'daoism_zhaijiao', 'daoism_jiuhuo',
+    'buddhism_mantra', 'buddhism_divine',
+    // 面相（按需加载）
     'mianxiang_ext', 'mianxiang_qise', 'mianxiang_qise2',
-    // 手相纹理
+    // 手相纹理/杂项
     'shouxiang_wenli', 'shengxiang', 'qise', 'guxiang'
   ]
 };

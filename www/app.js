@@ -1,4 +1,4 @@
-﻿/**
+/**
  * AI 占卜大师 - 主应用逻辑 (v2.0)
  * v2.0.1: 从 index.html 拆出 4770 行 inline JS
  * v3.0.5: 拆分到 www/core/ 7 个模块 + 按域 app/*.js
@@ -771,9 +771,9 @@ document.addEventListener('DOMContentLoaded', () => {
     'navZiwei': () => switchPage('ziwei'),
     'navLiuyao': () => switchPage('liuyao'),
     'navQimen': () => switchPage('qimen'),
-    'navShouxiang': () => switchPage('shouxiang'),
+    'navShouxiang': () => switchPage('fengshui'),
     'navXingshi': () => switchPage('xingshi'),
-    'navCross': () => switchPage('cross'),
+    'navMeihua': () => switchPage('meihua'),
     'navFengshui': () => switchPage('fengshui'),
     'navSettings': () => switchPage('settings')
   };
@@ -812,7 +812,7 @@ function smartRoute() {
       re: /择日|吉日|黄道|建除|良辰|开业|入伙|搬家|结婚日|动土/ },
     { mod: 'xingshi', page: 'xingshi', score: 0,
       re: /起名|改名|姓名|名字|五格|三才|公司名|商标|品牌/ },
-    { mod: 'shouxiang', page: 'shouxiang', score: 0,
+    { mod: 'fengshui', page: 'fengshui', score: 0,
       re: /手相|掌纹|手掌|指纹|生命线|智慧线|感情线|事业线|丘/ },
     { mod: 'liuyao', page: 'liuyao', score: 0,
       re: /六爻|起卦|摇钱|占卜|占事|测一测|灵签|签文|世应|动爻|卦象/ },
@@ -845,32 +845,11 @@ function smartRoute() {
     if (s > bestScore) { bestMod = m; bestScore = s; }
   }
 
-  // 特殊场景：化解类/求签类→ 跳转化解页
-  if (/化解|噩梦|失眠|太岁|破财|压床|求签|灵签|抽签/.test(q)) {
-    bestMod = 'daofobuddhism';
-  }
-
-  const pageMap = {
-    bazi: { page: 'bazi', qField: 'baziQuestion' },
-    ziwei: { page: 'ziwei', qField: 'zwQuestion' },
-    liuyao: { page: 'liuyao', qField: 'lyQuestion' },
-    qimen: { page: 'qimen', qField: 'qmQuestion' },
-    fengshui: { page: 'fengshui', qField: 'fsQuestion' },
-    shouxiang: { page: 'shouxiang', qField: null },
-    xingshi: { page: 'xingshi', qField: 'xsQuestion' },
-    daofobuddhism: { page: 'daofobuddhism', qField: 'aiHuaJieInput' }
-  };
-  const target = pageMap[bestMod] || pageMap.bazi;
-
-  // 显示推荐结果
-  const modNames = { bazi: '八字', ziwei: '紫微', liuyao: '六爻', qimen: '奇门', fengshui: '风水', shouxiang: '手相', xingshi: '姓名学', daofobuddhism: '化解页' };
-  const modIcons = { bazi: '📅', ziwei: '⭐', liuyao: '☯', qimen: '🔮', fengshui: '🧭', shouxiang: '✋', xingshi: '👤', daofobuddhism: '🙏' };
-  const resultEl = document.getElementById('smartResult');
-  const allScores = Object.entries(scores).map(([m, s]) => `${modIcons[m]||''}${modNames[m]||m}=${s}`).join(' ');
-  resultEl.innerHTML = `<div style="background:var(--bg-card);padding:0.5rem;border-radius:6px;margin-top:0.4rem;">
-    <div style="color:var(--accent-gold);font-weight:bold;">${modIcons[bestMod]||''} 推荐：${modNames[bestMod]||bestMod}</div>
-    <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.2rem;">评分：${allScores || '无匹配，默认八字'}</div>
-  </div>`;
+  const modPages = { bazi: { page: 'bazi', qField: '' }, ziwei: { page: 'ziwei', qField: 'zwQuestion' }, liuyao: { page: 'liuyao', qField: 'lyQuestion' }, qimen: { page: 'qimen', qField: 'qmQuestion' }, meihua: { page: 'meihua', qField: 'mhQuestion' }, fengshui: { page: 'fengshui', qField: 'fsQuestion' } };
+  const target = modPages[bestMod] || { page: 'bazi' };
+  const allScores = Object.entries(scores).map(function(e){var m=e[0],s=e[1];return (modIcons[m]||'')+(modNames[m]||m)+'='+s}).join(' ');
+  document.getElementById('smartResult').innerHTML = `<div style="color:var(--accent-gold);font-weight:bold;">${modIcons[bestMod]||''} 推荐：${modNames[bestMod]||bestMod}</div>
+    <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.2rem;">评分：${allScores || '无匹配，默认八字'}</div>`;
 
   // 跳转并预填
   switchPage(target.page);

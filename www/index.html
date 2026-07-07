@@ -636,16 +636,63 @@
   </div>
 
   <!-- 底部导航 -->
+  <!-- ============ 梅花易数 ============ -->
+  <div class="page" id="pageMeihua">
+    <div class="header"><h1>梅花易数</h1><div class="subtitle">观物取象 · 因时制宜</div></div>
+    <div class="input-section">
+      <div class="input-row">
+        <div class="input-group"><label>起卦方式</label>
+          <div class="btn-row">
+            <button class="toggle-btn active" data-method="time" onclick="selMeihuaMethod(this)">时间</button>
+            <button class="toggle-btn" data-method="number" onclick="selMeihuaMethod(this)">数字</button>
+            <button class="toggle-btn" data-method="object" onclick="selMeihuaMethod(this)">物象</button>
+          </div>
+        </div>
+      </div>
+      <div class="input-row" id="mhTimeRow">
+        <div class="input-group"><label>年（农历）</label><input type="number" id="mhYear" placeholder="2024"></div>
+        <div class="input-group"><label>月（农历）</label><input type="number" id="mhMonth" placeholder="5"></div>
+        <div class="input-group"><label>日（农历）</label><input type="number" id="mhDay" placeholder="15"></div>
+        <div class="input-group"><label>时辰（地支数1-12）</label><input type="number" id="mhHour" placeholder="8" value="8"></div>
+      </div>
+      <div class="input-row" id="mhNumberRow" style="display:none;">
+        <div class="input-group"><label>上卦数</label><input type="number" id="mhNum1" placeholder="例：28"></div>
+        <div class="input-group"><label>下卦数</label><input type="number" id="mhNum2" placeholder="例：35"></div>
+      </div>
+      <div class="input-row" id="mhObjectRow" style="display:none;">
+        <div class="input-group"><label>物象卦数（1乾2兑3离4震5巽6坎7艮8坤）</label>
+          <select id="mhObjGua"><option value="">选择</option><option value="1">乾（天/父）</option><option value="2">兑（泽/少女）</option><option value="3">离（火/中女）</option><option value="4">震（雷/长男）</option><option value="5">巽（风/长女）</option><option value="6">坎（水/中男）</option><option value="7">艮（山/少男）</option><option value="8">坤（地/母）</option></select>
+        </div>
+        <div class="input-group"><label>方位卦数</label>
+          <select id="mhFangWei"><option value="">选择</option><option value="3">正南/离</option><option value="8">西南/坤</option><option value="2">正西/兑</option><option value="1">西北/乾</option><option value="6">正北/坎</option><option value="7">东北/艮</option><option value="4">正东/震</option><option value="5">东南/巽</option></select>
+        </div>
+      </div>
+      <div class="input-row">
+        <div class="input-group" style="grid-column:span 2;"><label>所问之事（可选）</label><input type="text" id="mhQuestion" placeholder="例如：明年事业发展如何？"></div>
+      </div>
+      <button class="divine-btn" onclick="doMeihua()">起卦排盘</button>
+    </div>
+    <div class="result-section" id="mhResult">
+      <div id="mhResultContent"></div>
+      <button class="divine-btn" id="mhAIBtn" style="display:none;" onclick="doAIMeihua()">AI 梅花解读</button>
+    </div>
+    <div class="ai-section" id="mhAI" style="display:none">
+      <div class="result-title">AI 梅花易数解读</div>
+      <div class="loading" id="mhAILoading" style="display:none;">正在解读…</div>
+      <div class="ai-content" id="mhAIContent"></div>
+      <div class="ai-actions" id="mhAIActions">
+        <button onclick="copyResult('mhAIContent')">复制文本</button>
+        <button onclick="document.getElementById('mhAIContent').textContent=''">清空</button>
+      </div>
+    </div>
+  </div>
   <nav class="bottom-nav">
     <button onclick="switchPage('bazi')" id="navBazi"><span class="icon">📅</span>八字</button>
     <button onclick="switchPage('ziwei')" id="navZiwei"><span class="icon">⭐</span>紫微</button>
     <button onclick="switchPage('liuyao')" id="navLiuyao"><span class="icon">☯</span>六爻</button>
     <button onclick="switchPage('qimen')" id="navQimen"><span class="icon">🔮</span>奇门</button>
-    <button onclick="switchPage('shouxiang')" id="navShouxiang"><span class="icon">✋</span>手相</button>
-    <button onclick="switchPage('xingshi')" id="navXingshi"><span class="icon">👤</span>姓名</button>
-    <button onclick="switchPage('cross')" id="navCross"><span class="icon">🔀</span>三术</button>
+    <button onclick="switchPage('meihua')" id="navMeihua"><span class="icon">🌸</span>梅花</button>
     <button onclick="switchPage('fengshui')" id="navFengshui"><span class="icon">🧭</span>风水</button>
-    <button onclick="switchPage('daofobuddhism')" id="navDaofobuddhism"><span class="icon">🙏</span>化解</button>
     <button onclick="switchPage('settings')" id="navSettings"><span class="icon">⚙</span>设置</button>
   </nav>
 
@@ -703,6 +750,7 @@
 <script src="app/qimen.js?v=301"></script>
 <script src="app/shouxiang.js?v=301"></script>
 <script src="app/xingshi.js?v=301"></script>
+<script src="app/meihua.js?v=301"></script>
 <script src="app/cross.js?v=301"></script>
 <script src="app/fengshui.js?v=301"></script>
 <script src="app/daofobuddhism.js?v=301"></script>
