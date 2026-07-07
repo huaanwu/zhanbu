@@ -237,45 +237,9 @@ async function doAICross() {
 
   let fullText = '⏳ 正在综合八字+紫微+六爻三术...\n';
   try {
-    const factsBazi = window.Expert.bazi(currentCross.bazi);
-    const factsLiu = window.Expert.liuyao(currentCross.liuyao);
-    const factsZiwei = window.Expert.ziwei(currentCross.ziwei);
-    // 交叉验证（代码层面确定三术一致性）
-    const crossCheck = window.Expert.crossValidate ? window.Expert.crossValidate(currentCross) : null;
-    const abCfg = getActiveABConfig();
-    // cross 检索 3 个事实模块,默认 maxChars 更小以避免 prompt 爆炸
-    const crossMaxChars = Math.min(abCfg.maxChars, 2000);
-    const ragContent = window.RAG.search(currentCross.bazi, currentCross.question, {
-      topK: Math.min(abCfg.topK, 8),
-      maxChars: crossMaxChars
-    });
-    const historyPrompt = getSimilarHistoryPrompt('cross', currentCross.bazi.gz.day, currentCross.question);
-    const feedbackCalib = window.FeedbackLoop ? window.FeedbackLoop.getCalibrationPrompt('cross') : '';
-    const riskPrompt = window.FeedbackLoop ? window.FeedbackLoop.getRiskPrompt('cross', currentCross.question) : '';
-    const system = '【三术同参原则】\n'
-      + '1. 三术皆属同一人生轨迹的"不同投影"，不应有本质矛盾\n'
-      + '2. 一致结论置信度高，可作主要建议\n'
-      + '3. 矛盾时需分析是排盘差异还是时点差异，不轻易否定\n'
-      + '4. 给每条结论标注：八字+紫微+六爻 三/二/一 术支持\n'
-      + '5. 优先采信交叉验证中"高置信度"结论\n'
-      + '6. 用神一致时结论更可靠，用神不一致时需分别说明各术视角\n\n'
-      + (crossCheck?.formatted || '')
-      + '\n'
-      + (factsBazi ? '【八字事实·100%准确】\n' + factsBazi + '\n' : '')
-      + (factsZiwei ? '【紫微事实·100%准确】\n' + factsZiwei + '\n' : '')
-      + (factsLiu ? '【六爻事实·100%准确】\n' + factsLiu + '\n' : '')
-      + (ragContent || '')
-      + (historyPrompt || '')
-      + (feedbackCalib || '')
-      + (riskPrompt || '')
-      + kbDaoismBuddhismOnDemand(currentCross.question)
-      + '\n\n'
-      + (function() {
-          let instruction = '';
-          if (abCfg.useChainOfThought) instruction += window.Expert.chainOfThought('三术同参');
-          if (abCfg.useFewshot)         instruction += (instruction ? '\n\n' : '') + window.Expert.fewshot('三术同参');
-          return instruction;
-        })();
+    // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
+    // cross 特殊:buildSystemPrompt 自动调 Expert.bazi/ziwei/liuyao + crossValidate + kbDaoism
+    const system = Core.AI.buildSystemPrompt({ domain: 'cross', pan: currentCross, question: currentCross.question });
 
     // 引导用户问题转化为三术共同关心的方向
     // v3.0.5: 统一 AI 入口(任务 #19)— 三术同参用 crossParams 作为 cache key

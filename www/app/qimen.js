@@ -90,31 +90,8 @@ async function doAIQimen() {
 
   let fullText = '';
   try {
-    const abCfg = getActiveABConfig();
-    const facts = window.Expert.qimen(currentQm);
-    const ragContent = window.RAG.search(currentQm, currentQm.question, {
-      topK: abCfg.topK,
-      maxChars: abCfg.maxChars,
-      source: '奇门'
-    });
-    const historyPrompt = getSimilarHistoryPrompt('qimen', currentQm.jushu_text, currentQm.question);
-    const feedbackCalib = window.FeedbackLoop ? window.FeedbackLoop.getCalibrationPrompt('qimen') : '';
-    const riskPrompt = window.FeedbackLoop ? window.FeedbackLoop.getRiskPrompt('qimen', currentQm.question) : '';
-    const system = (facts ? '【确定事实·100%准确】\n' + facts + '\n' : '')
-      + (ragContent || '')
-      + (historyPrompt || '')
-      + (feedbackCalib || '')
-      + (riskPrompt || '')
-      + kbPrimary('qimen')
-      + kbExtended('qimen', currentQm.question)
-      + kbDaoismBuddhismOnDemand(currentQm.question)
-      + '\n\n'
-      + (function() {
-          let instruction = '';
-          if (abCfg.useChainOfThought) instruction += window.Expert.chainOfThought('奇门');
-          if (abCfg.useFewshot)         instruction += (instruction ? '\n\n' : '') + window.Expert.fewshot('奇门');
-          return instruction;
-        })();
+    // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
+    const system = Core.AI.buildSystemPrompt({ domain: 'qimen', pan: currentQm, question: currentQm.question });
     // v3.0.5: 统一 AI 入口(任务 #19)
     const { finalText } = await Core.AI.interpret({
       domain: 'qimen',

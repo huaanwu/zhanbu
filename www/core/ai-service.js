@@ -291,10 +291,134 @@
     return { finalText, fromCache: false, fullText };
   }
 
+  /**
+   * 统一 system prompt 构建(任务 #23)
+   *
+   * 自动组装 Expert 事实 + RAG + 历史 + 反馈校准 + KB + chainOfThought/fewshot
+   * 消除 8 个 doAIXxx 中重复的 ~20 行 system 构建样板
+   *
+   * @param {object} opts
+   * @param {string} opts.domain       - 'bazi'|'ziwei'|'liuyao'|'qimen'|'cross'|'fengshui'|'xingshi'|'daofobuddhism'
+   * @param {object} opts.pan          - 命盘对象
+   * @param {string} [opts.question]   - 用户问题
+   * @param {string} [opts.extraSystem] - 自定义 system 前缀(用于 xingshi/fengshui/daofobuddhism 等非标准模块)
+   * @returns {string} 组装好的 system prompt
+   */
+  function buildSystemPrompt(opts) {
+    const { domain, pan, question, extraSystem = '' } = opts || {};
+    if (!domain) return extraSystem || '';
+
+    // 领域配置:expert 方法名 + 中文标签 + RAG source + signal 提取函数
+    // kbFlags 控制是否加载 kbPrimary/kbExtended/kbDaoismBuddhismOnDemand(默认全部 true)
+    // isCross:三术同参用多 Expert + 交叉验证;isCustom:自定义模块只加 kbPrimary+kbExtended
+    var CFG = {
+      bazi:   { expert: 'bazi',   label: '八字',     source: '八字',     signalFn: function(p) { return p.gz?.day; } },
+      ziwei:  { expert: 'ziwei',  label: '紫微',     source: '紫微',     signalFn: function(p) { return p.mingGong?.ganzhi; } },
+      liuyao: { expert: 'liuyao', label: '六爻',     source: '六爻',     signalFn: function(p) { return p.gua?.name; } },
+      qimen:  { expert: 'qimen',  label: '奇门',     source: '奇门',     signalFn: function(p) { return p.jushu_text; } },
+      cross:  { label: '三术同参', source: '三术同参', signalFn: function(p) { return p.bazi?.gz?.day; }, isCross: true, kbFlags: { primary: false, extended: false, daoism: true } },
+      fengshui:  { label: '风水',     isCustom: true, kbFlags: { daoism: false, chainOfThought: false } },
+      xingshi:   { label: '姓名学',   isCustom: true, kbFlags: { daoism: false, chainOfThought: false } },
+      daofobuddhism: { label: '道佛化解', isCustom: true, kbFlags: { primary: false, extended: false, daoism: false, chainOfThought: false } },
+    };
+    var cfg = CFG[domain];
+    if (!cfg) return extraSystem || '';
+
+    // ABTest 配置(全局函数,跨 IIFE 可见)
+    var abCfg = { topK: 10, maxChars: 2500, useFewshot: true, useChainOfThought: true };
+    if (typeof getActiveABConfig === 'function') {
+      try { abCfg = getActiveABConfig(); } catch (e) { /* fallback */ }
+    }
+
+    var Expert = window.Expert;
+    var RAG = window.RAG;
+    var FeedbackLoop = window.FeedbackLoop;
+    var q = question || '';
+
+    // 1) Expert 事实
+    var facts = '';
+    if (cfg.isCross) {
+      if (pan && pan.bazi && Expert?.bazi) facts += '【八字事实·100%准确】\n' + Expert.bazi(pan.bazi) + '\n';
+      if (pan && pan.ziwei && Expert?.ziwei) facts += '【紫微事实·100%准确】\n' + Expert.ziwei(pan.ziwei) + '\n';
+      if (pan && pan.liuyao && Expert?.liuyao) facts += '【六爻事实·100%准确】\n' + Expert.liuyao(pan.liuyao) + '\n';
+      if (Expert?.crossValidate) facts += '【交叉验证】\n' + Expert.crossValidate(pan) + '\n';
+    } else if (!cfg.isCustom && cfg.expert && Expert?.[cfg.expert] && pan) {
+      facts = Expert[cfg.expert](pan);
+    }
+
+    // 2) RAG
+    var ragContent = '';
+    if (!cfg.isCustom && RAG && cfg.source && pan) {
+      try {
+        var searchPan = cfg.isCross ? (pan.bazi || pan) : pan;
+        var crossMax = cfg.isCross ? Math.min(abCfg.maxChars, 2000) : abCfg.maxChars;
+        var crossTopK = cfg.isCross ? Math.min(abCfg.topK, 8) : abCfg.topK;
+        ragContent = RAG.search(searchPan, q, {
+          topK: crossTopK,
+          maxChars: crossMax,
+          source: cfg.source
+        });
+      } catch (e) { console.warn('[buildSystemPrompt] RAG fail:', e); }
+    }
+
+    // 3) 历史
+    var historyPrompt = '';
+    if (cfg.signalFn && typeof getSimilarHistoryPrompt === 'function') {
+      try {
+        var signal = pan ? cfg.signalFn(pan) : '';
+        historyPrompt = getSimilarHistoryPrompt(domain, signal, q);
+      } catch (e) { /* noop */ }
+    }
+
+    // 4) 反馈校准
+    var feedbackCalib = FeedbackLoop?.getCalibrationPrompt?.(domain) || '';
+    var riskPrompt = FeedbackLoop?.getRiskPrompt?.(domain, q) || '';
+
+    // 5) KB(全局函数,跨 IIFE 可见)
+    var kf = cfg.kbFlags || {};
+    var kbP = (kf.primary !== false && typeof kbPrimary === 'function') ? kbPrimary(domain) : '';
+    var kbE = (kf.extended !== false && typeof kbExtended === 'function') ? kbExtended(domain, q) : '';
+    var kbDao = (kf.daoism !== false && typeof kbDaoismBuddhismOnDemand === 'function') ? kbDaoismBuddhismOnDemand(q) : '';
+
+    // 6) Instruction
+    var instruction = '';
+    if (kf.chainOfThought !== false && !cfg.isCustom && Expert && cfg.label) {
+      if (abCfg.useChainOfThought) instruction += Expert.chainOfThought(cfg.label);
+      if (abCfg.useFewshot) instruction += (instruction ? '\n\n' : '') + Expert.fewshot(cfg.label);
+    }
+
+    // 7) Cross 特殊前缀
+    var crossPrefix = '';
+    if (cfg.isCross) {
+      crossPrefix = '【三术同参原则】\n'
+        + '1. 三术皆属同一人生轨迹的"不同投影"，不应有本质矛盾\n'
+        + '2. 一致结论置信度高，可作主要建议\n'
+        + '3. 矛盾时需分析是排盘差异还是时点差异，不轻易否定\n'
+        + '4. 给每条结论标注：八字+紫微+六爻 三/二/一 术支持\n'
+        + '5. 优先采信交叉验证中"高置信度"结论\n'
+        + '6. 用神一致时结论更可靠，用神不一致时需分别说明各术视角\n\n';
+      // crossCheck formatted 已包含在 facts 的 crossValidate 部分
+    }
+
+    // 8) 组装
+    var system = extraSystem || crossPrefix;
+    if (!cfg.isCross && facts) system += '【确定事实·100%准确】\n' + facts + '\n';
+    if (cfg.isCross) system += facts;  // facts already has headers
+    system += (ragContent || '')
+      + (historyPrompt || '')
+      + (feedbackCalib || '')
+      + (riskPrompt || '')
+      + kbP + kbE + kbDao;
+    if (instruction) system += '\n\n' + instruction;
+
+    return system;
+  }
+
   window.Core = window.Core || {};
   window.Core.AI = {
     callDeepSeek,
     interpret,
+    buildSystemPrompt,
     readSSE,
     stripThinking,
     getLocalServerUrl,

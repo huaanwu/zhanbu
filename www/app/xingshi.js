@@ -89,7 +89,11 @@ async function doAIXingshi() {
 
   let fullText = '';
   try {
-    const sys = '你是一位精通姓名学的命理大师，请根据五格剖象进行专业解读。重点说明人格（主运）、地格（基础）、总格（后运）的吉凶含义，并结合三才配置分析。注意：吉数并非绝对好，需要配合三才平衡。' + kbPrimary('xingshi') + kbExtended('xingshi', currentXs.birth);
+    // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
+    const sys = Core.AI.buildSystemPrompt({
+      domain: 'xingshi', pan: currentXs, question: currentXs.birth || '',
+      extraSystem: '你是一位精通姓名学的命理大师，请根据五格剖象进行专业解读。重点说明人格（主运）、地格（基础）、总格（后运）的吉凶含义，并结合三才配置分析。注意：吉数并非绝对好，需要配合三才平衡。'
+    });
     // v3.0.5: 统一 AI 入口(任务 #19)
     await Core.AI.interpret({
       domain: 'xingshi',

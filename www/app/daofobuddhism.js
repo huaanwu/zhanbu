@@ -370,7 +370,9 @@ async function doAiHuaJie() {
   result.innerHTML = '<div class="loading"><div class="spinner"></div><p style="margin-top:0.5rem;color:var(--text-secondary);">AI 正在结合道佛知识库生成化解方案...</p></div>';
 
   // 构建 system prompt
-  const system = `你是一位精通道教与佛教化解法门的导师。请根据用户描述的困扰，结合道佛知识库给出具体、可执行的化解方案。
+  // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
+    // daofobuddhism 特殊:全文传 extraSystem(KB 函数在 system 字符串内直接调用)
+    const system = Core.AI.buildSystemPrompt({ domain: 'daofobuddhism', pan: {}, question: input, extraSystem: `你是一位精通道教与佛教化解法门的导师。请根据用户描述的困扰，结合道佛知识库给出具体、可执行的化解方案。
 
 【优先使用：场景化解库（30 个标准场景方案）】
 ${kbDaoismJiuhuo()}
@@ -388,7 +390,7 @@ ${kbBuddhismDivine()}
 3. 推荐 2-3 个化解方案（每个含：方法 / 频次 / 时机 / 注意事项）
 4. 符箓、手诀、咒语、行善建议可组合
 5. 最后提醒"化解为辅，修心为本；行善积德方为根本"
-6. 用通俗易懂的语言，300-500字`;
+6. 用通俗易懂的语言，300-500字` });
 
   const prompt = `我的困扰：${input}\n\n请给出化解方案。`;
   try {

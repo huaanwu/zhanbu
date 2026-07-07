@@ -259,31 +259,8 @@ async function doAILiuyao() {
 
   let fullText = '';
   try {
-    const abCfg = getActiveABConfig();
-    const facts = window.Expert.liuyao(currentLy);
-    const ragContent = window.RAG.search(currentLy, currentLy.question, {
-      topK: abCfg.topK,
-      maxChars: abCfg.maxChars,
-      source: '六爻'
-    });
-    const historyPrompt = getSimilarHistoryPrompt('liuyao', currentLy.gua.name, currentLy.question);
-    const feedbackCalib = window.FeedbackLoop ? window.FeedbackLoop.getCalibrationPrompt('liuyao') : '';
-    const riskPrompt = window.FeedbackLoop ? window.FeedbackLoop.getRiskPrompt('liuyao', currentLy.question) : '';
-    let system = (facts ? '【确定事实·100%准确】\n' + facts + '\n' : '')
-      + (ragContent || '')
-      + (historyPrompt || '')
-      + (feedbackCalib || '')
-      + (riskPrompt || '')
-      + kbPrimary('liuyao')
-      + kbExtended('liuyao', currentLy.question)
-      + kbDaoismBuddhismOnDemand(currentLy.question)
-      + '\n\n'
-      + (function() {
-          let instruction = '';
-          if (abCfg.useChainOfThought) instruction += window.Expert.chainOfThought('六爻');
-          if (abCfg.useFewshot)         instruction += (instruction ? '\n\n' : '') + window.Expert.fewshot('六爻');
-          return instruction;
-        })();
+    // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
+    let system = Core.AI.buildSystemPrompt({ domain: 'liuyao', pan: currentLy, question: currentLy.question });
     if ((state.liuyao.mode || 'normal') === 'xunwu') {
       system += '\n\n【此为寻物占】用户正在寻找丢失的物品。重点解读：方位、距离、环境特征、是否还在原处、找回可能性、最佳时间、具体建议。';
     }

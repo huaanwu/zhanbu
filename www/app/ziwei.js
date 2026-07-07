@@ -181,31 +181,8 @@ async function doAIZiwei() {
 
   let fullText = '';
   try {
-    const abCfg = getActiveABConfig();
-    const facts = window.Expert.ziwei(currentZw);
-    const ragContent = window.RAG.search(currentZw, currentZw.question, {
-      topK: abCfg.topK,
-      maxChars: abCfg.maxChars,
-      source: '紫微'
-    });
-    const historyPrompt = getSimilarHistoryPrompt('ziwei', currentZw.mingGong.ganzhi, currentZw.question);
-    const feedbackCalib = window.FeedbackLoop ? window.FeedbackLoop.getCalibrationPrompt('ziwei') : '';
-    const riskPrompt = window.FeedbackLoop ? window.FeedbackLoop.getRiskPrompt('ziwei', currentZw.question) : '';
-    const system = (facts ? '【确定事实·100%准确】\n' + facts + '\n' : '')
-      + (ragContent || '')
-      + (historyPrompt || '')
-      + (feedbackCalib || '')
-      + (riskPrompt || '')
-      + kbPrimary('ziwei')
-      + kbExtended('ziwei', currentZw.question)
-      + kbDaoismBuddhismOnDemand(currentZw.question)
-      + '\n\n'
-      + (function() {
-          let instruction = '';
-          if (abCfg.useChainOfThought) instruction += window.Expert.chainOfThought('紫微');
-          if (abCfg.useFewshot)         instruction += (instruction ? '\n\n' : '') + window.Expert.fewshot('紫微');
-          return instruction;
-        })();
+    // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
+    const system = Core.AI.buildSystemPrompt({ domain: 'ziwei', pan: currentZw, question: currentZw.question });
     // v3.0.5: 统一 AI 入口(任务 #19)
     const { finalText } = await Core.AI.interpret({
       domain: 'ziwei',
