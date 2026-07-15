@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Master test runner - runs all module tests
  */
 var cp = require('child_process');
@@ -16,6 +16,7 @@ var tests = [
   'test_rag_embedding.js',
   'test_ai_interpret.js',
   'test_ts_demo.js',
+  'test_rag.js',
   'test_accuracy.js'
 ];
 
