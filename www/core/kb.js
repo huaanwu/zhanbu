@@ -240,7 +240,9 @@ async function _loadKBByKeys(keys) {
         try {
           const r = await fetch(KB_PATHS[k]);
           if (r.ok) return [k, await r.json()];
-        } catch {}
+        } catch (e) {
+          console.warn('[KB] 单文件加载异常:', e.message);
+        }
         return [k, {}];
       }
       if (!_bundleCache[bundle]) {
@@ -248,7 +250,10 @@ async function _loadKBByKeys(keys) {
           const r = await fetch(`kb_data/_bundles/${bundle}`);
           if (r.ok) _bundleCache[bundle] = await r.json();
           else _bundleCache[bundle] = {};
-        } catch { _bundleCache[bundle] = {}; }
+        } catch (e) {
+          console.warn('[KB] bundle 加载异常:', e.message);
+          _bundleCache[bundle] = {};
+        }
       }
       const data = _bundleCache[bundle];
       const out = {};

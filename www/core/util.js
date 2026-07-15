@@ -17,6 +17,24 @@
       .replace(/'/g, '&#39;');
   }
 
+  // tagged template: auto-escape all interpolated values
+  function safeHTML(strings, ...values) {
+    return strings.reduce((acc, s, i) => {
+      let v = values[i];
+      if (v == null) v = '';
+      else if (typeof v === 'object' && v && v.__safeHTML) v = v.html;
+      else if (typeof v !== 'string') v = String(v);
+      else v = escapeHtml(v);
+      return acc + s + v;
+    }, '');
+  }
+
+  // mark a pre-rendered HTML string as safe for safeHTML composition
+  safeHTML.raw = function(html) {
+    return { __safeHTML: true, html: String(html) };
+  };
+
+
   // 五行映射:10 天干 + 12 地支
   const WX = {
     '甲': '木', '乙': '木', '丙': '火', '丁': '火', '戊': '土', '己': '土', '庚': '金', '辛': '金', '壬': '水', '癸': '水',
@@ -135,5 +153,5 @@
   }
 
   window.Core = window.Core || {};
-  window.Core.Util = { escapeHtml, WX, SHENG, KE, judgeWangShuai, initDateInputs, selCal, selLeap, selGender };
+  window.Core.Util = { escapeHtml, safeHTML, WX, SHENG, KE, judgeWangShuai, initDateInputs, selCal, selLeap, selGender };
 })();

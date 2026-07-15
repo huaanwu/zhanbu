@@ -69,6 +69,9 @@ const Cache = {
         parts.push(params.liuyao?.gua?.name);
         parts.push(params.ziwei?.mingGong?.ganzhi);
         break;
+      case 'daofobuddhism':
+        parts.push(params.question?.slice(0, 50) || 'no-question');
+        break;
       default:
         parts.push(JSON.stringify(params));
     }

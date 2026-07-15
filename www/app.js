@@ -21,6 +21,7 @@ var selLeap = Core.Util.selLeap;
 var selGender = Core.Util.selGender;
 var stopCurrentStream = Core.Stream.stopCurrentStream;
 var escapeHtml = Core.Util.escapeHtml;
+var safeHTML = Core.Util.safeHTML;
 var judgeWangShuai = Core.Util.judgeWangShuai;
 var stripThinking = Core.AI.stripThinking;
 window.WX = Core.Util.WX;
@@ -483,7 +484,7 @@ function loadSettings() {
   const key = localStorage.getItem('ds_api_key') || '';
   const model = localStorage.getItem('ds_model') || 'deepseek-chat';
   const useLocal = localStorage.getItem('use_local_model') === '1';
-  const vKey = localStorage.getItem('vision_api_key') || DEFAULT_VISION_KEY;
+  const vKey = localStorage.getItem('vision_api_key') || '';
   const vModel = localStorage.getItem('vision_model') || 'qwen-vl-plus';
   const savedIp = localStorage.getItem('local_server_ip');
   const savedPort = localStorage.getItem('local_server_port');

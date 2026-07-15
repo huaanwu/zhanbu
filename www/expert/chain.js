@@ -248,11 +248,19 @@ const FEWSHOT_CROSS = `【Few-shot 标准示范】
 Expert.fewshot = function(domain) {
   const map = {
     '六爻': FEWSHOT_LIUYAO,
+    'liuyao': FEWSHOT_LIUYAO,
     '八字': FEWSHOT_BAZI,
+    'bazi': FEWSHOT_BAZI,
     '紫微': FEWSHOT_ZIWEI,
+    'ziwei': FEWSHOT_ZIWEI,
     '奇门': FEWSHOT_QIMEN,
+    'qimen': FEWSHOT_QIMEN,
     '三术同参': FEWSHOT_CROSS,
+    'cross': FEWSHOT_CROSS,
   };
+  if (!map[domain]) {
+    console.warn('[Expert.fewshot] 未知 domain:', domain, '回退到六爻示例');
+  }
   return map[domain] || FEWSHOT_LIUYAO;
 };
 

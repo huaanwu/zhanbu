@@ -26,7 +26,6 @@
 
   // v1.3.1: API Key 必须运行时由用户输入,禁止硬编码
   window.DEFAULT_API_KEY = '';
-  window.DEFAULT_VISION_KEY = '';
 
   window.Core = window.Core || {};
   window.Core.State = { get: () => window.state, set: (s) => { window.state = s; } };
