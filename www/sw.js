@@ -9,7 +9,8 @@
  * 版本: 通过 CACHE_NAME 升级,旧缓存自动清空
  */
 
-const CACHE_NAME = 'zhanbu-v1';
+const SW_VERSION = '3.0.5-1';
+const CACHE_NAME = 'zhanbu-' + SW_VERSION;
 const STATIC_ASSETS = [
   './',
   './index.html',
