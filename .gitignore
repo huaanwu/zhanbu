@@ -45,3 +45,6 @@ yarn-error.log*
 
 # KB 手动备份(日期格式)
 /www/kb_data/*.bak-*
+
+# 本地测试服务器日志
+tmp_server*.log

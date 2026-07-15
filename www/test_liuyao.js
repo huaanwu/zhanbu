@@ -1,4 +1,4 @@
-﻿/**
+/**
  * liuyao.js test - fixed method check
  */
 process.chdir(__dirname);
@@ -6,7 +6,7 @@ var TR = require('./test_comprehensive.js');
 var runner = new TR();
 var fs = require('fs');
 
-var code = fs.readFileSync('liuyao.js', 'utf-8');
+var code = fs.readFileSync('lib/ganzhi.js', 'utf-8') + ';' + fs.readFileSync('liuyao.js', 'utf-8');
 globalThis.window = {};
 eval(code);
 var liuyao = globalThis.window.liuyao;

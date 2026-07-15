@@ -1,11 +1,17 @@
-﻿process.chdir(__dirname);
+process.chdir(__dirname);
 var TR = require("./test_comprehensive.js");
 var runner = new TR();
 var fs0 = require("fs");
 
 globalThis.window = {};
+eval(fs0.readFileSync('lib/ganzhi.js', 'utf-8'));
+eval(fs0.readFileSync('expert/tables.js', 'utf-8'));
+eval(fs0.readFileSync('expert/bazi.js', 'utf-8'));
+eval(fs0.readFileSync('expert/liuyao.js', 'utf-8'));
+eval(fs0.readFileSync('expert/qimen.js', 'utf-8'));
+eval(fs0.readFileSync('expert/ziwei.js', 'utf-8'));
+eval(fs0.readFileSync('expert/chain.js', 'utf-8'));
 eval(fs0.readFileSync('liuyao.js', 'utf-8'));
-eval(fs0.readFileSync('expert.js', 'utf-8'));
 eval(fs0.readFileSync('xingshi.js', 'utf-8'));
 eval(fs0.readFileSync('qimen.js', 'utf-8'));
 
@@ -491,8 +497,10 @@ runner.test('年柱：2026立春前(2/3)=乙巳', function() {
 runner.test('年柱：2026立春(2/4)在农历年前=乙巳', function() {
   runner.assertEq(window.getYearGZEx(2026,2,4), "乙巳");
 });
-runner.test('年柱：2026立春后(2/5)农历年前=乙巳', function() {
-  runner.assertEq(window.getYearGZEx(2026,2,5), "乙巳");
+runner.test('年柱：2026立春后(2/5)=丙午', function() {
+  // 2026 立春是 2/4 22:46, 2/5 0:00 起已属丙午年(按八字标准: 立春换年)
+  // 旧期望乙巳是按春节换年算的, 与八字规则不符, 已修正
+  runner.assertEq(window.getYearGZEx(2026,2,5), "丙午");
 });
 runner.test('年柱：2000立春前(2/3)=己卯', function() {
   runner.assertEq(window.getYearGZEx(2000,2,3), "己卯");
@@ -505,8 +513,10 @@ runner.module('高精度引擎·节气月');
 runner.test('月柱：2026立春前(2/3)=己丑', function() {
   runner.assertEq(window.getMonthGZEx(2026,2,3,"乙"), "己丑");
 });
-runner.test('月柱：2026立春后(2/4)=庚寅', function() {
-  runner.assertEq(window.getMonthGZEx(2026,2,4,"乙"), "庚寅");
+runner.test('月柱：2026立春当日(2/4 0时)=己丑', function() {
+  // 2026 立春是 2/4 22:46, 0:00 仍在己丑月; 22:46 后才进庚寅月
+  // 旧期望庚寅是把 2/4 整天当作立春后, 与节气实际时刻不符, 已修正
+  runner.assertEq(window.getMonthGZEx(2026,2,4,"乙"), "己丑");
 });
 runner.test('月柱：2026夏至后6/28=甲午', function() {
   runner.assertEq(window.getMonthGZEx(2026,6,28,"丙"), "甲午");

@@ -20,7 +20,11 @@ globalThis.window = {};
 globalThis.fetch = function() { return Promise.reject(new Error('fetch not available in test')); };
 globalThis.requestIdleCallback = null; // 测试里不需要
 
-var code = fs.readFileSync('rag.js', 'utf-8');
+var code = fs.readFileSync('rag/tokenizer.js', 'utf-8')
+  + ';' + fs.readFileSync('rag/bm25.js', 'utf-8')
+  + ';' + fs.readFileSync('rag/vector.js', 'utf-8')
+  + ';' + fs.readFileSync('rag/rrf.js', 'utf-8')
+  + ';' + fs.readFileSync('rag/index.js', 'utf-8');
 eval(code);
 
 runner.test('RAG 模块暴露', function() {

@@ -59,7 +59,8 @@ function drawQian() {
     const q = data[idx];
     const levelColor = q.level === '上上' ? 'var(--accent-gold)' : q.level === '上吉' ? 'var(--accent-green)' : q.level === '中吉' ? 'var(--accent-gold)' : q.level === '中平' ? 'var(--text-secondary)' : 'var(--accent-red)';
     const ctx = window._dfCurrentQuestion ? '\n\n【问事参考】' + window._dfCurrentQuestion : '';
-    document.getElementById('qianResult').innerHTML = `
+    const ctxDiv = ctx ? safeHTML`<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">${ctx}</div>` : '';
+    document.getElementById('qianResult').innerHTML = safeHTML`
       <div style="text-align:center;padding:1rem;background:var(--bg-inner);border-radius:8px;border:1px solid var(--accent-gold);">
         <div style="font-size:0.8rem;color:var(--text-muted);">第 ${q.num} 签 · 共 ${data.length} 签</div>
         <div style="font-size:1.5rem;font-weight:bold;color:${levelColor};margin:0.3rem 0;">${q.level}签</div>
@@ -67,7 +68,7 @@ function drawQian() {
         <div style="font-size:0.85rem;color:var(--text-secondary);font-style:italic;margin:0.3rem 0;line-height:1.5;">${q.poem}</div>
         <div style="font-size:0.9rem;color:var(--text-primary);margin:0.5rem 0;line-height:1.6;">${q.desc}</div>
         <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.5rem;padding-top:0.5rem;border-top:1px dashed var(--border);">💡 化解：${q.advice}</div>
-        ${ctx ? '<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">' + ctx + '</div>' : ''}
+        ${safeHTML.raw(ctxDiv)}
       </div>
     `;
     document.getElementById('qianResult').style.display = 'block';
@@ -87,10 +88,17 @@ function renderFuList() {
   }
   // 分类栏
   const cats = ['all', ...new Set(kb.entries.map(e => e.category))];
-  const catBar = cats.map(c =>
-    `<button onclick="_fuCategory='${c}';renderFuList();" style="padding:0.25rem 0.5rem;background:${_fuCategory===c?'var(--accent-gold)':'var(--bg-primary)'};color:${_fuCategory===c?'#1a1612':'var(--text-primary)'};border:1px solid var(--border);border-radius:4px;font-size:0.7rem;cursor:pointer;">${c==='all'?'全部':c}</button>`
-  ).join('');
-  document.getElementById('fuCategoryBar').innerHTML = catBar;
+const catBar = cats.map(c => {
+  const isActive = _fuCategory === c;
+  return safeHTML`<button data-cat="${c}" style="padding:0.25rem 0.5rem;background:${isActive?'var(--accent-gold)':'var(--bg-primary)'};color:${isActive?'#1a1612':'var(--text-primary)'};border:1px solid var(--border);border-radius:4px;font-size:0.7rem;cursor:pointer;">${c==='all'?'全部':c}</button>`;
+}).join('');
+document.getElementById('fuCategoryBar').innerHTML = catBar;
+document.querySelectorAll('#fuCategoryBar [data-cat]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    _fuCategory = btn.dataset.cat;
+    renderFuList();
+  });
+});
   // 列表
   let list = kb.entries;
   if (_fuCategory !== 'all') list = list.filter(e => e.category === _fuCategory);
@@ -330,10 +338,17 @@ function renderJueList() {
     return;
   }
   const cats = ['all', ...new Set(kb.entries.map(e => e.category))];
-  const catBar = cats.map(c =>
-    `<button onclick="_jueCategory='${c}';renderJueList();" style="padding:0.25rem 0.5rem;background:${_jueCategory===c?'var(--accent-gold)':'var(--bg-primary)'};color:${_jueCategory===c?'#1a1612':'var(--text-primary)'};border:1px solid var(--border);border-radius:4px;font-size:0.7rem;cursor:pointer;">${c==='all'?'全部':c}</button>`
-  ).join('');
-  document.getElementById('jueCategoryBar').innerHTML = catBar;
+const catBar = cats.map(c => {
+  const isActive = _jueCategory === c;
+  return safeHTML`<button data-cat="${c}" style="padding:0.25rem 0.5rem;background:${isActive?'var(--accent-gold)':'var(--bg-primary)'};color:${isActive?'#1a1612':'var(--text-primary)'};border:1px solid var(--border);border-radius:4px;font-size:0.7rem;cursor:pointer;">${c==='all'?'全部':c}</button>`;
+}).join('');
+document.getElementById('jueCategoryBar').innerHTML = catBar;
+document.querySelectorAll('#jueCategoryBar [data-cat]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    _jueCategory = btn.dataset.cat;
+    renderJueList();
+  });
+});
   let list = kb.entries;
   if (_jueCategory !== 'all') list = list.filter(e => e.category === _jueCategory);
   document.getElementById('jueList').innerHTML = list.map(e => {
@@ -402,10 +417,16 @@ ${kbBuddhismDivine()}
       question: input,
       callOpts: { temperature: 0.3 },
     });
-    result.innerHTML = `<div style="background:var(--bg-inner);border-radius:8px;padding:0.8rem;line-height:1.7;font-size:0.9rem;white-space:pre-wrap;">${text}</div>
+    result.innerHTML = safeHTML`<div style="background:var(--bg-inner);border-radius:8px;padding:0.8rem;line-height:1.7;font-size:0.9rem;white-space:pre-wrap;">${text}</div>
       <div style="margin-top:0.5rem;display:flex;gap:0.4rem;justify-content:flex-end;">
-        <button onclick="navigator.clipboard.writeText(\`${text.replace(/`/g, '\\`').replace(/\\/g, '\\\\')}\`);showToast('已复制','success');" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:0.3rem 0.6rem;border-radius:4px;font-size:0.75rem;cursor:pointer;">📋 复制</button>
+        <button class="df-copy-btn" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:0.3rem 0.6rem;border-radius:4px;font-size:0.75rem;cursor:pointer;">📋 复制</button>
       </div>`;
+    const copyBtn = result.querySelector('.df-copy-btn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(text).then(() => showToast('已复制', 'success')).catch(() => showToast('复制失败', 'error'));
+      });
+    }
   } catch (e) {
     result.innerHTML = `<div class="error">化解生成失败：${escapeHtml(e.message)}</div>`;
   }

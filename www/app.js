@@ -13,22 +13,23 @@
 // ========== 兼容层: HTML onclick 调用,需在所有 IIFE 之前设置 ==========
 // core/*.js 已在 app.js 之前加载,这里把 Core.* 重新挂到 window 上以匹配 onclick 属性
 // 以及 app/*.js 中的 bare 调用(callDeepSeek/getLocalServerUrl/stripThinking 等)
-window.switchPage = Core.Router.switchPage;
-window.showToast = Core.Toast.showToast;
-window.initDateInputs = Core.Util.initDateInputs;
-window.selCal = Core.Util.selCal;
-window.selLeap = Core.Util.selLeap;
-window.selGender = Core.Util.selGender;
-window.stopCurrentStream = Core.Stream.stopCurrentStream;
-window.escapeHtml = Core.Util.escapeHtml;
-window.judgeWangShuai = Core.Util.judgeWangShuai;
-window.stripThinking = Core.AI.stripThinking;
+var switchPage = Core.Router.switchPage;
+var showToast = Core.Toast.showToast;
+var initDateInputs = Core.Util.initDateInputs;
+var selCal = Core.Util.selCal;
+var selLeap = Core.Util.selLeap;
+var selGender = Core.Util.selGender;
+var stopCurrentStream = Core.Stream.stopCurrentStream;
+var escapeHtml = Core.Util.escapeHtml;
+var safeHTML = Core.Util.safeHTML;
+var judgeWangShuai = Core.Util.judgeWangShuai;
+var stripThinking = Core.AI.stripThinking;
 window.WX = Core.Util.WX;
-window.callDeepSeek = Core.AI.callDeepSeek;
-window.readSSE = Core.AI.readSSE;
-window.getLocalServerUrl = Core.AI.getLocalServerUrl;
-window.getLocalServerIp = Core.AI.getLocalServerIp;
-window.getLocalServerPort = Core.AI.getLocalServerPort;
+var callDeepSeek = Core.AI.callDeepSeek;
+var readSSE = Core.AI.readSSE;
+var getLocalServerUrl = Core.AI.getLocalServerUrl;
+var getLocalServerIp = Core.AI.getLocalServerIp;
+var getLocalServerPort = Core.AI.getLocalServerPort;
 
 // 知识库入口兼容(core/kb.js 已加载)
 window.ensureCoreKB = Core.KB.ensureCoreKB;
@@ -483,7 +484,7 @@ function loadSettings() {
   const key = localStorage.getItem('ds_api_key') || '';
   const model = localStorage.getItem('ds_model') || 'deepseek-chat';
   const useLocal = localStorage.getItem('use_local_model') === '1';
-  const vKey = localStorage.getItem('vision_api_key') || DEFAULT_VISION_KEY;
+  const vKey = localStorage.getItem('vision_api_key') || '';
   const vModel = localStorage.getItem('vision_model') || 'qwen-vl-plus';
   const savedIp = localStorage.getItem('local_server_ip');
   const savedPort = localStorage.getItem('local_server_port');
