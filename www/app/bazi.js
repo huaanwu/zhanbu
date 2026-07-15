@@ -130,12 +130,6 @@ function renderBazi(pan) {
   document.getElementById('baziResult').innerHTML = html;
 }
 
-function getYearGZ(year) {
-  const gan = ["庚","辛","壬","癸","甲","乙","丙","丁","戊","己"];
-  const zhi = ["申","酉","戌","亥","子","丑","寅","卯","辰","巳","午","未"];
-  return gan[year % 10] + zhi[year % 12];
-}
-
 function buildBaziPrompt(pan) {
   const gz = pan.gz;
   const now = new Date();

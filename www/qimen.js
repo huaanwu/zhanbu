@@ -1,10 +1,11 @@
-/**
- * 奇门遁甲排盘系统 - 纯 JavaScript 版
- * 移植自 backend/divination/qimen.py + paipan.py
- */
+// ========== 奇门遁甲排盘系统 v1.1 ==========
+// 基础干支函数(GAN/ZHI/getYearGZ/getMonthGZ/getDayGZ/getHourGZ)由 lib/ganzhi.js 提供(单一来源)
+// 本文件仅保留奇门特有: 节气/局数/九宫/天盘/地盘/人盘/神盘 + panQimen/formatQimenPrompt
+// ==============================================
 
-const GAN = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
-const ZHI = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+// GAN/ZHI 由 lib/ganzhi.js 提供(单一来源), 这里做本地引用
+const GAN = (typeof window !== 'undefined' && window.GAN) ? window.GAN : (typeof GAN !== 'undefined' ? GAN : ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']);
+const ZHI = (typeof window !== 'undefined' && window.ZHI) ? window.ZHI : (typeof ZHI !== 'undefined' ? ZHI : ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']);
 
 const JIE_QI_NAMES = ['冬至','小寒','大寒','立春','雨水','惊蛰',
                       '春分','清明','谷雨','立夏','小满','芒种',
@@ -57,27 +58,6 @@ function tiangandizhiSequence() {
   return seq;
 }
 const TIAN_GAN_DI_ZHI_SEQ = tiangandizhiSequence();
-
-function getGanZhi(offset) { return GAN[offset % 10] + ZHI[offset % 12]; }
-function getYearGZ(year) { return getGanZhi(year - 4); }
-function getMonthGZ(yearGan, month) {
-  const wuHuDun = {'甲':'丙','己':'丙','乙':'戊','庚':'戊','丙':'庚','辛':'庚','丁':'壬','壬':'壬','戊':'甲','癸':'甲'};
-  const startGan = wuHuDun[yearGan] || '丙';
-  const startIdx = GAN.indexOf(startGan);
-  const dzArr = ['寅','卯','辰','巳','午','未','申','酉','戌','亥','子','丑'];
-  return GAN[(startIdx + month - 1) % 10] + dzArr[month - 1];
-}
-function getDayGZ(dt) {
-  const base = new Date(1900, 0, 31);
-  const diff = Math.floor((dt - base) / 86400000);
-  return getGanZhi(diff);
-}
-function getHourGZ(dayGan, hour) {
-  const zhiIdx = Math.floor((hour + 1) / 2) % 12;
-  const dayIdx = GAN.indexOf(dayGan);
-  const ganIdx = (dayIdx * 2 + zhiIdx) % 10;
-  return GAN[ganIdx] + ZHI[zhiIdx];
-}
 
 // === 节气计算 ===
 const WINTER_SOLSTICE = {

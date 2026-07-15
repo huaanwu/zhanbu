@@ -1,4 +1,4 @@
-﻿/**
+/**
  * qimen.js test - fixed keys
  */
 process.chdir(__dirname);
@@ -8,9 +8,10 @@ var fs = require('fs');
 
 globalThis.window = globalThis;
 var LunarLib = require('./lib/lunar.bundle.js');
-globalThis.Solar = LunarLib.Solar;
-globalThis.Lunar = LunarLib.Lunar;
-globalThis.LunarLib = LunarLib;
+// 注: 旧版 lunar.bundle.js 直接 require 返回空对象(Solar 是 var 未导出)
+//     ganzhi.js 通过 vm 沙箱加载, 这里是死代码, 保留仅为向后兼容
+if (LunarLib && LunarLib.Solar) globalThis.Solar = LunarLib.Solar;
+eval(fs.readFileSync('lib/ganzhi.js', 'utf-8'));
 eval(fs.readFileSync('qimen.js', 'utf-8'));
 var qimen = globalThis.window.qimen;
 

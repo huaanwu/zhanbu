@@ -1,4 +1,4 @@
-﻿/**
+/**
  * expert.js test - fixed mock data
  */
 process.chdir(__dirname);
@@ -7,6 +7,7 @@ var runner = new TR();
 var fs = require('fs');
 
 globalThis.window = {};
+eval(fs.readFileSync('lib/ganzhi.js', 'utf-8'));
 eval(fs.readFileSync('liuyao.js', 'utf-8'));
 eval(fs.readFileSync('expert.js', 'utf-8'));
 var Expert = globalThis.window.Expert;
