@@ -8,8 +8,12 @@ var fs = require('fs');
 
 globalThis.window = {};
 eval(fs.readFileSync('lib/ganzhi.js', 'utf-8'));
-eval(fs.readFileSync('liuyao.js', 'utf-8'));
-eval(fs.readFileSync('expert.js', 'utf-8'));
+eval(fs.readFileSync('expert/tables.js', 'utf-8'));
+eval(fs.readFileSync('expert/bazi.js', 'utf-8'));
+eval(fs.readFileSync('expert/liuyao.js', 'utf-8'));
+eval(fs.readFileSync('expert/qimen.js', 'utf-8'));
+eval(fs.readFileSync('expert/ziwei.js', 'utf-8'));
+eval(fs.readFileSync('expert/chain.js', 'utf-8'));
 var Expert = globalThis.window.Expert;
 
 runner.module('expert.js - Expert System');

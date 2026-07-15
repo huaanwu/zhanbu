@@ -5,8 +5,13 @@ var fs0 = require("fs");
 
 globalThis.window = {};
 eval(fs0.readFileSync('lib/ganzhi.js', 'utf-8'));
+eval(fs0.readFileSync('expert/tables.js', 'utf-8'));
+eval(fs0.readFileSync('expert/bazi.js', 'utf-8'));
+eval(fs0.readFileSync('expert/liuyao.js', 'utf-8'));
+eval(fs0.readFileSync('expert/qimen.js', 'utf-8'));
+eval(fs0.readFileSync('expert/ziwei.js', 'utf-8'));
+eval(fs0.readFileSync('expert/chain.js', 'utf-8'));
 eval(fs0.readFileSync('liuyao.js', 'utf-8'));
-eval(fs0.readFileSync('expert.js', 'utf-8'));
 eval(fs0.readFileSync('xingshi.js', 'utf-8'));
 eval(fs0.readFileSync('qimen.js', 'utf-8'));
 
