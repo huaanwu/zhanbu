@@ -4,8 +4,8 @@
 // ==============================================
 
 // GAN/ZHI 由 lib/ganzhi.js 提供(单一来源), 这里做本地引用
-const GAN = (typeof window !== 'undefined' && window.GAN) ? window.GAN : (typeof GAN !== 'undefined' ? GAN : ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']);
-const ZHI = (typeof window !== 'undefined' && window.ZHI) ? window.ZHI : (typeof ZHI !== 'undefined' ? ZHI : ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']);
+var GAN = (typeof window !== 'undefined' && window.GAN) ? window.GAN : ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+var ZHI = (typeof window !== 'undefined' && window.ZHI) ? window.ZHI : ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
 
 const JIE_QI_NAMES = ['冬至','小寒','大寒','立春','雨水','惊蛰',
                       '春分','清明','谷雨','立夏','小满','芒种',
