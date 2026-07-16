@@ -74,14 +74,14 @@
 
   function getLocalServerUrl() {
     const ip = (localStorage.getItem('local_server_ip') || '127.0.0.1').replace(/\/$/, '');
-    const port = localStorage.getItem('local_server_port') || '11434';
+    const port = localStorage.getItem('local_server_port') || '8082';
     return `http://${ip}:${port}`;
   }
   function getLocalServerIp() {
     return (localStorage.getItem('local_server_ip') || '127.0.0.1').replace(/\/$/, '');
   }
   function getLocalServerPort() {
-    return localStorage.getItem('local_server_port') || '11434';
+    return localStorage.getItem('local_server_port') || '8082';
   }
 
   let _currentStreamAbort = null;
