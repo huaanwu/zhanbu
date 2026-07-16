@@ -73,15 +73,15 @@
   }
 
   function getLocalServerUrl() {
-    const ip = (localStorage.getItem('local_server_ip') || '192.168.1.3').replace(/\/$/, '');
-    const port = localStorage.getItem('local_server_port') || '8082';
+    const ip = (localStorage.getItem('local_server_ip') || '127.0.0.1').replace(/\/$/, '');
+    const port = localStorage.getItem('local_server_port') || '11434';
     return `http://${ip}:${port}`;
   }
   function getLocalServerIp() {
-    return (localStorage.getItem('local_server_ip') || '192.168.1.3').replace(/\/$/, '');
+    return (localStorage.getItem('local_server_ip') || '127.0.0.1').replace(/\/$/, '');
   }
   function getLocalServerPort() {
-    return localStorage.getItem('local_server_port') || '8082';
+    return localStorage.getItem('local_server_port') || '11434';
   }
 
   let _currentStreamAbort = null;
@@ -119,7 +119,7 @@
         const res = await fetch(localUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'local', messages, temperature, max_tokens: MAX_TOKENS, stream: !!onChunk }),
+          body: JSON.stringify({ model: 'qwen2.5:1.5b', messages, temperature, max_tokens: MAX_TOKENS, stream: !!onChunk }),
           signal: ctrl.signal
         });
         clearTimeout(localTimer);
@@ -152,10 +152,16 @@
       }
     }
 
-    // 云端 DeepSeek
+    // 云端 DeepSeek fallback
     const key = localStorage.getItem('ds_api_key') || '';
     const isFallback = useLocal;
-    if (!key) throw new Error('请先在设置页配置 DeepSeek API Key,或启动本地模型 (LM Studio / Ollama)');
+    if (!key && isFallback) {
+      // 本地模型 fallback 失败 + 没有 API Key → 报错
+      throw new Error('本地模型不可用，且未配置 DeepSeek API Key。请检查本地模型是否启动，或在设置页配置 API Key。');
+    }
+    if (!key) {
+      throw new Error('请先在设置页配置 DeepSeek API Key,或启动本地模型 (LM Studio / Ollama)');
+    }
     const model = optModel || localStorage.getItem('ds_model') || 'deepseek-chat';
 
     const ctrl = new AbortController();
