@@ -12,7 +12,7 @@ const QIAN_FALLBACK = [
 
 // 从 KB 提取 100 签（bdiv_09 之后为具体签文）
 function getQianFromKB() {
-  const k = _kb?.buddhism_divine;
+  const k = window._kb?.buddhism_divine;
   if (!k?.entries) return null;
   const qianEntries = k.entries.filter(e => e.id && e.id.startsWith('bdiv_') && e.poem);
   if (qianEntries.length === 0) return null;
@@ -41,9 +41,19 @@ function switchDfTab(name) {
   document.querySelectorAll('.df-tab-content').forEach(c => c.style.display = 'none');
   const target = document.getElementById('dfTab' + name[0].toUpperCase() + name.slice(1));
   if (target) target.style.display = 'block';
-  // 切换时按需渲染
-  if (name === 'fu') renderFuList();
-  if (name === 'jue') renderJueList();
+  // 切换时按需渲染；若 KB 未加载则先加载
+  if (name === 'fu') {
+    if (window._kb?.daoism_fuzhou) { renderFuList(); }
+    else if (window.loadKBGroups) {
+      window.loadKBGroups(['daofobuddhism']).then(() => renderFuList()).catch(e => console.warn('[DF] fu KB load fail:', e));
+    }
+  }
+  if (name === 'jue') {
+    if (window._kb?.daoism_shoujue) { renderJueList(); }
+    else if (window.loadKBGroups) {
+      window.loadKBGroups(['daofobuddhism']).then(() => renderJueList()).catch(e => console.warn('[DF] jue KB load fail:', e));
+    }
+  }
 }
 
 // ========== 灵签抽签 ==========
@@ -54,6 +64,7 @@ function drawQian() {
   document.getElementById('qianResult').style.display = 'none';
   document.getElementById('qianAgain').style.display = 'none';
   setTimeout(() => {
+    try {
     const data = getQianData();
     const idx = Math.floor(Math.random() * data.length);
     const q = data[idx];
@@ -74,6 +85,13 @@ function drawQian() {
     document.getElementById('qianResult').style.display = 'block';
     document.getElementById('qianAgain').style.display = 'inline-block';
     document.getElementById('qianShaking').style.display = 'none';
+    } catch (e) {
+      console.error('[DF] drawQian error:', e);
+      document.getElementById('qianShaking').style.display = 'none';
+      document.getElementById('qianResult').style.display = 'block';
+      document.getElementById('qianResult').innerHTML = '<div class=\"error\">抽签出错：' + escapeHtml(e.message) + '</div>';
+      document.getElementById('qianAgain').style.display = 'inline-block';
+    }
   }, 1500);
 }
 
@@ -81,7 +99,7 @@ function drawQian() {
 let _fuCategory = 'all';
 function renderFuList() {
   const kw = document.getElementById('fuSearch')?.value?.trim() || '';
-  const kb = (typeof _kb !== 'undefined' ? _kb : window._kb)?.daoism_fuzhou;
+  const kb = window._kb?.daoism_fuzhou;
   if (!kb?.entries) {
     document.getElementById('fuList').innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:1rem;">知识库加载中...</div>';
     return;
@@ -332,7 +350,7 @@ function renderFuSvg(fuType, title, opts = {}) {
 }
 
 function renderJueList() {
-  const kb = (typeof _kb !== 'undefined' ? _kb : window._kb)?.daoism_shoujue;
+  const kb = window._kb?.daoism_shoujue;
   if (!kb?.entries) {
     document.getElementById('jueList').innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:1rem;">知识库加载中...</div>';
     return;
@@ -431,3 +449,15 @@ ${kbBuddhismDivine()}
     result.innerHTML = `<div class="error">化解生成失败：${escapeHtml(e.message)}</div>`;
   }
 }
+
+// 初始化：预加载道佛知识库，使符箓/手诀/灵签立即可用
+(async function initDaofobuddhism() {
+  if (window.loadKBGroups && window.PAGE_KB_GROUPS) {
+    try {
+      await window.loadKBGroups(window.PAGE_KB_GROUPS.daofobuddhism || ['daofobuddhism']);
+      console.log('[DF] 道佛知识库预加载完成');
+    } catch (e) {
+      console.warn('[DF] 道佛知识库预加载失败:', e);
+    }
+  }
+})();

@@ -1,4 +1,4 @@
-function buildLiuyaoPrompt(pan, question) {
+﻿function buildLiuyaoPrompt(pan, question) {
   return window.liuyao ? window.liuyao.formatLiuyaoPrompt(pan, question) : "";
 }
 // ========== 六爻 ==========
@@ -254,13 +254,14 @@ async function doAILiuyao() {
 
   const prefix = _followUpPrefix;
   _followUpPrefix = '';
-  const separator = prefix ? '\n\n─────────────────\n📌 追问：' + (currentLy.question || '') + '\n─────────────────\n\n' : '';
+  const question = currentLy?.question || document.getElementById('lyQuestion')?.value?.trim() || '';
+  const separator = prefix ? '\n\n─────────────────\n📌 追问：' + (question || '') + '\n─────────────────\n\n' : '';
   if (!prefix) content.textContent = '';
 
   let fullText = '';
   try {
     // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
-    let system = Core.AI.buildSystemPrompt({ domain: 'liuyao', pan: currentLy, question: currentLy.question });
+    let system = Core.AI.buildSystemPrompt({ domain: 'liuyao', pan: currentLy, question });
     if ((state.liuyao.mode || 'normal') === 'xunwu') {
       system += '\n\n【此为寻物占】用户正在寻找丢失的物品。重点解读：方位、距离、环境特征、是否还在原处、找回可能性、最佳时间、具体建议。';
     }
@@ -270,12 +271,12 @@ async function doAILiuyao() {
       prompt: currentLyPrompt,
       system,
       pan: currentLy,
-      question: currentLy.question,
+      question,
       contentEl: content,
       prefix,
       separator,
     });
-    saveHistory('liuyao', currentLy.gua.name, currentLy.question || '六爻解读', finalText);
+    saveHistory('liuyao', currentLy.gua.name, question || '六爻解读', finalText);
     addFeedbackUI('liuyao', content, finalText, currentLyPrompt, system);
     showResultActions('lyAIContent', 'lyAIActions');
   } catch (e) {

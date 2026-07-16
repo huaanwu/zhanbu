@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap");
+﻿@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap");
 :root {
   --bg-primary: #1a1612;
   --bg-secondary: #25201a;
@@ -40,7 +40,7 @@
 }
 html { scroll-behavior: smooth; }
 body {
-  font-family: 'Noto Sans SC', sans-serif;
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', 'WenQuanYi Micro Hei', 'Noto Sans CJK SC', sans-serif;
   background: var(--bg-primary);
   background-image:
     radial-gradient(ellipse 80% 60% at 50% -10%, rgba(201,168,76,0.06), transparent),
@@ -175,7 +175,7 @@ body {
   border-radius: 1px;
 }
 .header h1 {
-  font-family: 'Noto Serif SC', serif;
+  font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', 'STSong', 'AR PL UMing', 'Noto Serif CJK SC', serif;
   font-size: 2.1rem;
   font-weight: 700;
   color: var(--accent-gold);
@@ -316,7 +316,7 @@ body {
 }
 
 .result-title {
-  font-family: 'Noto Serif SC', serif;
+  font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', 'STSong', 'AR PL UMing', 'Noto Serif CJK SC', serif;
   color: var(--accent-gold);
   font-size: 1.1rem;
   margin-bottom: 0.75rem;
@@ -351,7 +351,7 @@ body {
 .pillar-card:hover { transform: translateY(-2px); border-color: var(--accent-gold-dim); }
 .pillar-label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.4rem; letter-spacing: 0.1em; }
 .pillar-ganzhi {
-  font-family: 'Noto Serif SC', serif;
+  font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', 'STSong', 'AR PL UMing', 'Noto Serif CJK SC', serif;
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--accent-gold-light);
@@ -384,7 +384,7 @@ body {
   transition: border-color var(--transition);
 }
 .result-card:hover { border-color: var(--accent-gold-dim); }
-.result-card h3 { font-family: 'Noto Serif SC', serif; }
+.result-card h3 { font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', 'STSong', 'AR PL UMing', 'Noto Serif CJK SC', serif; }
 
 /* 九宫格 - 奇门 */
 .jiugong-grid {
@@ -412,11 +412,11 @@ body {
   box-shadow: 0 0 20px rgba(90,154,90,0.3);
   background: linear-gradient(135deg, rgba(90,154,90,0.12), var(--bg-card));
 }
-.gong-name { font-family: 'Noto Serif SC', serif; font-weight: 600; color: var(--accent-gold-light); font-size: 0.95rem; }
+.gong-name { font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', 'STSong', 'AR PL UMing', 'Noto Serif CJK SC', serif; font-weight: 600; color: var(--accent-gold-light); font-size: 0.95rem; }
 .gong-direction { font-size: 0.65rem; color: var(--text-muted); margin-bottom: 0.35rem; }
 .gong-item { margin: 0.15rem 0; font-size: 0.72rem; }
 .gong-item .label { color: var(--text-muted); font-size: 0.65rem; }
-.gong-item .value { color: var(--text-primary); font-family: 'Noto Serif SC', serif; }
+.gong-item .value { color: var(--text-primary); font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', 'STSong', 'AR PL UMing', 'Noto Serif CJK SC', serif; }
 .gong-item .star { color: var(--accent-gold); font-weight: 600; }
 .gong-item .door { color: var(--accent-green); }
 .gong-item .god { color: var(--accent-red); }
@@ -476,7 +476,7 @@ body {
   border-radius: var(--radius);
   padding: 1.25rem;
   line-height: 1.85;
-  font-family: 'Noto Serif SC', serif;
+  font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', 'STSong', 'AR PL UMing', 'Noto Serif CJK SC', serif;
   white-space: pre-wrap;
   font-size: 0.92rem;
   color: var(--text-primary);
@@ -589,7 +589,7 @@ body {
   color: var(--text-secondary);
   flex-wrap: wrap;
 }
-.gua-info strong { color: var(--accent-gold); font-family: 'Noto Serif SC', serif; }
+.gua-info strong { color: var(--accent-gold); font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', 'STSong', 'AR PL UMing', 'Noto Serif CJK SC', serif; }
 
 /* 摇签动画 + Spinner */
 @keyframes shake {

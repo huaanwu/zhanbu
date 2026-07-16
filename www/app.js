@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AI 占卜大师 - 主应用逻辑 (v2.0)
  * v2.0.1: 从 index.html 拆出 4770 行 inline JS
  * v3.0.5: 拆分到 www/core/ 7 个模块 + 按域 app/*.js
@@ -34,6 +34,7 @@ var getLocalServerPort = Core.AI.getLocalServerPort;
 // 知识库入口兼容(core/kb.js 已加载)
 window.ensureCoreKB = Core.KB.ensureCoreKB;
 window.loadKBGroups = Core.KB.loadKBGroups;
+window.loadKBGroup = Core.KB.loadKBGroup;
 window.kbPrimary = Core.KB.kbPrimary;
 window.kbExtended = Core.KB.kbExtended;
 window.kbDaoismBuddhismOnDemand = Core.KB.kbDaoismBuddhismOnDemand;
@@ -503,6 +504,11 @@ function loadSettings() {
   
   // 尝试用WebRTC获取本机IP，如果还没保存过则更新显示
   if (!savedIp) {
+    // 优先检测本机 Ollama (默认 11434)
+    fetch('http://localhost:11434/').then(() => {
+      document.getElementById('localServerIpInput').value = 'localhost';
+      document.getElementById('localServerPortInput').value = '11434';
+    }).catch(() => {
     try {
       const pc = new RTCPeerConnection({iceServers: []});
       pc.createDataChannel('');
@@ -517,6 +523,7 @@ function loadSettings() {
       };
       setTimeout(() => pc.close(), 2000);
     } catch(e) { console.warn('[LocalServerDiscovery] ICE candidate 监听失败:', e); }
+    }).catch(() => {});
   }
 }
 function saveSettings() {
@@ -688,8 +695,8 @@ window.autoDiscoverServer = autoDiscoverServer;
 // 一键测试本地模型连接
 async function testLocalModel() {
   const statusEl = document.getElementById('discoverStatus');
-  const ip = getLocalServerIp();
-  const port = getLocalServerPort();
+  const ip = (document.getElementById('localServerIpInput')?.value || getLocalServerIp()).replace(/\/$/, '');
+  const port = document.getElementById('localServerPortInput')?.value || getLocalServerPort();
   statusEl.textContent = `正在测试 ${ip}:${port} ...`;
   statusEl.style.color = 'var(--text-muted)';
 
@@ -701,6 +708,8 @@ async function testLocalModel() {
       const models = data.data?.map(m => m.id).join(', ') || '未知模型';
       statusEl.textContent = `✅ 连接成功！模型列表: ${models}`;
       statusEl.style.color = 'var(--accent-green)';
+      document.getElementById('localModelCheck').checked = true;
+      saveSettings();
       return;
     }
   } catch (e) { console.warn('[LocalModelTest] /v1/models 测试失败:', e); }
@@ -715,6 +724,8 @@ async function testLocalModel() {
     if (res.ok) {
       statusEl.textContent = `✅ 连接成功！chat/completions 接口可用`;
       statusEl.style.color = 'var(--accent-green)';
+      document.getElementById('localModelCheck').checked = true;
+      saveSettings();
       return;
     }
     const err = await res.text().catch(() => '');
