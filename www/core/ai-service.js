@@ -22,12 +22,12 @@
     t = t.replace(/Thinking\s*Process:[\s\S]*?(?=【|## |\n## |^## |$)/i, '');
     t = t.replace(/1\.\s*Analyze[\s\S]*?(?=【|## |\n## |^## |$)/i, '');
     t = t.replace(/\*\*Key\s*Facts:\*\*[\s\S]*?(?=【|## |\n## |^## |$)/i, '');
-    // 过滤英文分析过程（Qwen3.x 等模型常见）
-    t = t.replace(/\\*\\*Key\\s*Facts[^\\n]*\\n[\\s\\S]*?(?=【|## |\\n## |^## |$)/i, '');
-    t = t.replace(/\\d+\\)\\s*\\*\\*Analyze[^\\n]*\\n[\\s\\S]*?(?=【|## |\\n## |^## |$)/i, '');
-    t = t.replace(/\\*\\*Output\\s*Format:[\\s\\S]*?(?=【|## |\\n## |^## |$)/i, '');
-    t = t.replace(/Let\\s+me\\s+work[^\\n]*[\\s\\S]*?(?=【|## |\\n## |^## |$)/i, '');
-    t = t.replace(/I\\s+will\\s+now[^\\n]*[\\s\\S]*?(?=【|## |\\n## |^## |$)/i, '');
+    // 过滤英文分析过程(Qwen3.x 等模型常见) — 正则源码(单反斜杠,不是字符串)
+    t = t.replace(/\*\*Key\s*Facts[^\n]*\n[\s\S]*?(?=【|## |\n## |^## |$)/i, '');
+    t = t.replace(/\d+\)\s*\*\*Analyze[^\n]*\n[\s\S]*?(?=【|## |\n## |^## |$)/i, '');
+    t = t.replace(/\*\*Output\s*Format:[\s\S]*?(?=【|## |\n## |^## |$)/i, '');
+    t = t.replace(/Let\s+me\s+work[^\n]*[\s\S]*?(?=【|## |\n## |^## |$)/i, '');
+    t = t.replace(/I\s+will\s+now[^\n]*[\s\S]*?(?=【|## |\n## |^## |$)/i, '');
     // 过滤纯英文段落（超过100字符的连续英文）
     t = t.replace(/^[\\s\\S]{0,500}?(?=【)/, function(m) {
       if (/^[\\s\\S]*[a-zA-Z]{10,}[\\s\\S]*$/.test(m) && !/[\\u4e00-\\u9fa5]/.test(m)) return '';
