@@ -1,4 +1,4 @@
-/**
+﻿/**
  * RAG · 主入口 v1.0
  * --------------------------------------------------
  * const RAG = { index, ready, embeddingBackend, ... }
@@ -13,6 +13,20 @@
  *
  * 末尾设 window.RAG = RAG (最后加载, 包含所有方法挂载)
  */
+
+// v3.0.6: fetch 带超时保护
+async function fetchWithTimeout(url, opts = {}, timeoutMs = 10000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...opts, signal: ctrl.signal });
+    clearTimeout(timer);
+    return res;
+  } catch (e) {
+    clearTimeout(timer);
+    throw e;
+  }
+}
 
 // flattenKB 由 tokenizer.js 提供
 const _flattenKB = window.flattenKB;
@@ -36,7 +50,7 @@ const RAG = {
       // bundle 内仍按 key 区分, flattenKB 的 source tag 仍用 key 名
     const all = [];
     try {
-      const r = await fetch('kb_data/_bundles/kb_core.json');
+      const r = await fetchWithTimeout('kb_data/_bundles/kb_core.json');
       if (r.ok) {
         const bundle = await r.json();
         for (const [key, kb] of Object.entries(bundle)) {
@@ -67,7 +81,7 @@ const RAG = {
         ];
         await Promise.all(sources.map(async ({ key, name, file }) => {
           try {
-            const r = await fetch(file);
+            const r = await fetchWithTimeout(file);
             if (!r.ok) return;
             const kb = await r.json();
             all.push(...flattenKB(kb, name));

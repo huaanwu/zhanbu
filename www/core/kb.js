@@ -5,6 +5,21 @@
 (function () {
   if (typeof window === 'undefined') return;
 
+// v3.0.6: fetch 带超时保护，防止 Capacitor WebView 中网络挂起
+async function fetchWithTimeout(url, opts = {}, timeoutMs = 10000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...opts, signal: ctrl.signal });
+    clearTimeout(timer);
+    return res;
+  } catch (e) {
+    clearTimeout(timer);
+    throw e;
+  }
+}
+
+
 const KB_PATHS = {
   bazi: 'kb_data/bazi_kb.json',
   bazi_ext: 'kb_data/bazi_ext_kb.json',
@@ -192,7 +207,7 @@ function _loadBundleIndex() {
   if (_bundleIndexPromise) return _bundleIndexPromise;
   _bundleIndexPromise = (async () => {
     try {
-      const r = await fetch('kb_data/_bundles/_index.json');
+      const r = await fetchWithTimeout('kb_data/_bundles/_index.json');
       if (!r.ok) {
         console.warn('[KB] bundle index 加载失败,降级逐个 fetch');
         _bundleIndex = {};
@@ -238,7 +253,7 @@ async function _loadKBByKeys(keys) {
         // 单文件 fallback
         const k = kList[0];
         try {
-          const r = await fetch(KB_PATHS[k]);
+          const r = await fetchWithTimeout(KB_PATHS[k]);
           if (r.ok) return [k, await r.json()];
         } catch (e) {
           console.warn('[KB] 单文件加载异常:', e.message);
@@ -247,7 +262,7 @@ async function _loadKBByKeys(keys) {
       }
       if (!_bundleCache[bundle]) {
         try {
-          const r = await fetch(`kb_data/_bundles/${bundle}`);
+          const r = await fetchWithTimeout(`kb_data/_bundles/${bundle}`);
           if (r.ok) _bundleCache[bundle] = await r.json();
           else _bundleCache[bundle] = {};
         } catch (e) {

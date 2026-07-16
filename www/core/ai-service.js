@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AI 服务层 — 从 app.js 拆出
  * 封装 callDeepSeek / readSSE / stripThinking,提供 interpret() 统一入口
  * 阶段 2: 只搬代码;阶段 5: 加 interpret() 统一封装 + 缓存
@@ -119,7 +119,7 @@
         const res = await fetch(localUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'qwen2.5:1.5b', messages, temperature, max_tokens: MAX_TOKENS, stream: !!onChunk }),
+          body: JSON.stringify({ model: (localStorage.getItem('local_model_name') || 'default'), messages, temperature, max_tokens: MAX_TOKENS, stream: !!onChunk }),
           signal: ctrl.signal
         });
         clearTimeout(localTimer);

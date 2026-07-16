@@ -496,7 +496,9 @@ function loadSettings() {
   document.getElementById('visionKeyInput').value = vKey;
   document.getElementById('visionModelSelect').value = vModel;
   document.getElementById('localServerIpInput').value = defaultIp;
-  document.getElementById('localServerPortInput').value = savedPort || '11434';
+  document.getElementById('localServerPortInput').value = savedPort || '8082';
+  const savedModelName = localStorage.getItem('local_model_name');
+  document.getElementById('localModelNameInput').value = savedModelName || 'default';
   updateApiStatus(key);
   // 版本号显示
   const verEl = document.getElementById('versionInfo');
@@ -507,7 +509,7 @@ function loadSettings() {
     // 优先检测本机 Ollama (默认 11434)
     fetch('http://localhost:11434/').then(() => {
       document.getElementById('localServerIpInput').value = 'localhost';
-      document.getElementById('localServerPortInput').value = '11434';
+      document.getElementById('localServerPortInput').value = '8082';
     }).catch(() => {
     try {
       const pc = new RTCPeerConnection({iceServers: []});
@@ -533,7 +535,8 @@ function saveSettings() {
   const vKey = document.getElementById('visionKeyInput').value.trim();
   const vModel = document.getElementById('visionModelSelect').value;
   const localIp = document.getElementById('localServerIpInput').value.trim() || '192.168.1.12';
-  const localPort = document.getElementById('localServerPortInput').value.trim() || '11434';
+  const localPort = document.getElementById('localServerPortInput').value.trim() || '8082';
+    const localModelName = document.getElementById('localModelNameInput').value.trim() || 'default';
   localStorage.setItem('ds_api_key', key);
   localStorage.setItem('ds_model', model);
   localStorage.setItem('use_local_model', useLocal ? '1' : '0');
@@ -541,6 +544,7 @@ function saveSettings() {
   localStorage.setItem('vision_model', vModel);
   localStorage.setItem('local_server_ip', localIp);
   localStorage.setItem('local_server_port', localPort);
+    localStorage.setItem('local_model_name', localModelName);
   updateApiStatus(key);
   const msg = document.getElementById('saveMsg');
   msg.style.display = 'block';
@@ -611,7 +615,7 @@ async function autoDiscoverServer() {
         const xhr = new XMLHttpRequest();
         xhr.open('GET', `http://${ip}:${scanPort}/v1/models`, true);
         xhr.timeout = 1500;
-        xhr.onload = () => resolve(xhr.status === 200 ? ip : null);
+        xhr.onload = () => resolve(xhr.status === 200 || xhr.status === 502 || xhr.status === 503 ? ip : null);
         xhr.onerror = () => { onError && onError(ip, 'network'); resolve(null); };
         xhr.ontimeout = () => { onError && onError(ip, 'timeout'); resolve(null); };
         xhr.send();
@@ -656,7 +660,7 @@ async function autoDiscoverServer() {
         const xhr = new XMLHttpRequest();
         xhr.open('GET', `http://${ip}:${scanPort}/v1/models`, true);
         xhr.timeout = 1500;
-        xhr.onload = () => resolve(xhr.status === 200 ? ip : null);
+        xhr.onload = () => resolve(xhr.status === 200 || xhr.status === 502 || xhr.status === 503 ? ip : null);
         xhr.onerror = () => { errorCount++; resolve(null); };
         xhr.ontimeout = () => { timeoutCount++; resolve(null); };
         xhr.send();
@@ -681,12 +685,30 @@ async function autoDiscoverServer() {
   statusEl.textContent = `❌ 未找到 ${hint}。请检查: 1.同WiFi 2.模型已启动(${scanPort}端口) 3.防火墙开放${scanPort} 4.或在电脑上 curl http://localhost:${scanPort}/v1/models 验证`;
   statusEl.style.color = 'var(--accent-red)';
 
-  function done(ip) {
+  async function done(ip) {
     document.getElementById('localServerIpInput').value = ip;
     localStorage.setItem('local_server_ip', ip);
     document.getElementById('localModelCheck').checked = true;
     localStorage.setItem('use_local_model', '1');
-    statusEl.textContent = `✅ 发现服务器: ${ip}:${scanPort}`;
+    
+    try {
+      const res = await fetch('http://' + ip + ':' + scanPort + '/v1/models', { method: 'GET', mode: 'cors' });
+      if (res.ok) {
+        const data = await res.json();
+        const models = data.data?.map(m => m.id) || [];
+        if (models.length > 0) {
+          document.getElementById('localModelNameInput').value = models[0];
+          localStorage.setItem('local_model_name', models[0]);
+          statusEl.textContent = '✅ 发现服务器: ' + ip + ':' + scanPort + '，模型: ' + models[0];
+        } else {
+          statusEl.textContent = '✅ 发现服务器: ' + ip + ':' + scanPort + ' (未获取到模型名)';
+        }
+      } else {
+        statusEl.textContent = '✅ 发现服务器: ' + ip + ':' + scanPort;
+      }
+    } catch (e) {
+      statusEl.textContent = '✅ 发现服务器: ' + ip + ':' + scanPort;
+    }
     statusEl.style.color = 'var(--accent-green)';
   }
 }
@@ -719,7 +741,7 @@ async function testLocalModel() {
     const res = await fetch(`http://${ip}:${port}/v1/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'local', messages: [{role:'user',content:'hi'}], max_tokens: 1 })
+      body: JSON.stringify({ model: (document.getElementById('localModelNameInput')?.value || 'default'), messages: [{role:'user',content:'hi'}], max_tokens: 1 })
     });
     if (res.ok) {
       statusEl.textContent = `✅ 连接成功！chat/completions 接口可用`;
@@ -918,4 +940,3 @@ function smartRoute() {
   }, 200);
 }
 window.smartRoute = smartRoute;
-
