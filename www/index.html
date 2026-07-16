@@ -581,6 +581,7 @@
       <button class="df-tab-btn active" data-tab="qian" onclick="switchDfTab('qian')" style="flex:1;padding:0.5rem;background:var(--bg-card);border:1px solid var(--accent-gold);color:var(--accent-gold);border-radius:6px;font-size:0.85rem;cursor:pointer;">🎴 灵签</button>
       <button class="df-tab-btn" data-tab="fu" onclick="switchDfTab('fu')" style="flex:1;padding:0.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;font-size:0.85rem;cursor:pointer;">🪄 符箓</button>
       <button class="df-tab-btn" data-tab="jue" onclick="switchDfTab('jue')" style="flex:1;padding:0.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;font-size:0.85rem;cursor:pointer;">🖐️ 手诀</button>
+      <button class="df-tab-btn" data-tab="zhou" onclick="switchDfTab('zhou')" style="flex:1;padding:0.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;font-size:0.85rem;cursor:pointer;">📿 咒语</button>
       <button class="df-tab-btn" data-tab="ai" onclick="switchDfTab('ai')" style="flex:1;padding:0.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;font-size:0.85rem;cursor:pointer;">🤖 AI化解</button>
     </div>
 
@@ -623,7 +624,17 @@
       </div>
     </div>
 
-    <!-- Tab 4: AI 化解 -->
+    <!-- Tab 4: 咒语速查 -->
+    <div class="df-tab-content" id="dfTabZhou" style="display:none;">
+      <div class="result-card">
+        <h3 style="color:var(--accent-gold);">📿 咒语速查</h3>
+        <input type="text" id="zhouSearch" placeholder="🔍 搜索咒名/用途..." oninput="renderZhouList()" style="width:100%;background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem 0.6rem;border-radius:6px;font-size:0.85rem;margin-bottom:0.6rem;">
+        <div id="zhouCategoryBar" style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-bottom:0.6rem;"></div>
+        <div id="zhouList" style="max-height:60vh;overflow-y:auto;"></div>
+      </div>
+    </div>
+
+    <!-- Tab 5: AI 化解 -->
     <div class="df-tab-content" id="dfTabAi" style="display:none;">
       <div class="result-card">
         <h3 style="color:var(--accent-gold);">🤖 AI 道佛化解</h3>

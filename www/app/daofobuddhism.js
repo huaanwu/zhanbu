@@ -54,6 +54,12 @@ function switchDfTab(name) {
       window.loadKBGroups(['daofobuddhism']).then(() => renderJueList()).catch(e => console.warn('[DF] jue KB load fail:', e));
     }
   }
+  if (name === 'zhou') {
+    if (window._kb?.daoism_zhoushu) { renderZhouList(); }
+    else if (window.loadKBGroups) {
+      window.loadKBGroups(['daofobuddhism']).then(() => renderZhouList()).catch(e => console.warn('[DF] zhou KB load fail:', e));
+    }
+  }
 }
 
 // ========== 灵签抽签 ==========
@@ -402,6 +408,51 @@ document.querySelectorAll('#jueCategoryBar [data-cat]').forEach(btn => {
       ${e.pair_with && e.pair_with.length ? `<div style="font-size:0.75rem;color:var(--accent-gold);margin-top:0.3rem;"><b>配伍：</b>${e.pair_with.map(escapeHtml).join(' · ')}</div>` : ''}
     </div>
   `;}).join('');
+}
+
+// ========== 咒语速查 ==========
+let _zhouCategory = 'all';
+function renderZhouList() {
+  const kb = window._kb?.daoism_zhoushu;
+  if (!kb?.entries) {
+    document.getElementById('zhouList').innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:1rem;">知识库加载中...</div>';
+    return;
+  }
+  const kw = (document.getElementById('zhouSearch')?.value || '').trim().toLowerCase();
+  const cats = ['all', ...new Set(kb.entries.map(e => e.category))];
+  const catBar = cats.map(c => {
+    const isActive = _zhouCategory === c;
+    return safeHTML`<button data-cat="${c}" style="padding:0.25rem 0.5rem;background:${isActive?'var(--accent-gold)':'var(--bg-primary)'};color:${isActive?'#1a1612':'var(--text-primary)'};border:1px solid var(--border);border-radius:4px;font-size:0.7rem;cursor:pointer;">${c==='all'?'全部':c}</button>`;
+  }).join('');
+  document.getElementById('zhouCategoryBar').innerHTML = catBar;
+  document.querySelectorAll('#zhouCategoryBar [data-cat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _zhouCategory = btn.dataset.cat;
+      renderZhouList();
+    });
+  });
+
+  let list = kb.entries;
+  if (_zhouCategory !== 'all') list = list.filter(e => e.category === _zhouCategory);
+  if (kw) {
+    list = list.filter(e => (e.title||'').toLowerCase().includes(kw) || (e.content||'').toLowerCase().includes(kw) || (e.usage||'').toLowerCase().includes(kw));
+  }
+  if (list.length === 0) {
+    document.getElementById('zhouList').innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:1rem;">无匹配结果</div>';
+    return;
+  }
+  document.getElementById('zhouList').innerHTML = list.map(e => `
+    <div style="border-bottom:1px solid var(--border);padding:0.5rem 0;">
+      <div style="display:flex;align-items:center;gap:0.3rem;">
+        <span style="font-size:0.7rem;background:var(--bg-inner);color:var(--accent-gold);padding:0.1rem 0.4rem;border-radius:4px;">${escapeHtml(e.category)}</span>
+        <b style="color:var(--accent-gold);font-size:0.95rem;">${escapeHtml(e.title)}</b>
+      </div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.3rem;line-height:1.6;white-space:pre-wrap;">${escapeHtml(e.content)}</div>
+      <div style="font-size:0.75rem;color:var(--accent-green);margin-top:0.3rem;padding:0.3rem;background:var(--bg-inner);border-radius:4px;">
+        <b>诵法：</b>${escapeHtml(e.usage || '')}
+      </div>
+    </div>
+  `).join('');
 }
 
 // ========== AI 化解 ==========

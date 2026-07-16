@@ -1,8 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" width="180">
   <rect x="10" y="10" width="220" height="260" fill="#fffaf0" stroke="#c9a84c" stroke-width="2" rx="8"/>
-  <rect x="60" y="150" width="120" height="70" rx="20" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/>
-  <path d="M 60 140 Q 60 155 80 155 L 80 150 Q 80 145 60 140 Z" fill="#dba77e" stroke="#5a3a2a" stroke-width="2"/><path d="M 85 140 Q 85 155 105 155 L 105 150 Q 105 145 85 140 Z" fill="#dba77e" stroke="#5a3a2a" stroke-width="2"/><path d="M 110 140 Q 110 155 130 155 L 130 150 Q 130 145 110 140 Z" fill="#dba77e" stroke="#5a3a2a" stroke-width="2"/><path d="M 135 140 Q 135 155 155 155 L 155 150 Q 155 145 135 140 Z" fill="#dba77e" stroke="#5a3a2a" stroke-width="2"/><rect x="160" y="40" width="20" height="110" rx="10" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/>
-  <path d="M 40 150 Q 48 145 55 150 L 55 162 Q 48 165 40 158 Z" fill="#dba77e" stroke="#5a3a2a" stroke-width="2"/>
+  
+    <path d="M 65 160 Q 60 155 60 165 L 60 210 Q 60 220 70 220 L 170 220 Q 180 220 180 210 L 180 165 Q 180 155 175 160 L 170 165 L 70 165 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/>
+    <!-- 掌纹 -->
+    <path d="M 70 175 Q 120 180 170 175" fill="none" stroke="#dba77e" stroke-width="0.6"/>
+    <path d="M 75 195 Q 120 200 165 195" fill="none" stroke="#dba77e" stroke-width="0.6"/>
+    <path d="M 80 210 Q 120 215 160 210" fill="none" stroke="#dba77e" stroke-width="0.6"/>
+  
+  
+        <!-- 手指食指 弯曲 -->
+        <path d="M 71 135 Q 71 150 75 158 L 75 162 Q 75 165 71 165 L 89 165 Q 85 165 85 162 L 85 158 Q 89 150 89 135 Z" fill="#dba77e" stroke="#5a3a2a" stroke-width="1.5"/>
+      
+        <!-- 手指中指 弯曲 -->
+        <path d="M 95 135 Q 95 150 99 158 L 99 162 Q 99 165 95 165 L 115 165 Q 111 165 111 162 L 111 158 Q 115 150 115 135 Z" fill="#dba77e" stroke="#5a3a2a" stroke-width="1.5"/>
+      
+        <!-- 手指无名指 弯曲 -->
+        <path d="M 119 135 Q 119 150 123 158 L 123 162 Q 123 165 119 165 L 141 165 Q 137 165 137 162 L 137 158 Q 141 150 141 135 Z" fill="#dba77e" stroke="#5a3a2a" stroke-width="1.5"/>
+      
+        <!-- 手指小指 伸直 -->
+        <path d="M 145 45 Q 145 42 147 40 L 147 145 Q 147 150 145 152 L 165 152 Q 163 150 163 145 L 163 40 Q 163 42 165 45 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5"/>
+        <!-- 关节线 -->
+        <line x1="148" y1="85" x2="162" y2="85" stroke="#dba77e" stroke-width="0.8"/>
+        <line x1="148" y1="120" x2="162" y2="120" stroke="#dba77e" stroke-width="0.8"/>
+        <!-- 指甲 -->
+        <ellipse cx="155" cy="52" rx="6" ry="8" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/>
+      
+  
+      <path d="M 48 155 Q 42 150 38 155 L 36 165 Q 36 172 42 174 L 55 174 Q 62 174 62 165 L 62 158 Q 62 152 55 152 Z" fill="#dba77e" stroke="#5a3a2a" stroke-width="1.5"/>
+    
   <text x="120" y="250" text-anchor="middle" font-size="16" font-family="'Noto Serif SC',serif" font-weight="bold" fill="#5a3a2a">雷诀</text>
-  <text x="120" y="270" text-anchor="middle" font-size="10" font-family="'Noto Serif SC',serif" fill="#8b6f2a">握拳，食指伸出如雷电</text>
+  <text x="120" y="268" text-anchor="middle" font-size="9" font-family="'Noto Serif SC',serif" fill="#8b6f2a">握拳，食指伸出如雷电</text>
 </svg>
