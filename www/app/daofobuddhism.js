@@ -461,3 +461,17 @@ ${kbBuddhismDivine()}
     }
   }
 })();
+
+
+// ========== 暴露到 window 供 HTML 调用 ==========
+// v3.0.5: daofobuddhism.js 是 ES module 作用域，必须显式挂到 window 才能在 HTML onclick 中使用
+window.getQianFromKB = getQianFromKB;
+window.getQianData = getQianData;
+window.switchDfTab = switchDfTab;
+window.drawQian = drawQian;
+window.renderFuList = renderFuList;
+window.renderHandSvg = renderHandSvg;
+window.drawHandSVG = drawHandSVG;
+window.renderFuSvg = renderFuSvg;
+window.renderJueList = renderJueList;
+window.doAiHuaJie = doAiHuaJie;

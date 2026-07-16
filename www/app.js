@@ -496,7 +496,7 @@ function loadSettings() {
   document.getElementById('visionKeyInput').value = vKey;
   document.getElementById('visionModelSelect').value = vModel;
   document.getElementById('localServerIpInput').value = defaultIp;
-  document.getElementById('localServerPortInput').value = savedPort || '8082';
+  document.getElementById('localServerPortInput').value = savedPort || '11434';
   updateApiStatus(key);
   // 版本号显示
   const verEl = document.getElementById('versionInfo');
@@ -533,7 +533,7 @@ function saveSettings() {
   const vKey = document.getElementById('visionKeyInput').value.trim();
   const vModel = document.getElementById('visionModelSelect').value;
   const localIp = document.getElementById('localServerIpInput').value.trim() || '192.168.1.12';
-  const localPort = document.getElementById('localServerPortInput').value.trim() || '8082';
+  const localPort = document.getElementById('localServerPortInput').value.trim() || '11434';
   localStorage.setItem('ds_api_key', key);
   localStorage.setItem('ds_model', model);
   localStorage.setItem('use_local_model', useLocal ? '1' : '0');
