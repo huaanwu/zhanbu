@@ -18,6 +18,21 @@
     t = t.replace(/\n?Output\s*Generation.*$/is, '');
     t = t.replace(/\n?\*\(Self-Correction[\s\S]*?\)\*\s*$/is, '');
     t = t.replace(/\n?\*\*?Self-Correction[\s\S]*?\*\*?\s*$/is, '');
+    // 过滤 "Thinking Process:" 开头的整段英文内容
+    t = t.replace(/Thinking\s*Process:[\s\S]*?(?=【|## |\n## |^## |$)/i, '');
+    t = t.replace(/1\.\s*Analyze[\s\S]*?(?=【|## |\n## |^## |$)/i, '');
+    t = t.replace(/\*\*Key\s*Facts:\*\*[\s\S]*?(?=【|## |\n## |^## |$)/i, '');
+    // 过滤英文分析过程（Qwen3.x 等模型常见）
+    t = t.replace(/\\*\\*Key\\s*Facts[^\\n]*\\n[\\s\\S]*?(?=【|## |\\n## |^## |$)/i, '');
+    t = t.replace(/\\d+\\)\\s*\\*\\*Analyze[^\\n]*\\n[\\s\\S]*?(?=【|## |\\n## |^## |$)/i, '');
+    t = t.replace(/\\*\\*Output\\s*Format:[\\s\\S]*?(?=【|## |\\n## |^## |$)/i, '');
+    t = t.replace(/Let\\s+me\\s+work[^\\n]*[\\s\\S]*?(?=【|## |\\n## |^## |$)/i, '');
+    t = t.replace(/I\\s+will\\s+now[^\\n]*[\\s\\S]*?(?=【|## |\\n## |^## |$)/i, '');
+    // 过滤纯英文段落（超过100字符的连续英文）
+    t = t.replace(/^[\\s\\S]{0,500}?(?=【)/, function(m) {
+      if (/^[\\s\\S]*[a-zA-Z]{10,}[\\s\\S]*$/.test(m) && !/[\\u4e00-\\u9fa5]/.test(m)) return '';
+      return m;
+    });
     // 兜底:剥 <think> / <thinking> / <reflection> 标签
     t = t.replace(/<think>[\s\S]*?<\/think>/gi, '');
     t = t.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
@@ -155,12 +170,12 @@
     // 云端 DeepSeek fallback
     const key = localStorage.getItem('ds_api_key') || '';
     const isFallback = useLocal;
-    if (!key && isFallback) {
-      // 本地模型 fallback 失败 + 没有 API Key → 报错
-      throw new Error('本地模型不可用，且未配置 DeepSeek API Key。请检查本地模型是否启动，或在设置页配置 API Key。');
-    }
     if (!key) {
-      throw new Error('请先在设置页配置 DeepSeek API Key,或启动本地模型 (LM Studio / Ollama)');
+      if (isFallback) {
+        // 本地模型尝试失败 + 没有 API Key
+        throw new Error('本地模型连接失败(请检查模型是否启动、CORS是否开启)，且未配置云端 API Key。建议：1.确认本地模型已启动 2.运行 cors_proxy.py 3.或在设置页配置 DeepSeek API Key');
+      }
+      throw new Error('请先在设置页配置 DeepSeek API Key，或启用本地模型');
     }
     const model = optModel || localStorage.getItem('ds_model') || 'deepseek-chat';
 

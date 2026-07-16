@@ -710,6 +710,7 @@ async function autoDiscoverServer() {
       statusEl.textContent = '✅ 发现服务器: ' + ip + ':' + scanPort;
     }
     statusEl.style.color = 'var(--accent-green)';
+    saveSettings();
   }
 }
 window.autoDiscoverServer = autoDiscoverServer;
@@ -940,3 +941,4 @@ function smartRoute() {
   }, 200);
 }
 window.smartRoute = smartRoute;
+
