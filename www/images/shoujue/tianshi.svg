@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" width="180">
+  <rect x="10" y="10" width="220" height="260" fill="#fffaf0" stroke="#c9a84c" stroke-width="2" rx="8"/>
+  <rect x="60" y="150" width="120" height="70" rx="20" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/>
+  <path d="M 60 120 Q 60 150 80 150 L 80 130 Q 80 120 60 120 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/><path d="M 85 120 Q 85 150 105 150 L 105 130 Q 105 120 85 120 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/><rect x="110" y="40" width="20" height="110" rx="10" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/><rect x="135" y="40" width="20" height="110" rx="10" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/><path d="M 160 140 Q 160 155 180 155 L 180 150 Q 180 145 160 140 Z" fill="#dba77e" stroke="#5a3a2a" stroke-width="2"/>
+  <path d="M 35 140 Q 45 135 55 140 L 55 155 Q 45 160 35 150 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/>
+  <text x="120" y="250" text-anchor="middle" font-size="16" font-family="'Noto Serif SC',serif" font-weight="bold" fill="#5a3a2a">天师诀</text>
+  <text x="120" y="270" text-anchor="middle" font-size="10" font-family="'Noto Serif SC',serif" fill="#8b6f2a">中无名二指伸直，食小弯曲，拇指扣住</text>
+</svg>

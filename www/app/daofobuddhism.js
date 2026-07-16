@@ -129,7 +129,13 @@ document.querySelectorAll('#fuCategoryBar [data-cat]').forEach(btn => {
     return;
   }
   document.getElementById('fuList').innerHTML = list.map(e => {
-    const svgHtml = e.fuType ? renderFuSvg(e.fuType, e.title) : '';
+    // v3.1: 优先用 e.image 加载真实 SVG 图，否则用抽象 SVG 生成器
+    let svgHtml = '';
+    if (e.image) {
+      svgHtml = `<img src="images/fulu/${e.image}.svg" alt="${escapeHtml(e.title)}" style="width:120px;max-width:100%;display:block;margin:0.3rem auto;" loading="lazy"/>`;
+    } else if (e.fuType) {
+      svgHtml = renderFuSvg(e.fuType, e.title);
+    }
     return `
     <div style="border-bottom:1px solid var(--border);padding:0.5rem 0;">
       <div style="display:flex;align-items:center;gap:0.3rem;">
@@ -370,7 +376,13 @@ document.querySelectorAll('#jueCategoryBar [data-cat]').forEach(btn => {
   let list = kb.entries;
   if (_jueCategory !== 'all') list = list.filter(e => e.category === _jueCategory);
   document.getElementById('jueList').innerHTML = list.map(e => {
-    const svgHtml = e.handType ? renderHandSvg(e.fingers || [], { title: e.title, type: e.handType }) : '';
+    // v3.1: 优先用 e.image 加载真实 SVG 图，否则用抽象 SVG 生成器
+    let svgHtml = '';
+    if (e.image) {
+      svgHtml = `<img src="images/shoujue/${e.image}.svg" alt="${escapeHtml(e.title)}" style="width:140px;max-width:100%;display:block;margin:0.3rem auto;" loading="lazy"/>`;
+    } else if (e.handType) {
+      svgHtml = renderHandSvg(e.fingers || [], { title: e.title, type: e.handType });
+    }
     return `
     <div style="border-bottom:1px solid var(--border);padding:0.5rem 0;">
       <div style="display:flex;align-items:center;gap:0.3rem;">

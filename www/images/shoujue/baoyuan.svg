@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" width="180">
+  <rect x="10" y="10" width="220" height="260" fill="#fffaf0" stroke="#c9a84c" stroke-width="2" rx="8"/>
+  <rect x="60" y="150" width="120" height="70" rx="20" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/>
+  <path d="M 60 120 Q 60 150 80 150 L 80 130 Q 80 120 60 120 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/><path d="M 85 120 Q 85 150 105 150 L 105 130 Q 105 120 85 120 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/><path d="M 110 120 Q 110 150 130 150 L 130 130 Q 130 120 110 120 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/><path d="M 135 120 Q 135 150 155 150 L 155 130 Q 155 120 135 120 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/><path d="M 160 120 Q 160 150 180 150 L 180 130 Q 180 120 160 120 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/>
+  <path d="M 35 140 Q 45 135 55 140 L 55 155 Q 45 160 35 150 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/>
+  <text x="120" y="250" text-anchor="middle" font-size="16" font-family="'Noto Serif SC',serif" font-weight="bold" fill="#5a3a2a">抱元印</text>
+  <text x="120" y="270" text-anchor="middle" font-size="10" font-family="'Noto Serif SC',serif" fill="#8b6f2a">双手交叠掌心向上置丹田</text>
+</svg>
