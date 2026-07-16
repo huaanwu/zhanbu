@@ -99,6 +99,23 @@
     return localStorage.getItem('local_server_port') || '8082';
   }
 
+  // 自动发现本地模型名：用户未填写时，从 /v1/models 取第一个模型
+  async function getLocalModelName() {
+    const saved = localStorage.getItem('local_model_name');
+    if (saved && saved !== 'default') return saved;
+    try {
+      const res = await fetch(`${getLocalServerUrl()}/v1/models`, { signal: AbortSignal.timeout(3000) });
+      if (!res.ok) return 'default';
+      const data = await res.json();
+      const first = data.data?.[0]?.id || data.models?.[0]?.id || data.data?.[0]?.model || data.models?.[0]?.model;
+      if (first) {
+        localStorage.setItem('local_model_name', first);
+        return first;
+      }
+    } catch (e) { console.warn('[AI] 自动获取本地模型名失败:', e.message); }
+    return 'default';
+  }
+
   let _currentStreamAbort = null;
 
   async function callDeepSeek(prompt, system, onChunk, opts = {}) {
@@ -108,8 +125,19 @@
     _currentStreamAbort = externalSignal ? null : new AbortController();
     const messages = [];
     const chineseConstraint = '【铁律·语言约束】你的所有输出必须使用纯中文。严禁输出任何英文单词、英文句子、中英文混合内容。严禁输出思考过程、分析步骤、"thinking process"、"step by step"、"let me think"等元内容。如果你需要推理，请在心中完成，只向用户展示最终的中文解读结果。\n\n';
-    if (system) {
-      messages.push({ role: 'system', content: chineseConstraint + system });
+
+    // 本地模型上下文保护: system 按中文字符粗略估算 1 token ≈ 1 中文字,limit 6000
+    const LOCAL_CTX_LIMIT = 10000;
+    const estimatedTokens = (chineseConstraint.length + (system?.length || 0) + prompt.length);
+    let finalSystem = system;
+    if (useLocal && estimatedTokens > LOCAL_CTX_LIMIT) {
+      const allowedSystemLen = Math.max(0, LOCAL_CTX_LIMIT - chineseConstraint.length - prompt.length - 200);
+      console.warn(`[AI] 本地模型上下文保护: system 过长(${system.length}字),截断到${allowedSystemLen}字`);
+      finalSystem = system.slice(0, allowedSystemLen) + '\n...[上下文已截断以保持本地模型可运行]';
+    }
+
+    if (finalSystem) {
+      messages.push({ role: 'system', content: chineseConstraint + finalSystem });
     } else {
       messages.push({ role: 'system', content: chineseConstraint });
     }
@@ -117,7 +145,9 @@
 
     const LOCAL_TIMEOUT = 360000; // 6 分钟
     const CLOUD_TIMEOUT = 120000; // 2 分钟
-    const MAX_TOKENS = 4096;
+    const MAX_TOKENS_CLOUD = 4096;
+    const MAX_TOKENS_LOCAL = 8192; // 本地模型输出可以更长
+    const MAX_TOKENS = useLocal ? MAX_TOKENS_LOCAL : MAX_TOKENS_CLOUD;
     const showToast = window.Core?.Toast?.showToast || function () {};
 
     if (useLocal) {
@@ -131,10 +161,11 @@
         localP1 = setTimeout(() => showToast('AI 仍在思考，已等待 2 分钟...', 'success'), 120000);
         localP2 = setTimeout(() => showToast('AI 仍在思考，已等待 4 分钟...', 'success'), 240000);
 
+        const localModelName = await getLocalModelName();
         const res = await fetch(localUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: (localStorage.getItem('local_model_name') || 'default'), messages, temperature, max_tokens: MAX_TOKENS, stream: !!onChunk }),
+          body: JSON.stringify({ model: localModelName, messages, temperature, max_tokens: MAX_TOKENS, stream: !!onChunk }),
           signal: ctrl.signal
         });
         clearTimeout(localTimer);
@@ -144,11 +175,18 @@
         if (res.ok) {
           if (onChunk && res.body) return await readSSE(res.body, onChunk);
           const data = await res.json();
-          if (data.choices?.[0]?.message?.content) {
-            const full = data.choices[0].message.content;
-            return stripThinking(full);
+          const msg = data.choices?.[0]?.message || {};
+          // Qwen3.5 等思考模型: 正文可能在 content 或 reasoning_content
+          const rawText = msg.content || msg.reasoning_content || '';
+          if (rawText) {
+            const full = stripThinking(rawText);
+            if (full) return full;
+            // strip 后为空说明全是 thinking,提示用户
+            if (msg.content && msg.reasoning_content) {
+              return '[模型返回内容全是思考过程,无正式解读。请重试或在 llama-server 启动时加 --reasoning off]';
+            }
           }
-          throw new Error('本地模型返回格式异常');
+          throw new Error('本地模型返回格式异常: content 和 reasoning_content 都为空');
         }
         const errText = await res.text().catch(() => '');
         console.error('本地模型 HTTP 错误:', res.status, errText);
@@ -332,13 +370,14 @@
     // 领域配置:expert 方法名 + 中文标签 + RAG source + signal 提取函数
     // kbFlags 控制是否加载 kbPrimary/kbExtended/kbDaoismBuddhismOnDemand(默认全部 true)
     // isCross:三术同参用多 Expert + 交叉验证;isCustom:自定义模块只加 kbPrimary+kbExtended
+    // ragBudget: 该域 system 预算较紧,限制 RAG 返回长度,避免本地模型爆上下文
     var CFG = {
       bazi:   { expert: 'bazi',   label: '八字',     source: '八字',     signalFn: function(p) { return p.gz?.day; } },
-      ziwei:  { expert: 'ziwei',  label: '紫微',     source: '紫微',     signalFn: function(p) { return p.mingGong?.ganzhi; } },
+      ziwei:  { expert: 'ziwei',  label: '紫微',     source: '紫微',     signalFn: function(p) { return p.mingGong?.ganzhi; }, ragBudget: 1200 },
       liuyao: { expert: 'liuyao', label: '六爻',     source: '六爻',     signalFn: function(p) { return p.gua?.name; } },
-      qimen:  { expert: 'qimen',  label: '奇门',     source: '奇门',     signalFn: function(p) { return p.jushu_text; } },
+      qimen:  { expert: 'qimen',  label: '奇门',     source: '奇门',     signalFn: function(p) { return p.jushu_text; }, ragBudget: 1200 },
       cross:  { label: '三术同参', source: '三术同参', signalFn: function(p) { return p.bazi?.gz?.day; }, isCross: true, kbFlags: { primary: false, extended: false, daoism: true } },
-      fengshui:  { label: '风水',     isCustom: true, kbFlags: { daoism: false, chainOfThought: false } },
+      fengshui:  { label: '风水',     isCustom: true, kbFlags: { daoism: false, chainOfThought: false }, ragBudget: 1200 },
       xingshi:   { label: '姓名学',   isCustom: true, kbFlags: { daoism: false, chainOfThought: false } },
       daofobuddhism: { label: '道佛化解', isCustom: true, kbFlags: { primary: false, extended: false, daoism: false, chainOfThought: false } },
     };
@@ -363,6 +402,7 @@
         if (pan && pan.bazi && Expert?.bazi) facts += '【八字事实·100%准确】\n' + Expert.bazi(pan.bazi) + '\n';
         if (pan && pan.ziwei && Expert?.ziwei) facts += '【紫微事实·100%准确】\n' + Expert.ziwei(pan.ziwei) + '\n';
         if (pan && pan.liuyao && Expert?.liuyao) facts += '【六爻事实·100%准确】\n' + Expert.liuyao(pan.liuyao) + '\n';
+        if (pan && pan.qimen && Expert?.qimen) facts += '【奇门事实·100%准确】\n' + Expert.qimen(pan.qimen) + '\n';
         if (Expert?.crossValidate) facts += '【交叉验证】\n' + Expert.crossValidate(pan) + '\n';
       } catch (e) { console.warn('[AI] Expert 调用失败:', e); }
     } else if (!cfg.isCustom && cfg.expert && Expert?.[cfg.expert] && pan) {
@@ -375,9 +415,11 @@
     var ragContent = '';
     if (!cfg.isCustom && RAG && cfg.source && pan) {
       try {
-        var searchPan = cfg.isCross ? (pan.bazi || pan) : pan;
+        var searchPan = cfg.isCross ? (pan.bazi || pan.qimen || pan) : pan;
         var crossMax = cfg.isCross ? Math.min(abCfg.maxChars, 2000) : abCfg.maxChars;
         var crossTopK = cfg.isCross ? Math.min(abCfg.topK, 8) : abCfg.topK;
+        // 对 system 预算紧张的域单独限制 RAG 长度
+        if (cfg.ragBudget && crossMax > cfg.ragBudget) crossMax = cfg.ragBudget;
         ragContent = RAG.search(searchPan, q, {
           topK: crossTopK,
           maxChars: crossMax,
@@ -404,6 +446,14 @@
     var kbP = (kf.primary !== false && typeof kbPrimary === 'function') ? kbPrimary(domain) : '';
     var kbE = (kf.extended !== false && typeof kbExtended === 'function') ? kbExtended(domain, q) : '';
     var kbDao = (kf.daoism !== false && typeof kbDaoismBuddhismOnDemand === 'function') ? kbDaoismBuddhismOnDemand(q) : '';
+
+    // 对 system 预算紧张的域截断 KB 输出(保留开头,长尾截断)
+    if (cfg.ragBudget) {
+      var kbBudget = cfg.ragBudget; // 复用同一预算概念
+      if (kbP.length > kbBudget) kbP = kbP.slice(0, kbBudget) + '\n...[知识库primary已截断]';
+      if (kbE.length > kbBudget) kbE = kbE.slice(0, kbBudget) + '\n...[知识库extended已截断]';
+      if (kbDao.length > kbBudget) kbDao = kbDao.slice(0, kbBudget) + '\n...[知识库道佛已截断]';
+    }
 
     // 6) Instruction
     var instruction = '';

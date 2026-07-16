@@ -20,7 +20,8 @@ REM 启动 llama.cpp 服务器
   --port 8082 ^
   --host 0.0.0.0 ^
   -ngl 99 ^
-  --ctx-size 8192
+  --ctx-size 32768 ^
+  --reasoning off
 
 echo.
 echo 服务器已启动！

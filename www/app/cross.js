@@ -50,6 +50,11 @@ function extractSignals(pan, domain) {
     }
     const cai = pan.yaoList.find(y => y.liuqin === '妻财');
     if (cai) signals.push('财在' + cai.name + '(' + (cai.isDong ? '动' : '静') + ')');
+  } else if (domain === 'qimen' && pan.gong9) {
+    signals.push(pan.jushu_text);
+    if (pan.zhishi) signals.push('直使' + pan.zhishi.men);
+    const zhifuGong = pan.gong9.find(g => g.is_tianpan_zhifu);
+    if (zhifuGong) signals.push('直符宫' + zhifuGong.name);
   }
   return signals;
 }
@@ -110,6 +115,14 @@ function doCross() {
       throw new Error('六爻排盘失败');
     }
 
+    // 4. 奇门（如选中）
+    let qmPan = null;
+    if (cxState.modules.includes('qimen')) {
+      if (!window.qimen) throw new Error('奇门库加载中，请稍后');
+      qmPan = window.qimen.panQimen(year, month, day, hour, 0);
+      if (!qmPan || !qmPan.gong9) throw new Error('奇门排盘失败');
+    }
+
     // 渲染三盘
     const moduleNames = { bazi: '八字', ziwei: '紫微', liuyao: '六爻', qimen: '奇门' };
     const moduleIcons = { bazi: '📅', ziwei: '⭐', liuyao: '☯', qimen: '🔮' };
@@ -155,9 +168,20 @@ function doCross() {
       </div>`;
     }
 
+    // 奇门摘要（仅当选中）
+    const qmSig = qmPan ? extractSignals(qmPan, 'qimen') : [];
+    if (cxState.modules.includes('qimen') && qmPan) {
+      html += `<div style="background:var(--bg-inner);padding:0.6rem;border-radius:6px;margin-top:0.5rem;">
+        <div style="color:var(--accent-gold);">🔮 奇门：${qmPan.jushu_text} · ${qmPan.jieqi}</div>
+        <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.3rem;">
+          直符宫：${qmSig.find(s=>s.includes('直符宫'))||'-'} · 直使：${qmSig.find(s=>s.includes('直使'))||'-'} · 信号：${qmSig.join('、')}
+        </div>
+      </div>`;
+    }
+
     result.innerHTML = html;
 
-    currentCross = { bazi: baziPan, ziwei: ziweiPan, liuyao: lyPan, qimen: null, question, modules: cxState.modules, signals: { bazi: baziSig, ziwei: zwSig, liuyao: lySig } };
+    currentCross = { bazi: baziPan, ziwei: ziweiPan, liuyao: lyPan, qimen: qmPan, question, modules: cxState.modules, signals: { bazi: baziSig, ziwei: zwSig, liuyao: lySig, qimen: qmSig } };
     currentCrossPrompt = buildCrossPrompt(currentCross);
 
     document.getElementById('cxAI').style.display = 'block';
@@ -200,8 +224,15 @@ function buildCrossPrompt(c) {
     s += `六亲信号：${c.signals.liuyao.join('、')}\n\n`;
   }
 
+  if (mods.includes('qimen') && c.qimen) {
+    s += `【奇门盘】\n`;
+    s += `局数：${c.qimen.jushu_text} · 节气：${c.qimen.jieqi}\n`;
+    s += `直使：${c.qimen.zhishi ? c.qimen.zhishi.men + ' → ' + c.qimen.zhishi.gong : '无'}\n`;
+    s += `奇门信号：${(c.signals.qimen || []).join('、')}\n\n`;
+  }
+
   s += `【请按"多维联合"模式解读】\n`;
-  s += `1. 提取各盘关键信号（旺相/动爻/格局/四化/用神）\n`;
+  s += `1. 提取各盘关键信号（旺相/动爻/格局/四化/用神/奇门值符值使）\n`;
   s += `2. 比较各盘对同一问题的方向（吉/凶/中）\n`;
   s += `3. 一致处为高置信结论（${mods.length} 术中 ${mods.length} 术一致=高/${Math.ceil(mods.length*0.6)} 术一致=中/其他=低）\n`;
   s += `4. 矛盾处需特别说明（哪术为什么判断不同）\n`;
@@ -217,10 +248,11 @@ async function doAICross() {
   }
   await ensureKB();
   // v1.3.1 按选中模块加载 primary KB
+  const KB = window.Core?.KB || {};
   const mods = (currentCross && currentCross.modules) || ['bazi', 'ziwei', 'liuyao'];
   for (const m of mods) {
-    await loadPrimaryKbs(m);
-    await loadExtendedKbsByQuestion(m, currentCross.question);
+    if (KB.loadPrimaryKbs) await KB.loadPrimaryKbs(m);
+    if (KB.loadExtendedKbsByQuestion) await KB.loadExtendedKbsByQuestion(m, currentCross.question);
   }
   await window.RAG.build();
   const btn = document.getElementById('cxAIBtn');
@@ -233,21 +265,21 @@ async function doAICross() {
   const prefix = _followUpPrefix;
   _followUpPrefix = '';
   const separator = prefix ? '\n\n─────────────────\n📌 追问：' + (currentCross.question || '') + '\n─────────────────\n\n' : '';
-  if (!prefix) text.textContent = '⏳ 正在综合八字+紫微+六爻三术...\n';
+  const moduleNames = { bazi: '八字', ziwei: '紫微', liuyao: '六爻', qimen: '奇门' };
+  if (!prefix) text.textContent = `⏳ 正在综合${mods.map(m=>moduleNames[m]||m).join('+')}多维联合解读...\n`;
 
-  let fullText = '⏳ 正在综合八字+紫微+六爻三术...\n';
+  let fullText = `⏳ 正在综合${mods.map(m=>moduleNames[m]||m).join('+')}多维联合解读...\n`;
   try {
     // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
     // cross 特殊:buildSystemPrompt 自动调 Expert.bazi/ziwei/liuyao + crossValidate + kbDaoism
     const system = Core.AI.buildSystemPrompt({ domain: 'cross', pan: currentCross, question: currentCross.question });
 
-    // 引导用户问题转化为三术共同关心的方向
-    // v3.0.5: 统一 AI 入口(任务 #19)— 三术同参用 crossParams 作为 cache key
+    // v3.0.5: 统一 AI 入口(任务 #19)— 三术同参用完整 currentCross 作为 cache key 与 Expert 输入
     const { finalText: outFinal } = await Core.AI.interpret({
       domain: 'cross',
       prompt: currentCrossPrompt,
       system,
-      pan: { bazi: currentCross.bazi, liuyao: currentCross.liuyao },
+      pan: currentCross,
       question: currentCross.question,
       contentEl: text,
       prefix,
