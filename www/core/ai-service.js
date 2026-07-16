@@ -338,12 +338,16 @@
     // 1) Expert 事实
     var facts = '';
     if (cfg.isCross) {
-      if (pan && pan.bazi && Expert?.bazi) facts += '【八字事实·100%准确】\n' + Expert.bazi(pan.bazi) + '\n';
-      if (pan && pan.ziwei && Expert?.ziwei) facts += '【紫微事实·100%准确】\n' + Expert.ziwei(pan.ziwei) + '\n';
-      if (pan && pan.liuyao && Expert?.liuyao) facts += '【六爻事实·100%准确】\n' + Expert.liuyao(pan.liuyao) + '\n';
-      if (Expert?.crossValidate) facts += '【交叉验证】\n' + Expert.crossValidate(pan) + '\n';
+      try {
+        if (pan && pan.bazi && Expert?.bazi) facts += '【八字事实·100%准确】\n' + Expert.bazi(pan.bazi) + '\n';
+        if (pan && pan.ziwei && Expert?.ziwei) facts += '【紫微事实·100%准确】\n' + Expert.ziwei(pan.ziwei) + '\n';
+        if (pan && pan.liuyao && Expert?.liuyao) facts += '【六爻事实·100%准确】\n' + Expert.liuyao(pan.liuyao) + '\n';
+        if (Expert?.crossValidate) facts += '【交叉验证】\n' + Expert.crossValidate(pan) + '\n';
+      } catch (e) { console.warn('[AI] Expert 调用失败:', e); }
     } else if (!cfg.isCustom && cfg.expert && Expert?.[cfg.expert] && pan) {
-      facts = Expert[cfg.expert](pan);
+      try {
+        facts = Expert[cfg.expert](pan);
+      } catch (e) { console.warn('[AI] Expert 调用失败:', e); }
     }
 
     // 2) RAG

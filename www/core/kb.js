@@ -329,6 +329,25 @@ async function loadKbsForQuestion(domain, question) {
 }
 
 // 返回 domain primary KB 的注入字符串（自动含倪海厦学派基础）
+// v3.0.6: 通用 KB 文本化 fallback，当领域专用的 kbXxx 函数不存在或返回空时自动从 _kb[key] 提取
+function _kbFallback(key) {
+  const k = _kb[key];
+  if (!k) return '';
+  let s = '';
+  if (Array.isArray(k.entries)) {
+    s += '\n\n【' + (k.name || key) + '】';
+    for (const e of k.entries.slice(0, 30)) {
+      s += '\n· ' + (e.title || e.id || e.name || '') + '：' + (e.content || e.description || '').slice(0, 250);
+    }
+  } else if (typeof k === 'object' && k !== null) {
+    s += '\n\n【' + (k.name || key) + '】';
+    for (const [name, desc] of Object.entries(k).slice(0, 30)) {
+      if (['name','version','description','id'].includes(name)) continue;
+      s += '\n· ' + name + '：' + String(desc).slice(0, 250);
+    }
+  }
+  return s;
+}
 function kbPrimary(domain) {
   let s = '';
   // 倪海厦学派是所有模块的理论基础
@@ -336,8 +355,14 @@ function kbPrimary(domain) {
   // domain 专属 primary KB
   const keys = KB_TIERS.primary[domain] || [];
   for (const k of keys) {
-    const fn = window['kb_' + k.charAt(0).toUpperCase() + k.slice(1).replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase())];
-    if (typeof fn === 'function') s += fn();
+    const fnName = 'kb' + k.charAt(0).toUpperCase() + k.slice(1).replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
+    const fn = window[fnName];
+    let part = '';
+    if (typeof fn === 'function') {
+      try { part = fn({}); } catch (e) { console.warn('[KB] 调用 ' + fnName + ' 失败:', e); }
+    }
+    if (!part || part.length < 10) part = _kbFallback(k);
+    s += part;
   }
   return s;
 }
@@ -355,8 +380,41 @@ function kbExtended(domain, question) {
   if (libs.size === 0) return '';
   let s = '\n\n【扩展知识库·按问题关键词加载】';
   for (const k of libs) {
-    const fn = window['kb_' + k.charAt(0).toUpperCase() + k.slice(1).replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase())];
-    if (typeof fn === 'function') s += fn();
+    const fnName = 'kb' + k.charAt(0).toUpperCase() + k.slice(1).replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
+    const fn = window[fnName];
+    let part = '';
+    if (typeof fn === 'function') {
+      try { part = fn({}); } catch (e) { console.warn('[KB] 调用 ' + fnName + ' 失败:', e); }
+    }
+    if (!part || part.length < 10) part = _kbFallback(k);
+    s += part;
+  }
+  return s;
+}
+
+// 姓名学扩展 KB 文本化
+function kbXingshiExt() {
+  const k = _kb?.xingshi_ext || {};
+  if (!k || Object.keys(k).length === 0) return '';
+  let s = '\n\n【扩展知识库·姓名学】';
+  const keys = ['五格','音律','姓名学','天格','地格','人格','外格','总格','三才','笔画','姓名案例','名人姓名案例'];
+  for (const key of keys) {
+    if (k[key]) {
+      if (typeof k[key] === 'string') {
+        s += `\n· ${key}：${k[key].slice(0, 400)}`;
+      } else if (Array.isArray(k[key])) {
+        s += `\n· ${key}：`;
+        for (const item of k[key].slice(0, 10)) {
+          if (typeof item === 'string') s += `\n  ${item}`;
+          else s += `\n  ${JSON.stringify(item).slice(0, 200)}`;
+        }
+      } else if (typeof k[key] === 'object') {
+        s += `\n· ${key}：`;
+        for (const [sk, sv] of Object.entries(k[key]).slice(0, 20)) {
+          s += `\n  ${sk}: ${typeof sv === 'string' ? sv.slice(0, 200) : JSON.stringify(sv).slice(0, 200)}`;
+        }
+      }
+    }
   }
   return s;
 }
@@ -1343,5 +1401,61 @@ function kbDaoismBuddhismOnDemand(question) {
   window.kbPrimary = kbPrimary;
   window.kbExtended = kbExtended;
   window.kbDaoismBuddhismOnDemand = kbDaoismBuddhismOnDemand;
+
+  // v3.0.6: 把领域 KB 注入函数暴露到 window，供 kbPrimary/kbExtended 动态调用
+  window.kbBazi = kbBazi;
+  window.kbLiuyao = kbLiuyao;
+  window.kbQimen = kbQimen;
+  window.kbShouxiang = kbShouxiang;
+  window.kbZiwei = kbZiwei;
+  window.kbZiweiExt = kbZiweiExt;
+  window.kbZiweiFuxing = kbZiweiFuxing;
+  window.kbZiweiDaxian = kbZiweiDaxian;
+  window.kbZiweiGeju = kbZiweiGeju;
+  window.kbQimenXingmen = kbQimenXingmen;
+  window.kbQimenGeju = kbQimenGeju;
+  window.kbQimenZhanji = kbQimenZhanji;
+  window.kbLiuyaoLiushen = kbLiuyaoLiushen;
+  window.kbLiuyaoXunkong = kbLiuyaoXunkong;
+  window.kbLiuyaoJintui = kbLiuyaoJintui;
+  window.kbBaziExt = kbBaziExt;
+  window.kbLiuyaoExt = kbLiuyaoExt;
+  window.kbQimenExt = kbQimenExt;
+  window.kbNihaiXia = kbNihaiXia;
+  window.kbGuxiang = kbGuxiang;
+  window.kbShengxiang = kbShengxiang;
+  window.kbQise = kbQise;
+  window.kbBuddhismMantra = kbBuddhismMantra;
+  window.kbBuddhismDivine = kbBuddhismDivine;
+  window.kbDaoismFuzhou = kbDaoismFuzhou;
+  window.kbDaoismZhoushu = kbDaoismZhoushu;
+  window.kbDaoismShoujue = kbDaoismShoujue;
+  window.kbDaoismJiuhuo = kbDaoismJiuhuo;
+  window.kbBaziDayun = kbBaziDayun;
+  window.kbZiweiGongwei = kbZiweiGongwei;
+  window.kbShouxiangWenli = kbShouxiangWenli;
+  window.kbWannianli = kbWannianli;
+  window.kbLiuyaoNajia = kbLiuyaoNajia;
+  window.kbFengshuiBase = kbFengshuiBase;
+  window.kbXingshiCases = kbXingshiCases;
+  window.kbMianxiangQise = kbMianxiangQise;
+  window.kbMeihuaLeiXiang = kbMeihuaLeiXiang;
+  window.kbDaoismZhaijiao = kbDaoismZhaijiao;
+  window.kbZiweiDaxian2 = kbZiweiDaxian2;
+  window.kbBaziShensha2 = kbBaziShensha2;
+  window.kbQimenPaipan = kbQimenPaipan;
+  window.kbLiuyaoCases = kbLiuyaoCases;
+  window.kbZiweiZuhe = kbZiweiZuhe;
+  window.kbBaziShishen = kbBaziShishen;
+  window.kbFengshuiLuopan = kbFengshuiLuopan;
+  window.kbZeriJixiong = kbZeriJixiong;
+  window.kbMianxiangQise2 = kbMianxiangQise2;
+  window.kbXingshiCases = kbXingshiCases;
+  window.kbLiuyaoLiuqin = kbLiuyaoLiuqin;
+  window.kbQimenYongshen = kbQimenYongshen;
+  window.kbZiweiSihua = kbZiweiSihua;
+  window.kbBaziHehun = kbBaziHehun;
+  window.kbXingshiExt = kbXingshiExt;
   window._kb = _kb;
 })();
+
