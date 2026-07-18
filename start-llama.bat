@@ -1,33 +1,35 @@
 @echo off
 chcp 65001 >nul
 echo ==========================================
-echo  启动 llama.cpp 本地大模型服务器
+echo  GPT-OSS-20B IQ4_XS 本地极速版
+echo  RTX 5060 Ti 16GB · 100+ tok/s
+echo  OpenAI 开源 · 默认推荐
 echo ==========================================
 echo.
 
-REM 先终止旧的 llama-server 进程
 taskkill /F /IM llama-server.exe 2>nul
+sleep 2
 
-echo 正在启动 llama.cpp...
-echo 模型: Huihui-Qwen3.5-9B-abliterated.Q4_K_M.gguf
-echo 端口: 8082
-echo.
-
-REM 启动 llama.cpp 服务器
 "D:llama-b8581-bin-win-cuda-12.4-x64llama-server.exe" ^
-  -m "D:modelsqwen35-9b-abliteratedHuihui-Qwen3.5-9B-abliterated.Q4_K_M.gguf" ^
-  --mmproj "D:modelsqwen35-9b-abliteratedHuihui-Qwen3.5-9B-abliterated.mmproj-Q8_0.gguf" ^
+  -m "D:modelsgpt-oss-20bgpt-oss-20b.IQ4_XS.gguf" ^
   --port 8082 ^
   --host 0.0.0.0 ^
   -ngl 99 ^
-  --ctx-size 32768 ^
-  --reasoning off
+  -c 8192 ^
+  -t 20 ^
+  -b 2048 ^
+  -ub 512 ^
+  --flash-attn on ^
+  --mlock ^
+  --cache-type-k q8_0 ^
+  --cache-type-v q8_0 ^
+  --no-mmap ^
+  --cont-batching ^
+  --temp 0.7 ^
+  --top-p 0.9
 
 echo.
-echo 服务器已启动！
-echo 请在 APP 设置中填写：
-echo   IP: 127.0.0.1
-echo   端口: 8082
-echo   模型名: Huihui-Qwen3.5-9B-abliterated.Q4_K_M.gguf
+echo 服务器已启动 http://localhost:8082
+echo APP 设置:IP=127.0.0.1 端口=8082 模型名=gpt-oss-20b.IQ4_XS.gguf
 echo.
 pause

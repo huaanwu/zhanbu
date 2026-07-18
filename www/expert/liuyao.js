@@ -43,10 +43,16 @@ Expert.liuyao = function(pan) {
       facts.push(`【事实·官鬼爻】本卦有${guanYao.length}个官鬼爻：${guanYao.map(y => `${y.name}(${y.isDong ? '动' : '静'})`).join('、')}`);
     }
 
+    if (pan.fuShenList && pan.fuShenList.length > 0) {
+      facts.push(`【事实·伏神】${pan.fuShenList.map(f => `${f.name}下伏${f.gan}${f.zhi}(${f.liuqin})`).join('、')}`);
+    }
+
     // 【新增】世爻应爻（按64卦世应固定表）
     if (pan.gua.lines) {
       const shortName = GUA_FULL_TO_SHORT[pan.gua.name] || pan.gua.name?.[0] || pan.gua.name;
-      const shiIdx = SHI_YING[shortName];
+      const shiIdx = pan.gua.shiYao && pan.gua.yingYao
+        ? { shi: pan.gua.shiYao, ying: pan.gua.yingYao }
+        : SHI_YING[shortName];
       if (shiIdx) {
         const shiYao = pan.yaoList[shiIdx.shi - 1];
         const yingYao = pan.yaoList[shiIdx.ying - 1];
@@ -78,8 +84,10 @@ Expert.liuyao = function(pan) {
       const SHENGED = { '木':'水','火':'木','土':'火','金':'土','水':'金' };
       const KE = { '木':'土','土':'水','水':'火','火':'金','金':'木' };
 
-      // 旬空（按日柱查）
-      const xunKong = window.XUNKONG ? window.XUNKONG[pan.timeGanzhi.day] : null;
+      // 旬空优先使用排盘层已计算结果，兼容旧盘再查专家表。
+      const xunKong = Array.isArray(pan.xunKong)
+        ? pan.xunKong
+        : (window.XUNKONG ? window.XUNKONG[pan.timeGanzhi.day] : null);
 
       // 月破：月建所冲之爻为月破
       const YUE_PO = { '子':'午','午':'子','丑':'未','未':'丑','寅':'申','申':'寅','卯':'酉','酉':'卯','辰':'戌','戌':'辰','巳':'亥','亥':'巳' };
@@ -102,9 +110,9 @@ Expert.liuyao = function(pan) {
         // --- 月令旺衰 ---
         let monthStatus;
         if (ylWx === monthMain) monthStatus = '旺';
-        else if (SHENGED[ylWx] === monthMain) monthStatus = '相（得令生）';
-        else if (SHENG[monthMain] === ylWx) monthStatus = '休（生月令泄气）';
-        else if (KE[monthMain] === ylWx) monthStatus = '囚（克月令耗力）';
+        else if (SHENG[monthMain] === ylWx) monthStatus = '相（月令生扶）';
+        else if (SHENG[ylWx] === monthMain) monthStatus = '休（生月令泄气）';
+        else if (KE[ylWx] === monthMain) monthStatus = '囚（克月令耗力）';
         else monthStatus = '死（被月令克）';
 
         // --- 日辰影响 ---
@@ -118,7 +126,7 @@ Expert.liuyao = function(pan) {
           else if (ylWx === dayMain) dayEffects.push('日辰比和');
           // 日冲（暗动/冲散）
           if (RI_CHONG[y.zhi] === dayZhi) {
-            if (monthStatus === '旺' || monthStatus === '相（得令生）') dayEffects.push('日冲暗动');
+            if (monthStatus === '旺' || monthStatus === '相（月令生扶）') dayEffects.push('日冲暗动');
             else dayEffects.push('日冲冲散');
           }
           // 日合（合绊）
@@ -160,8 +168,10 @@ Expert.liuyao = function(pan) {
               else if (KE[bian.wuxing] === ylWx) dongEffects.push('化回头克');
               // 化进神（五行同且进一位，如寅化卯）
               else if (ylWx === bian.wuxing) {
-                const jinShen = { '寅':'卯','卯':'辰','辰':'巳','巳':'午','午':'未','未':'申','申':'酉','酉':'戌','戌':'亥','亥':'子','子':'丑','丑':'寅' };
-                const tuiShen = { '卯':'寅','辰':'卯','巳':'辰','午':'巳','未':'午','申':'未','酉':'申','戌':'酉','亥':'戌','子':'亥','丑':'子','寅':'丑' };
+                // 进神：五行同类、地支顺行（土按 丑→辰→未→戌→丑 循环）
+                const jinShen = { '亥':'子','寅':'卯','巳':'午','申':'酉','丑':'辰','辰':'未','未':'戌','戌':'丑' };
+                // 退神：进神的逆
+                const tuiShen = { '子':'亥','卯':'寅','午':'巳','酉':'申','辰':'丑','未':'辰','戌':'未','丑':'戌' };
                 if (jinShen[y.zhi] === bian.zhi) dongEffects.push('化进神');
                 else if (tuiShen[y.zhi] === bian.zhi) dongEffects.push('化退神');
               }
@@ -188,36 +198,17 @@ Expert.liuyao = function(pan) {
     // 【新增】卦变分析（本卦 → 变卦）—— 输出变卦具体爻象
     if (pan.gua.dongYaoList && pan.gua.dongYaoList.length > 0) {
       const dongList = pan.gua.dongYaoList;
-      // 获取变卦信息（liuyao.js 的 getGuaImage 已计算 bianGuaLines）
-      // 需要重新计算变卦名称
-      const benLines = pan.gua.lines || [];
-      const bianLines = benLines.map((v, i) => {
-        const yaoIdx = [3, 2, 1, 6, 5, 4][i]; // lineIdx → 爻位
-        return dongList.includes(yaoIdx) ? 1 - v : v;
-      });
-      // 变卦上下卦
-      const bianLower = [bianLines[2], bianLines[1], bianLines[0]];
-      const bianUpper = [bianLines[5], bianLines[4], bianLines[3]];
-      let bianLowerNum, bianUpperNum;
-      for (let n = 1; n <= 8; n++) {
-        if (arraysEqual(GUA_NAME[n][2], bianLower)) bianLowerNum = n;
-        if (arraysEqual(GUA_NAME[n][2], bianUpper)) bianUpperNum = n;
-      }
-      const bianGuaName = bianLowerNum && bianUpperNum ? LIUSHISIGUA[`${bianUpperNum},${bianLowerNum}`] : '未知';
+      // 变卦名称由排盘层按统一的“初爻→上爻”线序计算，专家层不再重复一套易错映射。
+      const bianGuaName = pan.gua.bianName || '未知';
       
       facts.push(`【事实·变卦】动爻${dongList.length}个（第${dongList.join('、')}爻），本卦${pan.gua.name} → 变卦${bianGuaName}`);
       
       // 变爻具体信息（含变卦六亲）
       const bianYaoDetails = dongList.map(d => {
         const yao = pan.yaoList[d - 1];
-        // 变出之爻的六亲：从变卦纳甲中获取
-        let bianLiuQin = '未知';
-        if (pan.bianYaoList && pan.bianYaoList[d - 1]) {
-          bianLiuQin = pan.bianYaoList[d - 1].liuqin;
-        }
-        // 变出之爻：阳动变阴，阴动变阳
-        const bianYaoType = yao.name.includes('阳') ? '阴' : '阳';
-        return `${yao.name}${yao.gan}${yao.zhi}(${yao.liuqin}) → 变${bianYaoType}(${bianLiuQin})`;
+        const bian = pan.bianYaoList && pan.bianYaoList[d - 1];
+        if (!bian) return `${yao.name}${yao.gan}${yao.zhi}(${yao.liuqin}) → 变爻未知`;
+        return `${yao.name}${yao.yinYang}${yao.gan}${yao.zhi}(${yao.liuqin}) → ${bian.yinYang}${bian.gan}${bian.zhi}(${bian.liuqin})`;
       });
       facts.push(`【事实·变爻详情】${bianYaoDetails.join('；')}`);
 

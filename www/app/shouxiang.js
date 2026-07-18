@@ -176,6 +176,12 @@ ${isMale ? '男性手相：左手代表先天命格（天生底子），右手�
     }
   }
 
+  // ========== 架构(任务 #42 固化):
+  //   手相图片 → **云端 qwen-vl-plus**(稳定,中文断掌纹好)
+  //   文字解读 → **本地 llama-server** b10064 + 35B(44 tok/s,极速)
+  //   仅在云端 Key 缺失时才尝试本地 VL(降级路径)
+  // ==================================================
+
   const localPort = getLocalServerPort();
   const hasVL   = await checkLocalModel(localPort);  // 识图模型
   const hasText = await checkLocalModel(localPort);  // 文本模型

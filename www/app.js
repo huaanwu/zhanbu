@@ -210,11 +210,24 @@ function renderHistory() {
   const keyword = document.getElementById('historyFilterKeyword')?.value?.trim() || '';
   const feedback = document.getElementById('historyFilterFeedback')?.value || '';
 
-  const items = window.History.search({ domain, days: days === 'all' ? 'all' : +days, keyword, feedback });
-  const list = document.getElementById('historyList');
-  const stats = document.getElementById('historyStats');
+  // 异步解密后渲染(v1.4 加密后 output/signal 是密文,展示前必须解密)
+  window.History.searchDecrypted({ domain, days: days === 'all' ? 'all' : +days, keyword, feedback })
+    .then(items => {
+      _renderHistoryList(items);
+      _renderHistoryStats(items);
+    })
+    .catch(e => {
+      console.warn('[renderHistory] 解密失败:', e);
+      // 降级用密文(虽然显示不友好,但至少不报错)
+      const items = window.History.search({ domain, days: days === 'all' ? 'all' : +days, keyword, feedback });
+      _renderHistoryList(items);
+      _renderHistoryStats(items);
+    });
+}
 
-  // 统计面板：v1.2.16 增强（反馈率 + 各模块分布）
+function _renderHistoryStats(items) {
+  const stats = document.getElementById('historyStats');
+  if (!stats) return;
   const s = window.History.stats();
   const fbTotal = s.feedbacks.good + s.feedbacks.partial + s.feedbacks.bad;
   const fbRate = fbTotal > 0 ? Math.round((s.feedbacks.good / fbTotal) * 100) : 0;
@@ -223,7 +236,11 @@ function renderHistory() {
     + ` · 反馈率 <b style="color:${fbRate >= 70 ? 'var(--accent-green)' : fbRate >= 40 ? 'var(--accent-gold)' : 'var(--accent-red)'};">${fbRate}%</b>`
     + ` <span style="color:var(--text-muted);">（✓${s.feedbacks.good} ≈${s.feedbacks.partial} ✗${s.feedbacks.bad} ○${s.feedbacks.none}）</span>`
     + `<br><span style="color:var(--text-muted);">常用：${topDomains}</span>`;
+}
 
+function _renderHistoryList(items) {
+  const list = document.getElementById('historyList');
+  if (!list) return;
   if (items.length === 0) {
     list.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text-muted);font-size:0.85rem;">暂无记录</div>';
     return;
@@ -234,7 +251,10 @@ function renderHistory() {
     const label = DOMAIN_LABELS[item.domain] || item.domain;
     const fbIcon = item.feedback === 'good' ? '✓' : item.feedback === 'partial' ? '≈' : item.feedback === 'bad' ? '✗' : '○';
     const fbColor = item.feedback === 'good' ? 'var(--accent-green)' : item.feedback === 'partial' ? 'var(--accent-gold)' : item.feedback === 'bad' ? 'var(--accent-red)' : 'var(--text-muted)';
-    const summary = (item.output || '').slice(0, 80).replace(/\n/g, ' ');
+    // 判断是否还是密文(解密失败时)
+    const isEncrypted = typeof item.output === 'string' && item.output.startsWith('enc:v1:');
+    const outputText = isEncrypted ? '⚠️ 解密失败,可能是历史密钥已更换' : (item.output || '');
+    const summary = (outputText || '').slice(0, 80).replace(/\n/g, ' ');
     html += `
       <div class="history-item" style="border-bottom:1px solid var(--border);padding:0.6rem 0;"
           data-id="${item.id}">
@@ -249,10 +269,10 @@ function renderHistory() {
         </div>
         <div class="history-summary" style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.3rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;"
              onclick="toggleHistoryDetail('${item.id}')">
-          ${summary}${(item.output||'').length > 80 ? '...' : ''}
+          ${escapeHtml(summary)}${outputText.length > 80 ? '...' : ''}
         </div>
         <div class="history-detail" id="hd-${item.id}" style="display:none;margin-top:0.5rem;padding:0.5rem;background:var(--bg-inner);border-radius:6px;font-size:0.8rem;color:var(--text-primary);white-space:pre-wrap;line-height:1.6;max-height:40vh;overflow-y:auto;">
-          ${escapeHtml(item.output || '')}
+          ${escapeHtml(outputText)}
         </div>
         <div class="history-actions" style="display:none;justify-content:flex-end;gap:0.4rem;margin-top:0.4rem;" id="ha-${item.id}">
           <button onclick="copyHistoryText('${item.id}')" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.75rem;cursor:pointer;">📋 复制</button>
@@ -274,34 +294,37 @@ function toggleHistoryDetail(id) {
   if (actions) actions.style.display = show ? 'flex' : 'none';
 }
 
-function copyHistoryText(id) {
+async function copyHistoryText(id) {
   if (!window.History) return;
   const items = window.History.load();
   const item = items.find(i => i.id === id);
   if (!item) return;
-  const text = `[${DOMAIN_LABELS[item.domain] || item.domain}] ${item.question || ''}\n\n${item.output || ''}`;
+  const decrypted = await window.History.decryptItem(item);
+  const text = `[${DOMAIN_LABELS[decrypted.domain] || decrypted.domain}] ${decrypted.question || ''}\n\n${decrypted.output || ''}`;
   navigator.clipboard.writeText(text).then(() => showToast('已复制', 'success')).catch(() => showToast('复制失败', 'error'));
 }
 
-function exportHistoryItem(id) {
+async function exportHistoryItem(id) {
   if (!window.History) return;
   const items = window.History.load();
   const item = items.find(i => i.id === id);
   if (!item) return;
-  const label = DOMAIN_LABELS[item.domain] || item.domain;
-  const date = new Date(item.ts);
+  const decrypted = await window.History.decryptItem(item);
+  const label = DOMAIN_LABELS[decrypted.domain] || decrypted.domain;
+  const date = new Date(decrypted.ts);
   const pad = n => String(n).padStart(2, '0');
   const dateStr = `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
   const fbMap = { good: '✓ 准确', partial: '≈ 部分准', bad: '✗ 不准' };
-  const fb = fbMap[item.feedback] || '○ 未评';
+  const fb = fbMap[decrypted.feedback] || '○ 未评';
+  const isEncrypted = typeof decrypted.output === 'string' && decrypted.output.startsWith('enc:v1:');
+  const outputText = isEncrypted ? '⚠️ 解密失败' : (decrypted.output || '');
   const text = `# 倪海厦占卜·${label}\n\n` +
     `时间：${dateStr}\n` +
     `类型：${label}\n` +
-    `问题：${item.question || '（无）'}\n` +
-    `信号：${item.signal || ''}\n` +
+    `问题：${decrypted.question || '（无）'}\n` +
+    `信号：${decrypted.signal || ''}\n` +
     `反馈：${fb}\n` +
-    `\n--- 解读 ---\n\n${item.output || ''}\n`;
-  // 触发下载
+    `\n--- 解读 ---\n\n${outputText}\n`;
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -469,11 +492,10 @@ async function doRecheck(domain, contentEl, prompt, system) {
 }
 window.doRecheck = doRecheck;
 
-// 找相似历史并格式化
-function getSimilarHistoryPrompt(domain, signal, question) {
+// 找相似历史并格式化(异步,解密后匹配)
+async function getSimilarHistoryPrompt(domain, signal, question) {
   if (!window.History) return '';
-  const similar = window.History.findSimilar(domain, signal, question, 3);
-  return window.History.formatForPrompt(similar);
+  return await window.History.formatSimilarForPrompt(domain, signal, question, 3);
 }
 window.getSimilarHistoryPrompt = getSimilarHistoryPrompt;
 
@@ -629,20 +651,30 @@ async function autoDiscoverServer() {
   // 统计错误信息(给用户更明确提示)
   let errorCount = 0, timeoutCount = 0;
 
-  // 先扫 .1~20
+  // 先扫 .1~50（常见家用网段）
   if (!foundIp) {
-    statusEl.textContent = `扫描 ${base}.1~20:${scanPort}...`;
-    foundIp = await scanBatch(1, 20, (ip, err) => {
+    statusEl.textContent = `扫描 ${base}.1~50:${scanPort}...`;
+    foundIp = await scanBatch(1, 50, (ip, err) => {
       if (err === 'timeout') timeoutCount++;
       else errorCount++;
     });
   }
   if (foundIp) { done(foundIp); return; }
-  statusEl.textContent = `扫描 ${base}.21~50:${scanPort}...`;
 
-  // 再扫 .21~50
+  // 再扫 .51~100
+  statusEl.textContent = `扫描 ${base}.51~100:${scanPort}...`;
   if (!foundIp) {
-    foundIp = await scanBatch(21, 50, (ip, err) => {
+    foundIp = await scanBatch(51, 100, (ip, err) => {
+      if (err === 'timeout') timeoutCount++;
+      else errorCount++;
+    });
+  }
+  if (foundIp) { done(foundIp); return; }
+
+  // 再扫 .101~254（覆盖完整网段）
+  statusEl.textContent = `扫描 ${base}.101~254:${scanPort}...`;
+  if (!foundIp) {
+    foundIp = await scanBatch(101, 254, (ip, err) => {
       if (err === 'timeout') timeoutCount++;
       else errorCount++;
     });
@@ -650,31 +682,20 @@ async function autoDiscoverServer() {
   if (foundIp) { done(foundIp); return; }
 
   // 最后扫常见fallback网段
-  const fallbackBases = myIp ? [] : ['192.168.0', '192.168.1', '10.0.0'];
+  const fallbackBases = myIp ? [] : ['192.168.0', '192.168.1', '192.168.31', '10.0.0'];
   for (const fb of fallbackBases) {
-    statusEl.textContent = `扫描 ${fb}.1~30:${scanPort}...`;
-    const promises = [];
-    for (let i = 1; i <= 30; i++) {
-      const ip = `${fb}.${i}`;
-      promises.push(new Promise(resolve => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', `http://${ip}:${scanPort}/v1/models`, true);
-        xhr.timeout = 1500;
-        xhr.onload = () => resolve(xhr.status === 200 || xhr.status === 502 || xhr.status === 503 ? ip : null);
-        xhr.onerror = () => { errorCount++; resolve(null); };
-        xhr.ontimeout = () => { timeoutCount++; resolve(null); };
-        xhr.send();
-      }));
-    }
-    const results = await Promise.all(promises);
-    foundIp = results.find(ip => ip !== null);
+    statusEl.textContent = `扫描 ${fb}.1~50:${scanPort}...`;
+    foundIp = await scanBatch(1, 50, (ip, err) => {
+      if (err === 'timeout') timeoutCount++;
+      else errorCount++;
+    });
     if (foundIp) { done(foundIp); return; }
   }
 
   // 未找到 - 给更明确的诊断信息
   let hint = '';
   if (webrtcFailed) {
-    hint = '(WebRTC 取本机IP失败,可能未授权;已尝试 192.168.0/1 + 10.0.0 网段)';
+    hint = '(WebRTC 取本机IP失败,可能未授权;已尝试常见网段)';
   } else if (timeoutCount > errorCount) {
     hint = `(大量超时,可能不在同WiFi;已扫 ${timeoutCount} 个IP)`;
   } else if (errorCount > 0) {
@@ -682,7 +703,7 @@ async function autoDiscoverServer() {
   } else {
     hint = `(已扫所有网段均无响应)`;
   }
-  statusEl.textContent = `❌ 未找到 ${hint}。请检查: 1.同WiFi 2.模型已启动(${scanPort}端口) 3.防火墙开放${scanPort} 4.或在电脑上 curl http://localhost:${scanPort}/v1/models 验证`;
+  statusEl.innerHTML = `❌ 未找到 ${hint}。<br>💡 建议：在电脑上打开浏览器访问 <a href="http://localhost:${scanPort}/v1/models" target="_blank" style="color:var(--accent-gold);">http://localhost:${scanPort}/v1/models</a> 确认模型已启动，然后在上方输入框手动输入电脑IP（如 192.168.1.7）`;
   statusEl.style.color = 'var(--accent-red)';
 
   async function done(ip) {
@@ -942,3 +963,51 @@ function smartRoute() {
 }
 window.smartRoute = smartRoute;
 
+
+// ========== 任务 #30:神秘感动画 ==========
+
+// 夜间模式切换
+function toggleNightMode() {
+  const isNight = document.body.classList.toggle('night-mode');
+  localStorage.setItem('night_mode', isNight ? '1' : '0');
+  const btn = document.getElementById('nightToggleBtn');
+  if (btn) btn.textContent = isNight ? '☀️' : '🌙';
+  showToast(isNight ? '已切换至夜间模式(烛火玄学)' : '已切换至日间模式(古籍淡雅)', 'success');
+}
+window.toggleNightMode = toggleNightMode;
+
+// 启动时恢复夜间模式
+(function restoreNightMode() {
+  if (localStorage.getItem('night_mode') === '1') {
+    document.body.classList.add('night-mode');
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('nightToggleBtn');
+      if (btn) btn.textContent = '☀️';
+    });
+  }
+})();
+
+// AI 解读流式 cursor + loading 按钮态
+(function setupStreamUX() {
+  if (!window.EventBus) return;
+  const bus = window.EventBus;
+  const events = window.CoreEvents || {};
+
+  bus.addEventListener(events.AI_START || 'ai:start', () => {
+    document.querySelectorAll('.divine-btn').forEach(b => b.classList.add('loading'));
+    document.querySelectorAll('.ai-content').forEach(el => el.classList.add('streaming'));
+    document.querySelectorAll('.divine-result').forEach(el => el.classList.add('loading'));
+  });
+  bus.addEventListener(events.AI_COMPLETE || 'ai:complete', () => {
+    setTimeout(() => {
+      document.querySelectorAll('.divine-btn').forEach(b => b.classList.remove('loading'));
+      document.querySelectorAll('.ai-content').forEach(el => el.classList.remove('streaming'));
+      document.querySelectorAll('.divine-result').forEach(el => el.classList.remove('loading'));
+    }, 200);
+  });
+  bus.addEventListener(events.AI_ERROR || 'ai:error', () => {
+    document.querySelectorAll('.divine-btn').forEach(b => b.classList.remove('loading'));
+    document.querySelectorAll('.ai-content').forEach(el => el.classList.remove('streaming'));
+    document.querySelectorAll('.divine-result').forEach(el => el.classList.remove('loading'));
+  });
+})();

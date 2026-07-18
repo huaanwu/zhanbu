@@ -272,7 +272,7 @@ async function doAICross() {
   try {
     // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
     // cross 特殊:buildSystemPrompt 自动调 Expert.bazi/ziwei/liuyao + crossValidate + kbDaoism
-    const system = Core.AI.buildSystemPrompt({ domain: 'cross', pan: currentCross, question: currentCross.question });
+    const system = await Core.AI.buildSystemPrompt({ domain: 'cross', pan: currentCross, question: currentCross.question });
 
     // v3.0.5: 统一 AI 入口(任务 #19)— 三术同参用完整 currentCross 作为 cache key 与 Expert 输入
     const { finalText: outFinal } = await Core.AI.interpret({

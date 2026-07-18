@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" width="240">
+  <defs>
+    <filter id="paper8"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="n"/><feDiffuseLighting in="n" lighting-color="#f4e4bc" surfaceScale="1.2"><feDistantLight azimuth="45" elevation="60"/></feDiffuseLighting></filter>
+  </defs>
+  <rect x="8" y="8" width="384" height="584" fill="#f4e4bc" stroke="#8b5a2b" stroke-width="3" filter="url(#paper8)"/>
+  <rect x="16" y="16" width="368" height="568" fill="none" stroke="#8b5a2b" stroke-width="1"/>
+
+  <g fill="#1a3a5a">
+    <rect x="120" y="28" width="160" height="48" rx="3"/>
+  </g>
+  <text x="200" y="60" text-anchor="middle" fill="#f4e4bc" font-size="30" font-family="'Noto Serif SC',serif" font-weight="bold" letter-spacing="4">敕令</text>
+
+  <!-- 螣蛇(腾蛇缠绕) -->
+  <g transform="translate(200, 130)" fill="none" stroke="#1a3a5a" stroke-width="2.5" opacity="0.7">
+    <!-- 蛇身曲线 -->
+    <path d="M-40,-15 Q-20,-35 0,-25 Q20,-15 10,5 Q0,20 -15,15 Q-25,10 -20,-5 Q-15,-15 -5,-10" stroke-width="2.5" fill="none"/>
+    <path d="M40,-15 Q60,-35 80,-25 Q100,-15 90,5 Q80,20 65,15 Q55,10 60,-5 Q65,-15 75,-10" stroke-width="2" fill="none" opacity="0.5"/>
+    <!-- 蛇头 -->
+    <circle cx="-40" cy="-15" r="6" fill="#1a3a5a"/>
+    <circle cx="-42" cy="-17" r="1.5" fill="#f4e4bc"/>
+    <!-- 蛇信 -->
+    <path d="M-46,-15 L-55,-12 M-46,-15 L-55,-18" stroke-width="1.5" fill="none"/>
+    <!-- 蛇纹 -->
+    <path d="M-30,-15 L-20,-10 M-25,-5 L-15,0 M0,-25 L10,-20 M5,0 L15,5" stroke-width="1" opacity="0.5"/>
+  </g>
+
+  <g fill="#1a3a5a" font-family="'Noto Serif SC',serif" font-weight="bold" text-anchor="middle">
+    <text x="200" y="240" font-size="26">螣蛇应变</text>
+    <text x="200" y="280" font-size="22">惊疑变化</text>
+    <text x="200" y="320" font-size="22">化解虚惊</text>
+    <text x="200" y="360" font-size="22">转危为安</text>
+    <text x="200" y="400" font-size="20">急急如律令</text>
+  </g>
+
+  <!-- 惊疑化解符纹 -->
+  <g transform="translate(200, 460)" fill="none" stroke="#1a3a5a" stroke-width="2" opacity="0.6">
+    <path d="M-60,-20 Q-40,-10 -60,0 Q-80,10 -60,20 Q-40,30 -60,40" stroke-dasharray="5,3"/>
+    <path d="M60,-20 Q40,-10 60,0 Q80,10 60,20 Q40,30 60,40" stroke-dasharray="5,3"/>
+    <path d="M-30,-30 Q0,-40 30,-30" opacity="0.4"/>
+    <path d="M-30,50 Q0,60 30,50" opacity="0.4"/>
+  </g>
+
+  <rect x="160" y="510" width="80" height="80" fill="none" stroke="#1a3a5a" stroke-width="3"/>
+  <text x="200" y="545" text-anchor="middle" fill="#1a3a5a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">螣蛇</text>
+  <text x="200" y="575" text-anchor="middle" fill="#1a3a5a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">大将</text>
+
+  <g fill="none" stroke="#1a3a5a" stroke-width="1.5" opacity="0.4">
+    <path d="M25,25 L35,35 L25,45 L35,55"/>
+    <path d="M375,25 L365,35 L375,45 L365,55"/>
+    <path d="M25,575 L35,565 L25,555 L35,545"/>
+    <path d="M375,575 L365,565 L375,555 L365,545"/>
+  </g>
+</svg>

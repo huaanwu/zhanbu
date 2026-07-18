@@ -1,4 +1,4 @@
-﻿function buildLiuyaoPrompt(pan, question) {
+function buildLiuyaoPrompt(pan, question) {
   return window.liuyao ? window.liuyao.formatLiuyaoPrompt(pan, question) : "";
 }
 // ========== 六爻 ==========
@@ -58,10 +58,14 @@ async function doLiuyao() {
     if (method === 'time') {
       pan = window.liuyao.panGua('time', { dt: new Date() });
     } else if (method === 'number') {
-      const n1 = +document.getElementById('lyNum1').value || 1;
-      const n2 = +document.getElementById('lyNum2').value || 1;
-      const n3 = document.getElementById('lyNum3').value;
-      pan = window.liuyao.panGua('number', { num1: n1, num2: n2, num3: n3 ? +n3 : null });
+      const n1Raw = document.getElementById('lyNum1').value;
+      const n2Raw = document.getElementById('lyNum2').value;
+      const n3Raw = document.getElementById('lyNum3').value;
+      pan = window.liuyao.panGua('number', {
+        num1: n1Raw === '' ? 1 : Number(n1Raw),
+        num2: n2Raw === '' ? 1 : Number(n2Raw),
+        num3: n3Raw === '' ? null : Number(n3Raw),
+      });
     } else if (method === 'coin') {
       pan = window.liuyao.panGua('coin', { dt: new Date() });
     } else {
@@ -91,11 +95,15 @@ window.doLiuyao = doLiuyao;
 function renderLiuyao(pan) {
   let html = '<div class="result-title">六爻排盘结果</div>';
   html += `<div class="gua-info">`;
-  html += `<span>卦名：<strong>${pan.gua.name}</strong></span>`;
+  html += `<span>本卦：<strong>${pan.gua.name}</strong></span>`;
+  html += `<span>卦宫：<strong>${pan.gua.palace}宫（${pan.gua.palaceWuxing}）·${pan.gua.palaceType}</strong></span>`;
+  html += `<span>世应：<strong>世${pan.gua.shiYao} · 应${pan.gua.yingYao}</strong></span>`;
+  html += `<span>旬空：<strong>${pan.xunKong?.length ? pan.xunKong.join('、') : '无'}</strong></span>`;
   if (pan.gua.dongYaoList && pan.gua.dongYaoList.length > 0) {
     html += `<span>动爻：<strong>第${pan.gua.dongYaoList.join('、')}爻（${pan.gua.dongYaoName}）</strong></span>`;
+    html += `<span>变卦：<strong>${pan.gua.bianName}</strong></span>`;
   } else {
-    html += `<span>动爻：<strong style="color:var(--text-muted)">无</strong></span>`;
+    html += `<span>动爻：<strong style="color:var(--text-muted)">无（静卦）</strong></span>`;
   }
   html += `</div>`;
 
@@ -119,15 +127,21 @@ function renderLiuyao(pan) {
 
   html += '<div class="yao-list">';
   for (const yao of [...pan.yaoList].reverse()) {
-    const dong = yao.isDong ? '<span class="dong">【动】</span>' : '';
+    const marks = [];
+    if (yao.isShi) marks.push('世');
+    if (yao.isYing) marks.push('应');
+    if (yao.isDong) marks.push('动');
+    if (yao.isXunKong) marks.push('空');
     html += `<div class="yao-item">`;
-    html += `<span>${yao.name} ${yao.gan}${yao.zhi}(${yao.wuxing}) ${yao.liuqin} ${yao.liushen}</span>`;
-    html += `${dong}</div>`;
+    html += `<span>${yao.name} ${yao.yinYang} ${yao.gan}${yao.zhi}(${yao.wuxing}) ${yao.liuqin} ${yao.liushen}</span>`;
+    if (marks.length) html += `<span class="${yao.isDong ? 'dong' : ''}">【${marks.join('·')}】</span>`;
+    if (yao.fuShen) html += `<small style="display:block;color:var(--text-muted);width:100%;">伏神：${yao.fuShen.gan}${yao.fuShen.zhi}(${yao.fuShen.wuxing}) ${yao.fuShen.liuqin}</small>`;
+    html += `</div>`;
   }
   html += '</div>';
 
   if (pan.huGua) {
-    html += `<div style="text-align:center;margin-top:0.5rem;color:var(--text-secondary);font-size:0.8rem;">互卦：${pan.huGua}</div>`;
+    html += `<div style="text-align:center;margin-top:0.5rem;color:var(--text-secondary);font-size:0.8rem;">互卦：${pan.huGua} · 错卦：${pan.gua.cuoGua} · 综卦：${pan.gua.zongGua}</div>`;
   }
   document.getElementById('lyResult').innerHTML = html;
 }
@@ -153,7 +167,7 @@ var XUNWU_ENV = {
   '青龙': { desc: '高处、洁净、明亮处', places: ['柜子上','书架顶层','高处台面','整洁的桌面'], reason: '青龙主高贵洁净' },
   '朱雀': { desc: '文书附近、说话处、喧哗处', places: ['桌上','打印机旁','电视旁','说话交流的地方'], reason: '朱雀主口舌文书' },
   '勾陈': { desc: '地面、土中、陈旧处', places: ['地面','地下','旧物堆','地板缝隙','土堆旁'], reason: '勾陈主土地陈旧' },
-  '腾蛇': { desc: '缠绕处、中空物内、拐角', places: ['包里','袋中','缝隙处','管道旁','沙发垫下','被科中'], reason: '腾蛇主缠绕中空' },
+  '螣蛇': { desc: '缠绕处、中空物内、拐角', places: ['包里','袋中','缝隙处','管道旁','沙发垫下','被褥中'], reason: '腾蛇主缠绕中空' },
   '白虎': { desc: '道路边、金属旁、凶煞处', places: ['路边','金属架旁','车旁','垃圾桶','利器旁'], reason: '白虎主道路金属' },
   '玄武': { desc: '暗处、隐蔽处、水边', places: ['床底','厕所','水池旁','阴暗角落','抽屉深处'], reason: '玄武主阴暗隐蔽' }
 };
@@ -171,7 +185,12 @@ function classifyLostItem(itemName) {
 
 function findYongShen(yaoList, category) {
   for (let i = 0; i < yaoList.length; i++) {
-    if (yaoList[i].liuqin === category) { return { position: i, yao: yaoList[i] }; }
+    if (yaoList[i].liuqin === category) return { position: i, yao: yaoList[i], isFuShen: false };
+  }
+  for (let i = 0; i < yaoList.length; i++) {
+    if (yaoList[i].fuShen?.liuqin === category) {
+      return { position: i, yao: { ...yaoList[i].fuShen, liushen: yaoList[i].liushen }, isFuShen: true };
+    }
   }
   return null;
 }
@@ -182,15 +201,18 @@ function analyzeXunWu(pan, lostItemName) {
   if (!yongShen) return { error: '未能定位用神' };
   const yl = yongShen.yao;
   const isMoving = yl.isDong;
+  const isFuShen = yongShen.isFuShen;
   const direction = XUNWU_DIRECTION[yl.wuxing] || { primary: '未知', reason: '无法确定五行' };
   const environment = XUNWU_ENV[yl.liushen] || { desc: '无法判断', places: [], reason: '六神信息不足' };
-  const probLevel = isMoving ? 'high' : 'medium';
-  const probPercent = isMoving ? 75 : 55;
-  const probReason = isMoving ? '用神发动，化变有力，失物有动向' : '用神安静，需主动寻找';
-  const timing = isMoving ? { desc: '3-7日内有望', reason: '动父主变化，近期会有动向' } : { desc: '近期留意', reason: '用神状态平稳' };
+  const probLevel = isFuShen ? 'low' : (isMoving ? 'high' : 'medium');
+  const probPercent = isFuShen ? 35 : (isMoving ? 75 : 55);
+  const probReason = isFuShen ? '用神伏藏，需待出伏或冲开飞神' : (isMoving ? '用神发动，化变有力，失物有动向' : '用神安静，需主动寻找');
+  const timing = isFuShen
+    ? { desc: '待出伏时重点寻找', reason: '伏神暂藏，逢冲飞神或伏神出空时更易显现' }
+    : (isMoving ? { desc: '3-7日内有望', reason: '动爻主变化，近期会有动向' } : { desc: '近期留意', reason: '用神状态平稳' });
   return {
     itemName: lostItemName, category: classification,
-    yongShen: { position: yongShen.position + 1, liuqin: yl.liuqin, wuxing: yl.wuxing, liushen: yl.liushen, isMoving },
+    yongShen: { position: yongShen.position + 1, liuqin: yl.liuqin, wuxing: yl.wuxing, liushen: yl.liushen, isMoving, isFuShen },
     direction, environment,
     probability: { level: probLevel, percentage: probPercent, reason: probReason, canFind: true },
     timing
@@ -208,8 +230,8 @@ function renderXunWuReport(analysis) {
   grid.innerHTML = `
     <div class="result-card" style="background:var(--bg-inner);border:1px solid var(--border);border-radius:8px;padding:0.8rem;">
       <div style="font-size:0.7rem;color:var(--text-muted);">失物类别 / 用神</div>
-      <div style="font-family:'Noto Serif SC',serif;font-size:1.2rem;font-weight:700;color:var(--accent-gold);">${analysis.category.category}父 · ${analysis.category.description}</div>
-      <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.3rem;">「${analysis.itemName}」取${analysis.category.category}为用神，位于第${analysis.yongShen.position}父</div>
+      <div style="font-family:'Noto Serif SC',serif;font-size:1.2rem;font-weight:700;color:var(--accent-gold);">${analysis.category.category}爻 · ${analysis.category.description}</div>
+      <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.3rem;">「${analysis.itemName}」取${analysis.category.category}为用神，位于第${analysis.yongShen.position}爻${analysis.yongShen.isFuShen?'（伏神）':''}</div>
     </div>
     <div class="result-card" style="background:var(--bg-inner);border:1px solid var(--border);border-radius:8px;padding:0.8rem;">
       <div style="font-size:0.7rem;color:var(--text-muted);">方位判断</div>
@@ -261,7 +283,7 @@ async function doAILiuyao() {
   let fullText = '';
   try {
     // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
-    let system = Core.AI.buildSystemPrompt({ domain: 'liuyao', pan: currentLy, question });
+    let system = await Core.AI.buildSystemPrompt({ domain: 'liuyao', pan: currentLy, question });
     if ((state.liuyao.mode || 'normal') === 'xunwu') {
       system += '\n\n【此为寻物占】用户正在寻找丢失的物品。重点解读：方位、距离、环境特征、是否还在原处、找回可能性、最佳时间、具体建议。';
     }

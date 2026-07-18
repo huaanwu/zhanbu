@@ -1,42 +1,61 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" width="240">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" width="100%" preserveAspectRatio="xMidYMid meet">
   <defs>
-    <filter id="paper"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="n"/><feDiffuseLighting in="n" lighting-color="#f4e4bc" surfaceScale="1.2"><feDistantLight azimuth="45" elevation="60"/></feDiffuseLighting></filter>
+    <filter id="paper_fengmen"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="n"/><feDiffuseLighting in="n" lighting-color="#f4e4bc" surfaceScale="1.2"><feDistantLight azimuth="45" elevation="60"/></feDiffuseLighting></filter>
   </defs>
-  <rect x="8" y="8" width="384" height="584" fill="#f4e4bc" stroke="#c9a84c" stroke-width="3" filter="url(#paper)"/>
-  <rect x="16" y="16" width="368" height="568" fill="none" stroke="#c9a84c" stroke-width="1"/>
-  <rect x="110" y="30" width="180" height="44" fill="#b91c1c" rx="2"/>
-  <text x="200" y="62" text-anchor="middle" fill="#f4e4bc" font-size="28" font-family="'Noto Serif SC',serif" font-weight="bold">敕令</text>
-  <g transform="translate(200, 260)" fill="#b91c1c" font-family="'Noto Serif SC',serif" font-weight="bold" text-anchor="middle">
-    <text x="0" y="-80" font-size="42">封门镇邪</text>
-    <text x="0" y="0" font-size="36">急急如律令</text>
-    <text x="0" y="60" font-size="32">外邪不入</text>
+  <!-- 符纸 -->
+  <rect x="8" y="8" width="384" height="584" fill="#f4e4bc" stroke="#8b5a2b" stroke-width="3" filter="url(#paper_fengmen)"/>
+  <rect x="16" y="16" width="368" height="568" fill="none" stroke="#8b5a2b" stroke-width="1"/>
+
+  <!-- 敕令头 -->
+  <g fill="#4a3a5a">
+    <rect x="120" y="28" width="160" height="48" rx="3"/>
+    <path d="M110,32 L120,40 L110,48 L120,56 L110,64" stroke="#4a3a5a" stroke-width="1.5" fill="none" opacity="0.6"/>
+    <path d="M290,32 L280,40 L290,48 L280,56 L290,64" stroke="#4a3a5a" stroke-width="1.5" fill="none" opacity="0.6"/>
   </g>
-  <g transform="translate(200, 260)" fill="none" stroke="#b91c1c" stroke-width="3" opacity="0.6">
-    <path d="M-120,-120 Q-100,-100 -120,-80 Q-140,-60 -120,-40 Q-100,-20 -120,0 Q-140,20 -120,40 Q-100,60 -120,80 Q-140,100 -120,120"/>
-    <path d="M120,-120 Q100,-100 120,-80 Q140,-60 120,-40 Q100,-20 120,0 Q140,20 120,40 Q100,60 120,80 Q140,100 120,120"/>
-    <path d="M-100,-130 Q0,-150 100,-130" opacity="0.5"/>
-    <path d="M-100,130 Q0,150 100,130" opacity="0.5"/>
+  <text x="200" y="60" text-anchor="middle" fill="#f4e4bc" font-size="30" font-family="'Noto Serif SC',serif" font-weight="bold" letter-spacing="4">敕令</text>
+
+  <!-- 主咒文(避免与符胆重叠) -->
+  <g fill="#4a3a5a" font-family="'Noto Serif SC',serif" font-weight="bold" text-anchor="middle">
+    <text x="200" y="130" font-size="26">封门闭户</text>
+    <text x="200" y="166" font-size="22">邪不得入</text>
+    <text x="200" y="202" font-size="22">六甲神将</text>
+    <text x="200" y="238" font-size="22">守户镇门</text>
   </g>
-  <g transform="translate(200, 260)" fill="none" stroke="#b91c1c" stroke-width="2" opacity="0.7">
-    <circle cx="0" cy="0" r="110"/>
-    <path d="M-110,0 L-78,0 M78,0 L110,0 M0,-110 L0,-78 M0,78 L0,110"/>
-    <path d="M-78,-78 L-55,-55 M55,55 L78,78 M-78,78 L-55,55 M55,-55 L78,-78"/>
+
+  <!-- 符胆元素(下移到 y=320 避开咒文) -->
+  <g transform="translate(200,330)" fill="none" stroke="#4a3a5a" stroke-width="2.5" opacity="0.6">
+      <rect x="-45" y="-60" width="90" height="120" stroke-width="3"/>
+      <line x1="0" y1="-60" x2="0" y2="60"/>
+      <circle cx="-12" cy="0" r="4" fill="#4a3a5a"/><circle cx="12" cy="0" r="4" fill="#4a3a5a"/>
+    </g>
+
+  <!-- 五雷震位 -->
+  <g transform="translate(200,440)" fill="none" stroke="#4a3a5a" stroke-width="2" opacity="0.5">
+    <path d="M-60,0 L-20,0 M20,0 L60,0 M0,-60 L0,-20 M0,20 L0,60"/>
+    <path d="M-40,-40 L-15,-15 M15,15 L40,40 M-40,40 L-15,15 M15,-15 L40,-40"/>
+    <circle cx="0" cy="0" r="35" stroke-dasharray="5,3"/>
   </g>
-  <g transform="translate(200, 480)">
-    <circle cx="-90" cy="0" r="5" fill="#b91c1c"/>
-    <circle cx="-60" cy="-15" r="5" fill="#b91c1c"/>
-    <circle cx="-30" cy="-8" r="5" fill="#b91c1c"/>
-    <circle cx="0" cy="0" r="6" fill="#b91c1c"/>
-    <circle cx="30" cy="-8" r="5" fill="#b91c1c"/>
-    <circle cx="60" cy="-15" r="5" fill="#b91c1c"/>
-    <circle cx="90" cy="0" r="5" fill="#b91c1c"/>
-    <path d="M-90,0 L-60,-15 L-30,-8 L0,0 L30,-8 L60,-15 L90,0" fill="none" stroke="#b91c1c" stroke-width="1.5" stroke-dasharray="4,2"/>
+
+  <!-- 印章 -->
+  <rect x="160" y="500" width="80" height="80" fill="none" stroke="#4a3a5a" stroke-width="3"/>
+  <text x="200" y="535" text-anchor="middle" fill="#4a3a5a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">封门</text>
+  <text x="200" y="565" text-anchor="middle" fill="#4a3a5a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">封门</text>
+
+  <!-- 符脚雷纹 -->
+  <g fill="none" stroke="#4a3a5a" stroke-width="1.5" opacity="0.4">
+    <path d="M25,25 L35,35 L25,45 L35,55"/>
+    <path d="M375,25 L365,35 L375,45 L365,55"/>
+    <path d="M25,575 L35,565 L25,555 L35,545"/>
+    <path d="M375,575 L365,565 L375,555 L365,545"/>
   </g>
-  <rect x="160" y="520" width="80" height="80" fill="none" stroke="#b91c1c" stroke-width="3"/>
-  <text x="200" y="555" text-anchor="middle" fill="#b91c1c" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">封门</text>
-  <text x="200" y="585" text-anchor="middle" fill="#b91c1c" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">镇邪</text>
-  <path d="M25,25 Q40,25 40,40 Q40,55 25,55" fill="none" stroke="#b91c1c" stroke-width="2"/>
-  <path d="M375,25 Q360,25 360,40 Q360,55 375,55" fill="none" stroke="#b91c1c" stroke-width="2"/>
-  <path d="M25,575 Q40,575 40,560 Q40,545 25,545" fill="none" stroke="#b91c1c" stroke-width="2"/>
-  <path d="M375,575 Q360,575 360,560 Q360,545 375,545" fill="none" stroke="#b91c1c" stroke-width="2"/>
+
+  <!-- 古旧破损 -->
+  <g fill="#d4b896" opacity="0.3">
+    <circle cx="380" cy="30" r="4"/>
+    <circle cx="370" cy="40" r="3"/>
+    <circle cx="385" cy="45" r="2.5"/>
+    <circle cx="375" cy="20" r="2"/>
+    <circle cx="25" cy="570" r="3.5"/>
+    <circle cx="20" cy="555" r="2.5"/>
+  </g>
 </svg>

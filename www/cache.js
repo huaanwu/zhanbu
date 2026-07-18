@@ -46,6 +46,8 @@ const Cache = {
         parts.push(params.gender);
         break;
       case 'liuyao':
+        // v2: 六爻线序/纳甲/卦宫算法已纠正，隔离旧算法生成的错误解读缓存。
+        parts.push('jingfang-v2');
         parts.push(params.gua?.name);
         parts.push((params.gua?.dongYaoList || []).join('-'));
         break;
@@ -65,6 +67,8 @@ const Cache = {
         parts.push(params.rightBase64?.slice(0, 100) || 'no-right');
         break;
       case 'cross':
+        // 三术同参包含六爻，同样不能复用旧六爻算法缓存。
+        parts.push('jingfang-v2');
         parts.push(params.bazi?.gz?.day);
         parts.push(params.liuyao?.gua?.name);
         parts.push(params.ziwei?.mingGong?.ganzhi);

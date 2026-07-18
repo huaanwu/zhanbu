@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" width="240">
+  <defs>
+    <filter id="paper6"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="n"/><feDiffuseLighting in="n" lighting-color="#f4e4bc" surfaceScale="1.2"><feDistantLight azimuth="45" elevation="60"/></feDiffuseLighting></filter>
+  </defs>
+  <rect x="8" y="8" width="384" height="584" fill="#f4e4bc" stroke="#8b5a2b" stroke-width="3" filter="url(#paper6)"/>
+  <rect x="16" y="16" width="368" height="568" fill="none" stroke="#8b5a2b" stroke-width="1"/>
+
+  <g fill="#c0392b">
+    <rect x="120" y="28" width="160" height="48" rx="3"/>
+  </g>
+  <text x="200" y="60" text-anchor="middle" fill="#f4e4bc" font-size="30" font-family="'Noto Serif SC',serif" font-weight="bold" letter-spacing="4">敕令</text>
+
+  <!-- 朱雀(凤凰展开) -->
+  <g transform="translate(200, 130)" fill="none" stroke="#c0392b" stroke-width="2" opacity="0.7">
+    <!-- 凤头 -->
+    <path d="M0,-25 Q-15,-20 -12,-5 Q-8,5 0,0 Q8,5 12,-5 Q15,-20 0,-25" fill="#c0392b"/>
+    <!-- 凤身 -->
+    <ellipse cx="0" cy="8" rx="18" ry="12" fill="none"/>
+    <!-- 凤翼 -->
+    <path d="M-18,5 Q-40,-5 -50,10 Q-45,25 -25,15 Q-15,12 -18,5" fill="none" stroke-width="2"/>
+    <path d="M18,5 Q40,-5 50,10 Q45,25 25,15 Q15,12 18,5" fill="none" stroke-width="2"/>
+    <!-- 凤尾(三根) -->
+    <path d="M-5,15 Q-15,40 -25,55" stroke-width="2" fill="none"/>
+    <path d="M0,18 Q0,45 0,60" stroke-width="2.5" fill="none"/>
+    <path d="M5,15 Q15,40 25,55" stroke-width="2" fill="none"/>
+    <!-- 火焰点 -->
+    <circle cx="-30" cy="20" r="2" fill="#c0392b"/>
+    <circle cx="0" cy="35" r="2" fill="#c0392b"/>
+    <circle cx="30" cy="20" r="2" fill="#c0392b"/>
+  </g>
+
+  <g fill="#c0392b" font-family="'Noto Serif SC',serif" font-weight="bold" text-anchor="middle">
+    <text x="200" y="240" font-size="26">朱雀明光</text>
+    <text x="200" y="280" font-size="22">南方火德</text>
+    <text x="200" y="320" font-size="22">光明正大</text>
+    <text x="200" y="360" font-size="22">文昌显达</text>
+    <text x="200" y="400" font-size="20">急急如律令</text>
+  </g>
+
+  <!-- 南方七宿 -->
+  <g transform="translate(200, 460)" fill="#c0392b" font-size="14" font-family="'Noto Serif SC',serif" text-anchor="middle" opacity="0.7">
+    <text x="-90" y="0">井</text>
+    <text x="-60" y="-15">鬼</text>
+    <text x="-30" y="-25">柳</text>
+    <text x="0" y="-28">星</text>
+    <text x="30" y="-25">张</text>
+    <text x="60" y="-15">翼</text>
+    <text x="90" y="0">轸</text>
+    <path d="M-90,0 L-60,-15 L-30,-25 L0,-28 L30,-25 L60,-15 L90,0" fill="none" stroke="#c0392b" stroke-width="1" stroke-dasharray="3,2" opacity="0.5"/>
+  </g>
+
+  <rect x="160" y="510" width="80" height="80" fill="none" stroke="#c0392b" stroke-width="3"/>
+  <text x="200" y="545" text-anchor="middle" fill="#c0392b" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">南方</text>
+  <text x="200" y="575" text-anchor="middle" fill="#c0392b" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">朱雀</text>
+
+  <g fill="none" stroke="#c0392b" stroke-width="1.5" opacity="0.4">
+    <path d="M25,25 L35,35 L25,45 L35,55"/>
+    <path d="M375,25 L365,35 L375,45 L365,55"/>
+    <path d="M25,575 L35,565 L25,555 L35,545"/>
+    <path d="M375,575 L365,565 L375,555 L365,545"/>
+  </g>
+</svg>

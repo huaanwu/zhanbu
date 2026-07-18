@@ -184,7 +184,7 @@ async function doAIBazi() {
   let fullText = '';
   try {
     // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
-    const system = Core.AI.buildSystemPrompt({ domain: 'bazi', pan: currentBazi, question: currentBazi.question });
+    const system = await Core.AI.buildSystemPrompt({ domain: 'bazi', pan: currentBazi, question: currentBazi.question });
     // v3.0.5: 统一 AI 入口(任务 #19)— 缓存查询 + 流式输出 + 事件派发 + abort 由 Core.AI.interpret() 接管
     const { finalText } = await Core.AI.interpret({
       domain: 'bazi',

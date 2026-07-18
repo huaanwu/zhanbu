@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" width="240">
+  <defs>
+    <filter id="paper4"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="n"/><feDiffuseLighting in="n" lighting-color="#f4e4bc" surfaceScale="1.2"><feDistantLight azimuth="45" elevation="60"/></feDiffuseLighting></filter>
+  </defs>
+  <rect x="8" y="8" width="384" height="584" fill="#f4e4bc" stroke="#8b5a2b" stroke-width="3" filter="url(#paper4)"/>
+  <rect x="16" y="16" width="368" height="568" fill="none" stroke="#8b5a2b" stroke-width="1"/>
+
+  <!-- 敕令(金色,对应西方白虎) -->
+  <g fill="#a0702a">
+    <rect x="120" y="28" width="160" height="48" rx="3"/>
+  </g>
+  <text x="200" y="60" text-anchor="middle" fill="#f4e4bc" font-size="30" font-family="'Noto Serif SC',serif" font-weight="bold" letter-spacing="4">敕令</text>
+
+  <!-- 白虎(头部符号) -->
+  <g transform="translate(200, 130)" fill="none" stroke="#a0702a" stroke-width="2.5" opacity="0.7">
+    <circle cx="0" cy="0" r="35"/>
+    <path d="M-20,-10 L-25,-20 L-15,-15 M20,-10 L25,-20 L15,-15" stroke-width="2"/>
+    <circle cx="-12" cy="-5" r="3" fill="#a0702a"/>
+    <circle cx="12" cy="-5" r="3" fill="#a0702a"/>
+    <path d="M0,-5 L-8,10 L0,15 L8,10 Z" fill="#a0702a"/>
+    <path d="M-25,15 Q0,25 25,15" fill="none"/>
+    <path d="M-30,10 L-40,5 M30,10 L40,5 M-30,20 L-40,25 M30,20 L40,25" stroke-width="1.5"/>
+  </g>
+
+  <!-- 主咒文 -->
+  <g fill="#a0702a" font-family="'Noto Serif SC',serif" font-weight="bold" text-anchor="middle">
+    <text x="200" y="230" font-size="26">白虎镇煞</text>
+    <text x="200" y="270" font-size="22">西方金德</text>
+    <text x="200" y="310" font-size="22">肃杀威严</text>
+    <text x="200" y="350" font-size="22">百邪不侵</text>
+    <text x="200" y="390" font-size="20">急急如律令</text>
+  </g>
+
+  <!-- 五雷 -->
+  <g transform="translate(200, 460)" fill="none" stroke="#a0702a" stroke-width="2" opacity="0.6">
+    <path d="M-70,-20 L-50,0 L-70,20 L-90,0 Z" fill="none"/>
+    <path d="M-20,-30 L0,-10 L-20,10 L-40,-10 Z" fill="none"/>
+    <path d="M30,-20 L50,0 L30,20 L10,0 Z" fill="none"/>
+    <path d="M80,-20 L100,0 L80,20 L60,0 Z" fill="none"/>
+    <path d="M5,-20 L25,0 L5,20 L-15,0 Z" fill="none"/>
+  </g>
+
+  <!-- 虎印 -->
+  <rect x="160" y="510" width="80" height="80" fill="none" stroke="#a0702a" stroke-width="3"/>
+  <text x="200" y="545" text-anchor="middle" fill="#a0702a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">西方</text>
+  <text x="200" y="575" text-anchor="middle" fill="#a0702a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">白虎</text>
+
+  <g fill="none" stroke="#a0702a" stroke-width="1.5" opacity="0.4">
+    <path d="M25,25 L35,35 L25,45 L35,55"/>
+    <path d="M375,25 L365,35 L375,45 L365,55"/>
+    <path d="M25,575 L35,565 L25,555 L35,545"/>
+    <path d="M375,575 L365,565 L375,555 L365,545"/>
+  </g>
+</svg>

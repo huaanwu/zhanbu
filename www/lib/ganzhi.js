@@ -59,8 +59,12 @@ var XUN_KONG = {
 
 // ========== 基础排盘函数(粗算法,不考虑节气分界) ==========
 
-// 通用干支计算:offset % 10 干, offset % 12 支
-function getGanZhi(offset) { return GAN[offset % 10] + ZHI[offset % 12]; }
+// 通用干支计算：使用数学正模，确保1900年以前的负偏移也能得到有效干支。
+function getGanZhi(offset) {
+  var ganIdx = ((offset % 10) + 10) % 10;
+  var zhiIdx = ((offset % 12) + 12) % 12;
+  return GAN[ganIdx] + ZHI[zhiIdx];
+}
 
 // 公历年干支(粗算法, 只用于节气分界已知时的内部推算)
 // 注意:此函数不处理立春换年, 请在外部接口层用 getYearGZEx
@@ -76,11 +80,14 @@ function getMonthGZ(yearGan, month) {
   return GAN[(startIdx + month - 1) % 10] + dzArr[month - 1];
 }
 
-// 日柱(以 1900-01-31(甲子) 为基准)
+// 日柱：1900-01-31 实为甲辰日（60甲子序号40），不是甲子日。
+// 使用 UTC 的“年月日”计算日差，避免本地夏令时造成 23/25 小时日引发偏移。
 function getDayGZ(dt) {
-  var base = new Date(1900, 0, 31);
-  var diff = Math.floor((dt - base) / 86400000);
-  return getGanZhi(diff);
+  if (!(dt instanceof Date) || isNaN(dt.getTime())) throw new Error('日期无效，无法计算日柱');
+  var baseUtc = Date.UTC(1900, 0, 31);
+  var dateUtc = Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate());
+  var diff = Math.floor((dateUtc - baseUtc) / 86400000);
+  return getGanZhi(diff + 40);
 }
 
 // 时柱(五鼠遁:甲己还加甲, 乙庚丙作初, 丙辛从戊起, 丁壬庚子居, 戊癸何方发, 壬子是真途)

@@ -468,7 +468,7 @@ async function doAiHuaJie() {
   // 构建 system prompt
   // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
     // daofobuddhism 特殊:全文传 extraSystem(KB 函数在 system 字符串内直接调用)
-    const system = Core.AI.buildSystemPrompt({ domain: 'daofobuddhism', pan: {}, question: input, extraSystem: `你是一位精通道教与佛教化解法门的导师。请根据用户描述的困扰，结合道佛知识库给出具体、可执行的化解方案。
+    const system = await Core.AI.buildSystemPrompt({ domain: 'daofobuddhism', pan: {}, question: input, extraSystem: `你是一位精通道教与佛教化解法门的导师。请根据用户描述的困扰，结合道佛知识库给出具体、可执行的化解方案。
 
 【优先使用：场景化解库（30 个标准场景方案）】
 ${kbDaoismJiuhuo()}

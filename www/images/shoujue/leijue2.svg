@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" width="180">
+  <rect x="10" y="10" width="220" height="260" fill="#fffaf0" stroke="#c9a84c" stroke-width="2" rx="8"/>
+
+  <!-- 手掌 -->
+  <path d="M 65 160 Q 60 155 60 165 L 60 210 Q 60 220 70 220 L 170 220 Q 180 220 180 210 L 180 165 Q 180 155 175 160 L 170 165 L 70 165 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/>
+  <path d="M 70 175 Q 120 180 170 175" fill="none" stroke="#dba77e" stroke-width="0.6"/>
+  <path d="M 75 195 Q 120 200 165 195" fill="none" stroke="#dba77e" stroke-width="0.6"/>
+  <path d="M 80 210 Q 120 215 160 210" fill="none" stroke="#dba77e" stroke-width="0.6"/>
+
+  <!-- 食指 伸直 -->
+  <path d="M 71 55 Q 71 52 73 50 L 73 145 Q 73 150 71 152 L 89 152 Q 87 150 87 145 L 87 50 Q 87 52 89 55 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5"/>
+  <line x1="74" y1="95" x2="86" y2="95" stroke="#dba77e" stroke-width="0.8"/>
+  <line x1="74" y1="125" x2="86" y2="125" stroke="#dba77e" stroke-width="0.8"/>
+  <ellipse cx="80" cy="62" rx="5" ry="7" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/>
+
+  <!-- 中指 第一关节屈曲(指背凸起,雷诀特征) -->
+  <path d="M 95 110 Q 95 95 105 90 Q 115 85 115 100 L 115 145 Q 115 150 113 152 L 97 152 Q 95 150 95 145 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5"/>
+  <path d="M 98 105 Q 105 98 112 105" fill="none" stroke="#dba77e" stroke-width="0.8"/>
+  <ellipse cx="105" cy="92" rx="6" ry="4" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/>
+
+  <!-- 无名指 第一关节屈曲 -->
+  <path d="M 121 112 Q 121 97 131 92 Q 141 87 141 102 L 141 145 Q 141 150 139 152 L 123 152 Q 121 150 121 145 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5"/>
+  <path d="M 124 107 Q 131 100 138 107" fill="none" stroke="#dba77e" stroke-width="0.8"/>
+  <ellipse cx="131" cy="94" rx="6" ry="4" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/>
+
+  <!-- 小指 半屈 -->
+  <path d="M 147 125 Q 147 145 151 156 L 151 162 Q 151 165 147 165 L 167 165 Q 163 165 163 162 L 163 156 Q 167 145 167 125 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5"/>
+  <ellipse cx="157" cy="132" rx="6" ry="5" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/>
+
+  <!-- 拇指 压中指无名指第二关节(雷印核心) -->
+  <path d="M 55 130 Q 48 126 44 132 L 40 150 Q 38 158 46 160 L 130 152 Q 138 151 137 143 L 137 140 Q 136 132 126 133 L 66 140 Q 60 136 55 130 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5" opacity="0.92"/>
+  <ellipse cx="50" cy="142" rx="6" ry="5" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/>
+
+  <text x="120" y="250" text-anchor="middle" font-size="16" font-family="'Noto Serif SC',serif" font-weight="bold" fill="#5a3a2a">雷诀</text>
+  <text x="120" y="268" text-anchor="middle" font-size="9" font-family="'Noto Serif SC',serif" fill="#8b6f2a">中指无名指屈第一关节指背凸起，拇指压其二节，食指小指伸出</text>
+</svg>

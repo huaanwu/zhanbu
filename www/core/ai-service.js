@@ -99,6 +99,77 @@
     return localStorage.getItem('local_server_port') || '8082';
   }
 
+  // ===== 多模型路由表(任务 #23,默认 DeepSeek-V4) =====
+  // 按 domain 自动选模型,用户可在设置页用 ai_model_override 覆盖
+  // DeepSeek V4 官方 API 仅支持 deepseek-v4-pro / deepseek-v4-flash(无 deepseek-v4)
+  const MODEL_ROUTER = {
+    liuyao:   'deepseek-v4-pro',     // 六爻逻辑推理强,优先 Pro(强推理)
+    bazi:     'deepseek-v4-flash',   // 八字 V4 旗舰日常够用,Flash 更快更便宜
+    ziwei:    'deepseek-v4-flash',
+    qimen:    'deepseek-v4-pro',     // 奇门星门组合复杂,Pro 推理更强
+    cross:    'deepseek-v4-pro',     // 三术同参需深度推理
+    fengshui: 'deepseek-v4-pro',     // 风水 2000+ 字长文,Pro 更稳
+    xingshi:  'deepseek-v4-flash',
+    shouxiang:'deepseek-v4-pro',     // 手相图片解读复杂
+    mianxiang:'deepseek-v4-pro',
+    daofo:    'deepseek-v4-flash',
+    chat:     'deepseek-v4-flash'
+  };
+  // 用户覆盖:localStorage.ai_model_override = JSON.stringify({liuyao: '...', ...})
+
+  function getModelForDomain(domain) {
+    const overrides = JSON.parse(localStorage.getItem('ai_model_override') || '{}');
+    if (overrides[domain]) return overrides[domain];
+    return MODEL_ROUTER[domain] || 'deepseek-v4-flash';
+  }
+
+  // ===== 用量统计(任务 #29) =====
+  // 按月分桶,记录每次调用的 model/tokens/cost
+  const USAGE_KEY = 'ai_usage_log_v1';
+  // 模型单价(每 1M tokens,CNY,2026年7月最新定价)
+  const MODEL_PRICING = {
+    'deepseek-v4':        { input: 1, output: 2, label: 'DeepSeek-V4' },
+    'deepseek-v4-flash':  { input: 1, output: 2, label: 'DeepSeek-V4-Flash(快)' },
+    'deepseek-v4-pro':    { input: 3, output: 6, label: 'DeepSeek-V4-Pro(强推理)' },
+    'deepseek-chat':      { input: 1, output: 2, label: 'DeepSeek-V3(旧)' },
+    'deepseek-reasoner':  { input: 4, output: 16, label: 'DeepSeek-R1' },
+    'gpt-4o':            { input: 18, output: 72, label: 'GPT-4o' },
+    'qwen-turbo':        { input: 0.3, output: 0.6, label: '通义千问 Turbo' }
+  };
+
+  function recordUsage(model, inputTokens, outputTokens, domain) {
+    try {
+      const log = JSON.parse(localStorage.getItem(USAGE_KEY) || '{}');
+      const month = new Date().toISOString().slice(0, 7); // YYYY-MM
+      log[month] = log[month] || { totalCalls: 0, totalCost: 0, byModel: {}, byDomain: {} };
+      const price = MODEL_PRICING[model] || MODEL_PRICING['deepseek-chat'];
+      const cost = (inputTokens / 1e6) * price.input + (outputTokens / 1e6) * price.output;
+      log[month].totalCalls++;
+      log[month].totalCost += cost;
+      log[month].byModel[model] = log[month].byModel[model] || { calls: 0, cost: 0, in: 0, out: 0 };
+      log[month].byModel[model].calls++;
+      log[month].byModel[model].cost += cost;
+      log[month].byModel[model].in += inputTokens;
+      log[month].byModel[model].out += outputTokens;
+      log[month].byDomain[domain] = (log[month].byDomain[domain] || 0) + 1;
+      // 只保留最近 6 个月
+      const months = Object.keys(log).sort().slice(-6);
+      const trimmed = {};
+      months.forEach(m => trimmed[m] = log[m]);
+      localStorage.setItem(USAGE_KEY, JSON.stringify(trimmed));
+    } catch (e) { console.warn('[Usage] 记录失败:', e); }
+  }
+
+  function getUsage(month) {
+    try {
+      const log = JSON.parse(localStorage.getItem(USAGE_KEY) || '{}');
+      if (month) return log[month] || null;
+      // 默认本月
+      const m = new Date().toISOString().slice(0, 7);
+      return log[m] || { totalCalls: 0, totalCost: 0, byModel: {}, byDomain: {} };
+    } catch (e) { return null; }
+  }
+
   // 自动发现本地模型名：用户未填写时，从 /v1/models 取第一个模型
   async function getLocalModelName() {
     const saved = localStorage.getItem('local_model_name');
@@ -119,7 +190,7 @@
   let _currentStreamAbort = null;
 
   async function callDeepSeek(prompt, system, onChunk, opts = {}) {
-    const { temperature = 0.15, model: optModel, signal: externalSignal } = opts;
+    const { temperature = 0.15, model: optModel, signal: externalSignal, domain: optDomain } = opts;
     const useLocal = localStorage.getItem('use_local_model') === '1';
     const externalAbort = externalSignal || new AbortController().signal;
     _currentStreamAbort = externalSignal ? null : new AbortController();
@@ -215,7 +286,11 @@
       }
       throw new Error('请先在设置页配置 DeepSeek API Key，或启用本地模型');
     }
-    const model = optModel || localStorage.getItem('ds_model') || 'deepseek-chat';
+    // 按 domain 自动路由模型,优先用 optModel(显式覆盖) > getModelForDomain > 设置默认值
+    const model = optModel
+      || (optDomain ? getModelForDomain(optDomain) : null)
+      || localStorage.getItem('ds_model')
+      || 'deepseek-v4-flash';
 
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), CLOUD_TIMEOUT);
@@ -245,11 +320,20 @@
 
       if (useStream && res.body) {
         const full = await readSSE(res.body, onChunk);
+        // 记录用量(若响应含 usage 字段)
+        try {
+          const usage = res.headers?.get?.('x-usage') ? JSON.parse(res.headers.get('x-usage')) : null;
+          if (usage && optDomain) recordUsage(model, usage.prompt_tokens || 0, usage.completion_tokens || full.length, optDomain);
+        } catch (e) { /* noop */ }
         return isFallback ? '[已自动切换至云端模型]\n\n' + full : full;
       }
 
       const data = await res.json();
       const text = data.choices?.[0]?.message?.content;
+      // 记录用量
+      try {
+        if (data.usage && optDomain) recordUsage(model, data.usage.prompt_tokens || 0, data.usage.completion_tokens || 0, optDomain);
+      } catch (e) { /* noop */ }
       if (!text || text.trim().length === 0) {
         const reasoning = data.choices?.[0]?.message?.reasoning_content;
         if (reasoning && reasoning.trim().length > 0) {
@@ -329,7 +413,7 @@
         fullText = full;
         if (contentEl) contentEl.textContent = prefix + separator + full;
         dispatch('AI_CHUNK', { domain, text: delta, full });
-      }, callOpts);
+      }, { ...callOpts, domain });
       if (!fullText) fullText = text || '';
     } catch (e) {
       hideIndicator();
@@ -364,6 +448,11 @@
    * @returns {string} 组装好的 system prompt
    */
   function buildSystemPrompt(opts) {
+    // 异步路径(getSimilarHistoryPrompt/getRiskPrompt 现在是 async)
+    return _buildSystemPromptAsync(opts);
+  }
+
+  async function _buildSystemPromptAsync(opts) {
     const { domain, pan, question, extraSystem = '' } = opts || {};
     if (!domain) return extraSystem || '';
 
@@ -433,13 +522,14 @@
     if (cfg.signalFn && typeof getSimilarHistoryPrompt === 'function') {
       try {
         var signal = pan ? cfg.signalFn(pan) : '';
-        historyPrompt = getSimilarHistoryPrompt(domain, signal, q);
-      } catch (e) { /* noop */ }
+        historyPrompt = await getSimilarHistoryPrompt(domain, signal, q);
+      } catch (e) { console.warn('[buildSystemPrompt] 历史相似匹配失败:', e); }
     }
 
     // 4) 反馈校准
     var feedbackCalib = FeedbackLoop?.getCalibrationPrompt?.(domain) || '';
-    var riskPrompt = FeedbackLoop?.getRiskPrompt?.(domain, q) || '';
+    var riskPrompt = '';
+    try { riskPrompt = (await FeedbackLoop?.getRiskPrompt?.(domain, q)) || ''; } catch (e) { /* noop */ }
 
     // 5) KB(全局函数,跨 IIFE 可见)
     var kf = cfg.kbFlags || {};
@@ -455,14 +545,7 @@
       if (kbDao.length > kbBudget) kbDao = kbDao.slice(0, kbBudget) + '\n...[知识库道佛已截断]';
     }
 
-    // 6) Instruction
-    var instruction = '';
-    if (kf.chainOfThought !== false && !cfg.isCustom && Expert && cfg.label) {
-      if (abCfg.useChainOfThought) instruction += Expert.chainOfThought(cfg.label);
-      if (abCfg.useFewshot) instruction += (instruction ? '\n\n' : '') + Expert.fewshot(cfg.label);
-    }
-
-    // 7) Cross 特殊前缀
+    // 6) Cross 特殊前缀
     var crossPrefix = '';
     if (cfg.isCross) {
       crossPrefix = '【三术同参原则】\n'
@@ -472,19 +555,19 @@
         + '4. 给每条结论标注：八字+紫微+六爻 三/二/一 术支持\n'
         + '5. 优先采信交叉验证中"高置信度"结论\n'
         + '6. 用神一致时结论更可靠，用神不一致时需分别说明各术视角\n\n';
-      // crossCheck formatted 已包含在 facts 的 crossValidate 部分
     }
 
-    // 8) 组装
+    // 7) 组装 — 简洁版(任务 #33:删除分层/Few-shot/CoT/JSON 强制)
+    // 保留:Expert 事实 + RAG + 历史校准 + 反馈校准 + KB
+    // 删除:CorePrompts 分层/动态 Few-shot/Chain-of-Thought/JSON 结构化约束
     var system = extraSystem || crossPrefix;
-    if (!cfg.isCross && facts) system += '【确定事实·100%准确】\n' + facts + '\n';
-    if (cfg.isCross) system += facts;  // facts already has headers
+    if (!cfg.isCross && facts) system += '【确定事实】\n' + facts + '\n';
+    if (cfg.isCross) system += facts;
     system += (ragContent || '')
       + (historyPrompt || '')
       + (feedbackCalib || '')
       + (riskPrompt || '')
       + kbP + kbE + kbDao;
-    if (instruction) system += '\n\n' + instruction;
 
     return system;
   }
@@ -502,5 +585,24 @@
     getCurrentStreamAbort,
     setCurrentStreamAbort,
     clearCurrentStreamAbort,
+    // 多模型路由 + 用量统计(任务 #23/#29)
+    getModelForDomain,
+    recordUsage,
+    getUsage,
+    MODEL_ROUTER,
+    MODEL_PRICING,
+    // 结构化输出解析(任务 #27)
+    parseConfidence
   };
+
+  // 从 AI 输出末尾提取"## 置信度: XX/100"
+  function parseConfidence(text) {
+    if (!text) return { confidence: null, cleanText: text || '' };
+    const m = text.match(/##\s*置信度\s*[::]\s*(\d{1,3})\s*\/\s*100/i);
+    if (!m) return { confidence: null, cleanText: text };
+    const conf = Math.max(0, Math.min(100, parseInt(m[1], 10)));
+    // 移除置信度行
+    const cleanText = text.replace(/\n?\s*##\s*置信度\s*[::]\s*\d{1,3}\s*\/\s*100\s*/i, '').trim();
+    return { confidence: conf, cleanText };
+  }
 })();

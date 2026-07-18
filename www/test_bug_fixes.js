@@ -2,10 +2,10 @@
  * test_bug_fixes.js
  *
  * 锁定 4 个 silent bug 的修复(2026-06-28 v1.3.0+):
- *   A:  expert.js:605  y.idx → y.yao - 1
- *   A.2:expert.js:1093/1254  isShi/isYing 改用 SHI_YING+GUA_FULL_TO_SHORT 推导
- *   B:  expert.js:1115 + test_inline.html:1302  pan.wuge → pan.wuge || pan
- *   C:  expert.js:99/102  NAYIN 4 处 砂 → 沙
+ *   A:  expert/liuyao.js 变爻按 1-based 爻位访问 bianYaoList
+ *   A.2:排盘层写入世应，专家层兼容 SHI_YING+GUA_FULL_TO_SHORT
+ *   B:  expert/chain.js + test_inline.html  pan.wuge → pan.wuge || pan
+ *   C:  expert/tables.js  NAYIN 4 处 砂 → 沙
  *
  * 纯 Node 测试,与 test_accuracy.js 同模式(eval 源码到 globalThis)。
  * 跑法: node www/test_bug_fixes.js
@@ -16,47 +16,27 @@ const fs = require('fs');
 const assert = require('node:assert');
 
 globalThis.window = {};
+eval(fs.readFileSync('lib/ganzhi.js', 'utf-8'));
+eval(fs.readFileSync('expert/tables.js', 'utf-8'));
 eval(fs.readFileSync('liuyao.js', 'utf-8'));
 eval(fs.readFileSync('xingshi.js', 'utf-8'));
-eval(fs.readFileSync('expert.js', 'utf-8'));
+eval(fs.readFileSync('expert/liuyao.js', 'utf-8'));
+eval(fs.readFileSync('expert/chain.js', 'utf-8'));
 
 const { liuyao, Xingshi } = globalThis.window;
-const expSrc = fs.readFileSync('expert.js', 'utf-8');
+const expSrc = fs.readFileSync('expert/liuyao.js', 'utf-8');
+const chainSrc = fs.readFileSync('expert/chain.js', 'utf-8');
+const tablesSrc = fs.readFileSync('expert/tables.js', 'utf-8');
 const inlineSrc = fs.readFileSync('test_inline.html', 'utf-8');
 
-// ============= Bug A: y.idx → y.yao - 1 =============
-console.log('[Bug A]   dongYaoList yao.yao-1 indexes bianYaoList correctly');
+// ============= Bug A: 变爻必须按1-based爻位访问 =============
+console.log('[Bug A]   moving line indexes bianYaoList by yao-1 correctly');
 {
-  // Source-level: the bug-shape pattern must be gone
-  assert.ok(
-    /pan\.bianYaoList\[y\.yao - 1\]/.test(expSrc),
-    'A: source must use y.yao - 1'
-  );
-  assert.ok(
-    !/pan\.bianYaoList\[y\.idx\]/.test(expSrc),
-    'A: y.idx pattern must be gone'
-  );
-
-  // Behavior: simulate the loop with a 1-based yao and a present bian entry
-  const dongYl = { yao: 3, zhi: '寅', wuxing: '木' };
-  const pan = {
-    bianYaoList: [
-      null, null,
-      { zhi: '卯', wuxing: '木' }, // index 2 = yao 3 - 1
-      null, null, null
-    ]
-  };
-  // Fixed access: pan.bianYaoList[y.yao - 1] === pan.bianYaoList[2]
-  assert.strictEqual(
-    pan.bianYaoList[dongYl.yao - 1].zhi, '卯',
-    'A: bianYaoList[yao-1] must reach the bian entry'
-  );
-
-  // Buggy access would yield undefined
-  assert.strictEqual(
-    pan.bianYaoList[dongYl.idx], undefined,
-    'A: pan.bianYaoList[idx] was undefined (the original bug)'
-  );
+  assert.ok(!/bianYaoList\[[^\]]*\.idx\]/.test(expSrc), 'A: y.idx pattern must be gone');
+  const pan = liuyao.panGua('number', { num1: 1, num2: 1, num3: 2, dt: new Date(2026, 5, 28, 14, 30) });
+  assert.strictEqual(pan.bianYaoList[1].zhi, '丑', 'A: 二爻动应访问变卦数组index 1');
+  const facts = window.Expert.liuyao(pan);
+  assert.ok(facts.includes('二爻阳甲寅(妻财) → 阴己丑(父母)'), 'A: 专家层应读取正确变爻');
 }
 
 // ============= Bug A.2: shi/ying via SHI_YING + GUA_FULL_TO_SHORT =============
@@ -98,7 +78,7 @@ console.log('[Bug B]   xingshi flat fields reachable via pan.wuge || pan');
 {
   // Source-level: expert.js
   assert.ok(
-    /const ge = pan\.wuge \|\| pan;/.test(expSrc),
+    /const ge = pan\.wuge \|\| pan;/.test(chainSrc),
     'B: expert.js must use pan.wuge || pan'
   );
 
@@ -131,10 +111,10 @@ console.log('[Bug C]   NAYIN_60JIAZI canonicalizes to 沙 for 甲午/乙未/丙�
   assert.strictEqual(NAYIN_60JIAZI['丁巳'], '沙中土', 'C: 丁巳 = 沙中土');
 
   // Source-level: no 砂 left in NAYIN list block
-  const listStart = expSrc.indexOf("const nayinList = [");
+  const listStart = tablesSrc.indexOf("const nayinList = [");
   assert.ok(listStart > 0, 'C: nayinList found in source');
-  const listEnd = expSrc.indexOf("];", listStart);
-  const block = expSrc.slice(listStart, listEnd + 2);
+  const listEnd = tablesSrc.indexOf("];", listStart);
+  const block = tablesSrc.slice(listStart, listEnd + 2);
   assert.ok(!block.includes('砂'),
     'C: no 砂 must remain in NAYIN list');
   assert.ok(block.includes('沙中金'), 'C: 沙中金 present');

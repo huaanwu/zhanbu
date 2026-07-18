@@ -91,7 +91,7 @@ async function doAIQimen() {
   let fullText = '';
   try {
     // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
-    const system = Core.AI.buildSystemPrompt({ domain: 'qimen', pan: currentQm, question: currentQm.question });
+    const system = await Core.AI.buildSystemPrompt({ domain: 'qimen', pan: currentQm, question: currentQm.question });
     // v3.0.5: 统一 AI 入口(任务 #19)
     const { finalText } = await Core.AI.interpret({
       domain: 'qimen',

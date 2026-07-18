@@ -9,16 +9,18 @@
 <title>AI占卜大师</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
-
-  <link rel="stylesheet" crossorigin href="/assets/index-RKRlqR-3.css">
+
+  <link rel="stylesheet" crossorigin href="/styles.css">
 </head>
 <body>
 <div class="container">
 
+<button class="night-toggle" onclick="toggleNightMode()" title="切换夜间模式" id="nightToggleBtn">🌙</button>
+
   <!-- ============ 设置页 ============ -->
   <div class="page active" id="pageSettings">
     <div class="header">
-      <h1>设置</h1>
+      <h1 data-seal="设">设置</h1>
       <div class="subtitle">API 配置与偏好</div>
     </div>
     <div class="input-section">
@@ -39,8 +41,10 @@
       <div class="setting-item">
         <div class="setting-label">模型选择</div>
         <select id="modelSelect" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem;border-radius:6px;">
-          <option value="deepseek-chat">deepseek-chat</option>
-          <option value="deepseek-reasoner">deepseek-reasoner</option>
+          <option value="deepseek-v4-flash">deepseek-v4-flash (快)</option>
+          <option value="deepseek-v4-pro">deepseek-v4-pro (强推理)</option>
+          <option value="deepseek-chat">deepseek-chat (V3)</option>
+          <option value="deepseek-reasoner">deepseek-reasoner (R1)</option>
         </select>
       </div>
       <div class="setting-item">
@@ -52,11 +56,11 @@
       <div class="setting-item">
         <div>
           <div class="setting-label">本地服务器IP（同WiFi下电脑IP）</div>
-          <div style="display:flex;gap:0.4rem;">
-            <input type="text" class="api-input" id="localServerIpInput" placeholder="192.168.1.3" value="192.168.1.3" style="flex:1;">
-            <input type="number" class="api-input" id="localServerPortInput" placeholder="8082" value="8082" style="width:80px;text-align:center;">
-            <button onclick="autoDiscoverServer()" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer;font-size:0.8rem;white-space:nowrap;">🔍 自动发现</button>
-            <button onclick="testLocalModel()" style="background:var(--bg-card);border:1px solid var(--border);color:var(--accent-green);padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer;font-size:0.8rem;white-space:nowrap;">🔗 测试连接</button>
+          <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+            <input type="text" class="api-input" id="localServerIpInput" placeholder="192.168.1.3" value="192.168.1.3" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="flex:3;min-width:140px;">
+            <input type="number" class="api-input" id="localServerPortInput" placeholder="8082" value="8082" inputmode="numeric" style="flex:1;min-width:70px;text-align:center;">
+            <button onclick="autoDiscoverServer()" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:0.4rem 0.6rem;border-radius:6px;cursor:pointer;font-size:0.75rem;white-space:nowrap;">🔍 自动发现</button>
+            <button onclick="testLocalModel()" style="background:var(--bg-card);border:1px solid var(--border);color:var(--accent-green);padding:0.4rem 0.6rem;border-radius:6px;cursor:pointer;font-size:0.75rem;white-space:nowrap;">🔗 测试连接</button>
           </div>
                     <div style="margin-top:0.4rem;">
             <div class="setting-label">本地模型名</div>
@@ -140,7 +144,7 @@
   <!-- ============ 八字页 ============ -->
   <div class="page" id="pageBazi">
     <div class="header">
-      <h1>八字命理</h1>
+      <h1 data-seal="命">八字命理</h1>
       <div class="subtitle">四柱排盘 · 十神解析</div>
     </div>
     <div class="input-section">
@@ -192,7 +196,7 @@
   <!-- ============ 紫微页 ============ -->
   <div class="page" id="pageZiwei">
     <div class="header">
-      <h1>紫微斗数</h1>
+      <h1 data-seal="紫">紫微斗数</h1>
       <div class="subtitle">命盘解析 · 星曜推演</div>
     </div>
     <div class="input-section">
@@ -250,11 +254,11 @@
 
   <!-- ============ 六爻页 ============ -->
   <div class="page" id="pageLiuyao">
-    <div class="header"><h1>六爻占卜</h1><div class="subtitle">问天问地 · 吉凶自知</div></div>
+    <div class="header"><h1 data-seal="卦">六爻占卜</h1><div class="subtitle">问天问地 · 吉凶自知</div></div>
     <div class="input-section">
       <div class="input-row">
         <div class="input-group"><label>起卦方式</label>
-          <div class="btn-row">
+          <div class="btn-row-grid" style="--btn-count:4;">
             <button class="toggle-btn active" data-method="time" onclick="selLiuyaoMethod(this)">时间</button>
             <button class="toggle-btn" data-method="number" onclick="selLiuyaoMethod(this)">数字</button>
             <button class="toggle-btn" data-method="coin" onclick="selLiuyaoMethod(this)">🪙 铜钱</button>
@@ -308,7 +312,7 @@
 
   <!-- ============ 奇门页 ============ -->
   <div class="page" id="pageQimen">
-    <div class="header"><h1>奇门遁甲</h1><div class="subtitle">运筹帷幄 · 决胜千里</div></div>
+    <div class="header"><h1 data-seal="奇">奇门遁甲</h1><div class="subtitle">运筹帷幄 · 决胜千里</div></div>
     <div class="input-section">
       <div class="input-row">
         <div class="input-group"><label>年</label><input type="number" id="qmYear" value="2026"></div>
@@ -336,7 +340,7 @@
   <!-- ============ 看手相页 ============ -->
   <div class="page" id="pageShouxiang">
     <div class="header">
-      <h1>看手相</h1>
+      <h1 data-seal="手">看手相</h1>
       <div class="subtitle">上传掌纹 · AI 解读 · 双手对比</div>
     </div>
     <div class="input-section">
@@ -399,7 +403,7 @@
   <!-- ============ 姓名学页 ============ -->
   <div class="page" id="pageXingshi">
     <div class="header">
-      <h1>姓名学</h1>
+      <h1 data-seal="名">姓名学</h1>
       <div class="subtitle">五格剖象 · 三才配置 · AI 解读</div>
     </div>
     <div class="input-section">
@@ -444,7 +448,7 @@
   <!-- ============ 三术同参页 ============ -->
   <div class="page" id="pageCross">
     <div class="header">
-      <h1>三术同参</h1>
+      <h1 data-seal="参">三术同参</h1>
       <div class="subtitle">八字 + 紫微 + 六爻 · 交叉验证</div>
     </div>
     <div class="input-section">
@@ -514,7 +518,7 @@
   <!-- ============ 风水罗盘页 ============ -->
   <div class="page" id="pageFengshui">
     <div class="header">
-      <h1>风水罗盘</h1>
+      <h1 data-seal="风">风水罗盘</h1>
       <div class="subtitle">八宅风水 · 玄空飞星 · 24山向</div>
     </div>
     <div class="input-section">
@@ -573,7 +577,7 @@
   <!-- ============ 道佛化解页（v1.2.17）============ -->
   <div class="page" id="pageDaofobuddhism">
     <div class="header">
-      <h1>🙏 道佛化解</h1>
+      <h1 data-seal="解">🙏 道佛化解</h1>
       <div class="subtitle">灵签 · 符箓 · 手诀 · AI化解</div>
     </div>
 
@@ -663,22 +667,24 @@
 </div>
 
 <!-- 八字、紫微本地依赖（离线可用） -->
-<script src="lib/lunar.bundle.js?v=301"></script>
-<script src="lib/ganzhi.js?v=301"></script>
-<script src="rag/tokenizer.js?v=301"></script>
-<script src="rag/bm25.js?v=301"></script>
-<script src="rag/vector.js?v=301"></script>
-<script src="rag/rrf.js?v=301"></script>
-<script src="rag/index.js?v=301"></script>
-<script src="expert/tables.js?v=301"></script>
-<script src="expert/bazi.js?v=301"></script>
-<script src="expert/liuyao.js?v=301"></script>
-<script src="expert/qimen.js?v=301"></script>
-<script src="expert/ziwei.js?v=301"></script>
-<script src="expert/chain.js?v=301"></script>
-<script src="lib/iztro.bundle.js?v=301"></script>
+<script src="lib/lunar.bundle.js?v=310"></script>
+<script src="lib/ganzhi.js?v=310"></script>
+<script src="rag/tokenizer.js?v=310"></script>
+<script src="rag/bm25.js?v=310"></script>
+<script src="rag/vector.js?v=310"></script>
+<script src="rag/rrf.js?v=310"></script>
+<script src="rag/index.js?v=310"></script>
+<script src="rag/rewrite.js?v=310"></script>
+<script src="rag/rerank.js?v=310"></script>
+<script src="expert/tables.js?v=310"></script>
+<script src="expert/bazi.js?v=310"></script>
+<script src="expert/liuyao.js?v=310"></script>
+<script src="expert/qimen.js?v=310"></script>
+<script src="expert/ziwei.js?v=310"></script>
+<script src="expert/chain.js?v=310"></script>
+<script src="lib/iztro.bundle.js?v=310"></script>
 <!-- kb_embedded.js 已移除 (2026-06-22) - 知识库改用fetch按需加载 -->
-<script src="vector-cache.js?v=301"></script>
+<script src="vector-cache.js?v=310"></script>
 <script>
   // lunar.bundle.js 暴露 LunarLib 全局
   if (window.LunarLib) {
@@ -695,40 +701,40 @@
 </script>
 
 <!-- 六爻、奇门、姓名学算法 -->
-<script src="liuyao.js?v=301"></script>
-<script src="qimen.js?v=301"></script>
-<script src="xingshi.js?v=301"></script>
-<script src="history.js?v=301"></script>
-<script src="feedback.js?v=301"></script>
-<script src="feedback-loop.js?v=301"></script>
-<script src="visual.js?v=301"></script>
-<script src="cache.js?v=301"></script>
-<script src="ab_test.js?v=301"></script>
-<script src="crypto.js?v=301"></script>
-<script src="chat.js?v=301"></script>
+<script src="liuyao.js?v=310"></script>
+<script src="qimen.js?v=310"></script>
+<script src="xingshi.js?v=310"></script>
+<script src="history.js?v=310"></script>
+<script src="feedback.js?v=310"></script>
+<script src="feedback-loop.js?v=310"></script>
+<script src="visual.js?v=310"></script>
+<script src="cache.js?v=310"></script>
+<script src="ab_test.js?v=310"></script>
+<script src="crypto.js?v=310"></script>
+<script src="chat.js?v=310"></script>
 
 <!-- v3.0.5: Core 模块(无依赖顺序) -->
-<script src="core/event-bus.js?v=301"></script>
-<script src="core/state.js?v=301"></script>
-<script src="core/util.js?v=301"></script>
-<script src="core/toast.js?v=301"></script>
-<script src="core/router.js?v=301"></script>
-<script src="core/stream.js?v=301"></script>
-<script src="core/ai-service.js?v=301"></script>
-<script src="core/kb.js?v=301"></script>
+<script src="core/event-bus.js?v=310"></script>
+<script src="core/state.js?v=310"></script>
+<script src="core/util.js?v=310"></script>
+<script src="core/toast.js?v=310"></script>
+<script src="core/router.js?v=310"></script>
+<script src="core/stream.js?v=310"></script>
+<script src="core/ai-service.js?v=310"></script>
+<script src="core/kb.js?v=310"></script>
 
 <!-- v2.0.1: 主应用逻辑 (core) -->
-<script src="app.js?v=301"></script>
+<script src="app.js?v=310"></script>
 <!-- v3.0.3: 按域代码分割 -->
-<script src="app/bazi.js?v=301"></script>
-<script src="app/ziwei.js?v=301"></script>
-<script src="app/liuyao.js?v=301"></script>
-<script src="app/qimen.js?v=301"></script>
-<script src="app/shouxiang.js?v=301"></script>
-<script src="app/xingshi.js?v=301"></script>
-<script src="app/cross.js?v=301"></script>
-<script src="app/fengshui.js?v=301"></script>
-<script src="app/daofobuddhism.js?v=301"></script>
+<script src="app/bazi.js?v=310"></script>
+<script src="app/ziwei.js?v=310"></script>
+<script src="app/liuyao.js?v=310"></script>
+<script src="app/qimen.js?v=310"></script>
+<script src="app/shouxiang.js?v=310"></script>
+<script src="app/xingshi.js?v=310"></script>
+<script src="app/cross.js?v=310"></script>
+<script src="app/fengshui.js?v=310"></script>
+<script src="app/daofobuddhism.js?v=310"></script>
 
 <!-- v3.0.1: PWA Service Worker 注册与安装提示 -->
 <script>

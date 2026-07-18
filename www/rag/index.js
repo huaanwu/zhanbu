@@ -265,8 +265,15 @@ const RAG = {
 
   search(pan, question, opts = {}) {
     if (!this.ready) return '';
-    const { topK = 8, maxChars = 2500, source = null, minScore = 1.0, tags = null, useVector = true } = opts;
-    const query = this.extractSignals(pan, question);
+    const { topK = 8, maxChars = 2500, source = null, minScore = 1.0, tags = null, useVector = true, domain = null } = opts;
+    // 任务 #28:query 改写 — 把口语化问题转成 KB 术语
+    let finalQuestion = question;
+    try {
+      if (window.QueryRewrite && question) {
+        finalQuestion = window.QueryRewrite.rewriteQuery(question, domain || pan?.domain || null);
+      }
+    } catch (e) { console.warn('[RAG.search] query 改写失败:', e); }
+    const query = this.extractSignals(pan, finalQuestion);
 
     // 1. BM25 检索
     let bm25Results = this.index.search(query, topK * 3);
@@ -302,10 +309,26 @@ const RAG = {
 
     if (fused.length === 0) return '';
 
+    // 任务 #24:重排序(取 3 倍候选,rerank 后取 topK,提升准确度)
+    let ranked = fused;
+    try {
+      if (window.RAGRerank && fused.length > topK) {
+        const candidates = fused.map(r => ({
+          title: r.doc.title || '',
+          text: r.doc.text || '',
+          tags: r.doc.tags || [],
+          score: r.score,
+          _doc: r.doc
+        }));
+        const reranked = window.RAGRerank.rerankCandidates(question || query, candidates, topK);
+        ranked = reranked.map(c => ({ doc: c._doc, score: c.finalScore }));
+      }
+    } catch (e) { console.warn('[RAG.search] 重排序失败,用原排序:', e); }
+
     // 7. 格式化输出
-    const lines = ['【知识库相关片段（BM25+向量语义混合检索）】'];
+    const lines = ['【知识库相关片段（重排序精排）】'];
     let totalLen = 0;
-    for (const r of fused) {
+    for (const r of ranked) {
       const tagStr = r.doc.tags ? `(${r.doc.tags.join('/')})` : '';
       const line = `· [${r.doc.source}]${tagStr} ${r.doc.text}`;
       if (totalLen + line.length > maxChars) break;
