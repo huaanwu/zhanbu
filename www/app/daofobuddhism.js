@@ -538,3 +538,5 @@ window.drawHandSVG = drawHandSVG;
 window.renderFuSvg = renderFuSvg;
 window.renderJueList = renderJueList;
 window.doAiHuaJie = doAiHuaJie;
+
+window.getQianData=getQianData;window.renderFuList=renderFuList;window.renderJueList=renderJueList;window.renderZhouList=renderZhouList;

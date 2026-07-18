@@ -17,6 +17,8 @@ var tests = [
   'test_ai_interpret.js',
   'test_ts_demo.js',
   'test_rag.js',
+  'test_audit.cjs',
+  'test_audit_panorama.cjs',
   'test_accuracy.js'
 ];
 

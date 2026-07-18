@@ -231,7 +231,7 @@ function renderXunWuReport(analysis) {
     <div class="result-card" style="background:var(--bg-inner);border:1px solid var(--border);border-radius:8px;padding:0.8rem;">
       <div style="font-size:0.7rem;color:var(--text-muted);">失物类别 / 用神</div>
       <div style="font-family:'Noto Serif SC',serif;font-size:1.2rem;font-weight:700;color:var(--accent-gold);">${analysis.category.category}爻 · ${analysis.category.description}</div>
-      <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.3rem;">「${analysis.itemName}」取${analysis.category.category}为用神，位于第${analysis.yongShen.position}爻${analysis.yongShen.isFuShen?'（伏神）':''}</div>
+      <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.3rem;">「${analysis.itemName}」取${analysis.category.category}爻为用神，位于第${analysis.yongShen.position}爻${analysis.yongShen.isFuShen?'（伏神）':''}</div>
     </div>
     <div class="result-card" style="background:var(--bg-inner);border:1px solid var(--border);border-radius:8px;padding:0.8rem;">
       <div style="font-size:0.7rem;color:var(--text-muted);">方位判断</div>

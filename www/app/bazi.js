@@ -48,10 +48,26 @@ async function doBazi() {
 
     let solar;
     if (state.bazi.cal === 'lunar') {
-      const lunar = Lunar.fromYmd(year, month, day);
-      solar = lunar.getSolar();
+      // lunar-javascript 的 Lunar.fromYmd 不支持负数闰月参数: 当月数为负,先按本年闰月拿真实 LunarMonth
+      const leapMonth = window.LunarYear ? window.LunarYear.fromYear(year).getLeapMonth() : 0;
+      if (month < 0 && leapMonth === -month) {
+        const lm = (window.LunarMonth ? window.LunarMonth.fromYm(year, leapMonth) : null);
+        if (lm) {
+          const dayCount = lm.getDayCount();
+          if (day > dayCount) {
+            // 闰月日数不够,落到下一月
+            solar = (window.LunarMonth ? window.LunarMonth.fromYm(year, leapMonth + 1) : lm).next(-(day - dayCount)).toSolar();
+          } else {
+            solar = Lunar.fromYmd(year, leapMonth, day).getSolar();
+          }
+        } else {
+          solar = Lunar.fromYmd(year, leapMonth, day).getSolar();
+        }
+      } else {
+        solar = Lunar.fromYmd(year, Math.abs(month), day).getSolar();
+      }
     } else {
-      solar = Solar.fromYmd(year, month, day);
+      solar = Solar.fromYmdHms(year, month, day, hour, 0, 0);
     }
 
     const gz = getBaziPan(solar, gender);

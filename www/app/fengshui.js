@@ -168,3 +168,5 @@ function kbFengshui() {
     + kbFengshuiBase()
     + kbFengshuiLuopan();
 }
+
+window.eightZhai=eightZhai;window.mingGua=mingGua;

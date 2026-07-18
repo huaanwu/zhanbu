@@ -88,7 +88,7 @@ function getJieQiInfo(year, month, day, hour) {
   // 首选 lunar-javascript
   if (window.Solar) {
     try {
-      const solar = window.Solar.fromYmd(year, month, day);
+      const solar = window.Solar.fromYmdHms(year, month, day, hour, minute, 0);
       const lunar = solar.getLunar();
       if (lunar.getPrevJieQi) {
         const prev = lunar.getPrevJieQi();

@@ -682,7 +682,14 @@
 <script src="expert/qimen.js?v=310"></script>
 <script src="expert/ziwei.js?v=310"></script>
 <script src="expert/chain.js?v=310"></script>
-<script src="lib/iztro.bundle.js?v=310"></script>
+<script src="lib/iztro.bundle.js?v=310"></script>iztro.bundle.js?v=310"></script>
+  <script>
+    // 把 lunar-javascript 的 LunarYear/LunarMonth 暴露到 window,以便 app 模块支持闰月输入
+    if (window.LunarLib) {
+      window.LunarYear = window.LunarLib.LunarYear;
+      window.LunarMonth = window.LunarLib.LunarMonth;
+    }
+  </script>
 <!-- kb_embedded.js 已移除 (2026-06-22) - 知识库改用fetch按需加载 -->
 <script src="vector-cache.js?v=310"></script>
 <script>
