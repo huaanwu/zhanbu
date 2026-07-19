@@ -493,14 +493,27 @@ Expert.crossValidate = function(cross) {
       else if (SHENGED[yongYao.wuxing] === monthMain) liuyaoDirection = '吉';
       else if (KE[yongYao.wuxing] === monthMain) liuyaoDirection = '凶';
     }
-    // 世应生克关系
+    // 世应生克关系（五关系全面判定）
     const cvShortName = GUA_FULL_TO_SHORT[liuyao.gua.name] || (liuyao.gua.name && liuyao.gua.name[0]) || liuyao.gua.name;
     const cvSY = SHI_YING[cvShortName] || {};
     const shiYao = liuyao.yaoList[cvSY.shi - 1];
     const yingYao = liuyao.yaoList[cvSY.ying - 1];
-    if (shiYao && yingYao && SHENG[shiYao.wuxing] === yingYao.wuxing) {
-      // 世生应，我生对方，对我不利
-      if (liuyaoDirection === '吉') liuyaoDirection = '中';
+    if (shiYao && yingYao) {
+      const sw = shiYao.wuxing, yw = yingYao.wuxing;
+      // 五关系: 世生应/世克应/应生世/应克世/比和
+      // 调整方向: +1(对我有利) / -1(对我不利) / 0(平)
+      let shiYingShift = 0;
+      if (SHENG[sw] === yw) shiYingShift = -1;        // 世生应,我耗于对方 → 不利
+      else if (KE[sw] === yw) shiYingShift = 1;        // 世克应,我克对方 → 有利
+      else if (SHENG[yw] === sw) shiYingShift = 1;     // 应生世,对方助我 → 有利
+      else if (KE[yw] === sw) shiYingShift = -1;       // 应克世,对方克我 → 不利
+      else if (sw === yw) shiYingShift = 0;            // 比和 → 平
+
+      // 双向生效:吉遇不利降为中,凶遇有利升为中
+      if (shiYingShift === -1 && liuyaoDirection === '吉') liuyaoDirection = '中';
+      else if (shiYingShift === 1 && liuyaoDirection === '凶') liuyaoDirection = '中';
+      else if (shiYingShift === -1 && liuyaoDirection === '中') liuyaoDirection = '凶';
+      else if (shiYingShift === 1 && liuyaoDirection === '中') liuyaoDirection = '吉';
     }
   }
 
