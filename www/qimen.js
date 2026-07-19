@@ -84,7 +84,8 @@ function getWinterSolstice(year) {
   return [12, (rem === 0 || rem === 1) ? 21 : 22];
 }
 
-function getJieQiInfo(year, month, day, hour) {
+function getJieQiInfo(year, month, day, hour, minute) {
+  minute = minute || 0;
   // 首选 lunar-javascript
   if (window.Solar) {
     try {
@@ -106,7 +107,9 @@ function getJieQiInfo(year, month, day, hour) {
           }
         }
       }
-    } catch(e) {}
+    } catch(e) {
+      console.warn('[qimen] lunar 精确节气计算失败, 回退近似估算:', e && e.message);
+    }
   }
 
   // fallback: 冬至基准 + 15.2184天间隔
@@ -357,7 +360,7 @@ function getJushu(jieqiName, daysInJq) {
 
 function panQimen(year, month, day, hour, minute) {
   minute = minute || 0;
-  const jq = getJieQiInfo(year, month, day, hour);
+  const jq = getJieQiInfo(year, month, day, hour, minute);
   const { isYang, jushu } = getJushu(jq.name, jq.days);
 
   const dt = new Date(year, month - 1, day, hour, minute);

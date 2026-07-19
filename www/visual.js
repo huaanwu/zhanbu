@@ -96,7 +96,7 @@ const Visual = {
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 3; col++) {
         const gongNum = gridOrder[row][col];
-        const gong = pan.gong9.find(g => g.number === gongNum);
+        const gong = pan.gong9.find(g => g.gong === gongNum);
         if (!gong) continue;
 
         const x = col * cellW, y = row * cellH;

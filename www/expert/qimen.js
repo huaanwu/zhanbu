@@ -22,18 +22,20 @@ Expert.qimen = function(pan) {
     if (zf) {
       facts.push(`【事实·值符】地盘值符在${zf.name}（${zf.dipan}）`);
       // 值符星（天乙贵人）
-      if (zf.tianpan_xing) {
-        facts.push(`【事实·值符星】天乙${zf.tianpan_xing}临${zf.name}，主事体性质${zf.tianpan_xing === '天蓬' ? '隐密' : zf.tianpan_xing === '天任' ? '稳重' : zf.tianpan_xing === '天冲' ? '冲动' : zf.tianpan_xing === '天辅' ? '文雅' : zf.tianpan_xing === '天英' ? '虚华' : zf.tianpan_xing === '天芮' ? '病疾' : zf.tianpan_xing === '天柱' ? '破坏' : zf.tianpan_xing === '天心' ? '医道' : ''}`);
+      if (zf.jiuxing) {
+        facts.push(`【事实·值符星】天乙${zf.jiuxing}临${zf.name}，主事体性质${zf.jiuxing === '天蓬' ? '隐密' : zf.jiuxing === '天任' ? '稳重' : zf.jiuxing === '天冲' ? '冲动' : zf.jiuxing === '天辅' ? '文雅' : zf.jiuxing === '天英' ? '虚华' : zf.jiuxing === '天芮' ? '病疾' : zf.jiuxing === '天柱' ? '破坏' : zf.jiuxing === '天心' ? '医道' : ''}`);
       }
       // 值符所落宫位的五行状态（宫生/克/比和值符）
       const GONG_WX = { '坎一宫':'水','坤二宫':'土','震三宫':'木','巽四宫':'木','中五宫':'土','乾六宫':'金','兑七宫':'金','艮八宫':'土','离九宫':'火' };
-      const XING_WX = { '天蓬':'水','天任':'土','天冲':'木','天辅':'木','天英':'火','天芮':'土','天柱':'金','天心':'金' };
+      const XING_WX = { '天蓬':'水','天任':'土','天冲':'木','天辅':'木','天英':'火','天芮':'土','天柱':'金','天心':'金','天禽':'土' };
+      // 寄宫时 jiuxing 可能为 "天心 天禽" 双星, 取任一匹配
+      const xingName = (zf.jiuxing || '').split(/\s+/).find(n => XING_WX[n]) || '';
       const gongWx = GONG_WX[zf.name];
-      const xingWx = XING_WX[zf.tianpan_xing];
+      const xingWx = XING_WX[xingName];
       const SHENG = { '木':'火','火':'土','土':'金','金':'水','水':'木' };
       const KE = { '木':'土','土':'水','水':'火','火':'金','金':'木' };
       if (gongWx && xingWx) {
-        if (gongWx === xingWx) facts.push(`【事实·值符宫星】${zf.name}属${gongWx}，值符星${zf.tianpan_xing}属${xingWx}，宫星比和，值符有力`);
+        if (gongWx === xingWx) facts.push(`【事实·值符宫星】${zf.name}属${gongWx}，值符星${xingName}属${xingWx}，宫星比和，值符有力`);
         else if (SHENG[gongWx] === xingWx) facts.push(`【事实·值符宫星】宫${gongWx}生星${xingWx}，值符得宫生助，事体有根基`);
         else if (KE[gongWx] === xingWx) facts.push(`【事实·值符宫星】宫${gongWx}克星${xingWx}，值符受宫压制，事体有阻`);
         else if (SHENG[xingWx] === gongWx) facts.push(`【事实·值符宫星】星${xingWx}生宫${gongWx}，值符泄气于宫，事体费力`);
