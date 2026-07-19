@@ -1,13 +1,13 @@
-# 占卜事实层准确率基线 v1 — 2026-07-19T16:58:48.398Z
+# 占卜事实层准确率基线 v1 — 2026-07-19T17:28:32.872Z
 
-**总览**: 30 题, 通过 20, 失败 10, 通过率 0.667, 平均归一化分 0.628
+**总览**: 30 题, 通过 27, 失败 3, 通过率 0.900, 平均归一化分 0.853
 
 ## 按 domain 分组
 
 | domain | 总数 | 通过 | 通过率 | 平均分 |
 |--------|------|------|--------|--------|
 | bazi | 10 | 10 | 1.000 | 0.951 |
-| liuyao | 8 | 0 | 0.000 | 0 |
+| liuyao | 8 | 7 | 0.875 | 0.802 |
 | ziwei | 6 | 6 | 1.000 | 0.903 |
 | qimen | 6 | 4 | 0.667 | 0.503 |
 
@@ -15,6 +15,7 @@
 
 | id | domain | 缺失关键词 |
 |-----|--------|-----------|
+| liuyao-001 | liuyao | 雷泽归妹, 山风蛊 |
 | qimen-003 | qimen | 伤门, 艮八宫 |
 | qimen-005 | qimen | 艮八宫 |
 
@@ -32,14 +33,14 @@
 | bazi-008 | bazi | 神煞 | medium | 1.00 | - |
 | bazi-009 | bazi | 纳音异体字 | easy | 1.00 | - |
 | bazi-010 | bazi | 流年 | medium | 1.00 | 中 |
-| liuyao-001 | liuyao | 卦象 | easy | ERR | - |
-| liuyao-002 | liuyao | 世应 | medium | ERR | - |
-| liuyao-003 | liuyao | 动变 | hard | ERR | - |
-| liuyao-004 | liuyao | 六亲六神 | easy | ERR | - |
-| liuyao-005 | liuyao | 纳甲 | medium | ERR | - |
-| liuyao-006 | liuyao | 旺衰 | hard | ERR | - |
-| liuyao-007 | liuyao | 用神 | hard | ERR | - |
-| liuyao-008 | liuyao | 旬空月破 | medium | ERR | - |
+| liuyao-001 | liuyao | 卦象 | easy | 0.33 | - |
+| liuyao-002 | liuyao | 世应 | medium | 1.00 | - |
+| liuyao-003 | liuyao | 动变 | hard | 1.00 | 中 |
+| liuyao-004 | liuyao | 六亲六神 | easy | 1.00 | - |
+| liuyao-005 | liuyao | 纳甲 | medium | 0.80 | - |
+| liuyao-006 | liuyao | 旺衰 | hard | 0.87 | 中 |
+| liuyao-007 | liuyao | 用神 | hard | 1.00 | 中 |
+| liuyao-008 | liuyao | 旬空月破 | medium | 0.75 | - |
 | ziwei-001 | ziwei | 命宫主星 | medium | 0.75 | - |
 | ziwei-002 | ziwei | 四化 | medium | 1.00 | - |
 | ziwei-003 | ziwei | 大限 | medium | 1.00 | - |

@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-07-19T16:58:48.398Z",
+  "generated_at": "2026-07-19T17:28:32.872Z",
   "version": "1.0",
   "pass_threshold": 0.6,
   "overall": {
     "total": 30,
-    "pass": 20,
-    "fail": 10,
-    "pass_rate": "0.667",
-    "mean_norm": 0.6282539682539683
+    "pass": 27,
+    "fail": 3,
+    "pass_rate": "0.900",
+    "mean_norm": 0.8532539682539684
   },
   "per_domain": {
     "bazi": {
@@ -18,9 +18,9 @@
     },
     "liuyao": {
       "total": 8,
-      "pass": 0,
-      "pass_rate": "0.000",
-      "mean_norm": 0
+      "pass": 7,
+      "pass_rate": "0.875",
+      "mean_norm": "0.802"
     },
     "ziwei": {
       "total": 6,
@@ -281,9 +281,23 @@
       "category": "卦象",
       "difficulty": "easy",
       "question_text": "2026-06-28 14:30 时间起卦，本卦与动爻？",
-      "output_excerpt": "",
-      "output_length": 0,
-      "error": "农历引擎未加载，无法保证时间起卦和干支准确"
+      "output_excerpt": "【事实·卦象】本卦：兑为泽\n【事实·动爻】共1个动爻：第4爻\n【事实·互卦】互卦为风火家人\n【事实·动爻六亲】四爻丁亥(子孙)\n【事实·妻财爻】本卦有1个妻财爻：二爻(静)\n【事实·官鬼爻】本卦有1个官鬼爻：初爻(静)\n【事实·世爻】第6爻上爻丁未（父母）持世\n【事实·应爻】第3爻三爻丁丑（父母）应爻\n【事实·世应生克】世应五行同为土（比和，主平稳）\n【事实·月建日辰】月建午（本气火），日辰酉（本",
+      "output_length": 562,
+      "error": null,
+      "fact_keywords_hit": [
+        "第4爻"
+      ],
+      "fact_keywords_missing": [
+        "雷泽归妹",
+        "山风蛊"
+      ],
+      "fact_hit_rate": 0.3333333333333333,
+      "fact_score": 1,
+      "judgment_match": null,
+      "judgment_score": 0,
+      "raw_score": 1,
+      "max_score": 3,
+      "normalized": 0.3333333333333333
     },
     {
       "id": "liuyao-002",
@@ -291,9 +305,23 @@
       "category": "世应",
       "difficulty": "medium",
       "question_text": "雷泽归妹世爻应爻位置与六亲？",
-      "output_excerpt": "",
-      "output_length": 0,
-      "error": "农历引擎未加载，无法保证时间起卦和干支准确"
+      "output_excerpt": "【事实·卦象】本卦：兑为泽\n【事实·动爻】共1个动爻：第4爻\n【事实·互卦】互卦为风火家人\n【事实·动爻六亲】四爻丁亥(子孙)\n【事实·妻财爻】本卦有1个妻财爻：二爻(静)\n【事实·官鬼爻】本卦有1个官鬼爻：初爻(静)\n【事实·世爻】第6爻上爻丁未（父母）持世\n【事实·应爻】第3爻三爻丁丑（父母）应爻\n【事实·世应生克】世应五行同为土（比和，主平稳）\n【事实·月建日辰】月建午（本气火），日辰酉（本",
+      "output_length": 562,
+      "error": null,
+      "fact_keywords_hit": [
+        "世爻",
+        "应爻",
+        "父母",
+        "官鬼"
+      ],
+      "fact_keywords_missing": [],
+      "fact_hit_rate": 1,
+      "fact_score": 4,
+      "judgment_match": null,
+      "judgment_score": 0,
+      "raw_score": 4,
+      "max_score": 4,
+      "normalized": 1
     },
     {
       "id": "liuyao-003",
@@ -301,9 +329,24 @@
       "category": "动变",
       "difficulty": "hard",
       "question_text": "四爻动变，变化关系？",
-      "output_excerpt": "",
-      "output_length": 0,
-      "error": "农历引擎未加载，无法保证时间起卦和干支准确"
+      "output_excerpt": "【事实·卦象】本卦：兑为泽\n【事实·动爻】共1个动爻：第4爻\n【事实·互卦】互卦为风火家人\n【事实·动爻六亲】四爻丁亥(子孙)\n【事实·妻财爻】本卦有1个妻财爻：二爻(静)\n【事实·官鬼爻】本卦有1个官鬼爻：初爻(静)\n【事实·世爻】第6爻上爻丁未（父母）持世\n【事实·应爻】第3爻三爻丁丑（父母）应爻\n【事实·世应生克】世应五行同为土（比和，主平稳）\n【事实·月建日辰】月建午（本气火），日辰酉（本",
+      "output_length": 562,
+      "error": null,
+      "fact_keywords_hit": [
+        "第4爻",
+        "变卦",
+        "变爻",
+        "动爻",
+        "卦"
+      ],
+      "fact_keywords_missing": [],
+      "fact_hit_rate": 1,
+      "fact_score": 4,
+      "judgment_match": "中",
+      "judgment_score": 2,
+      "raw_score": 6,
+      "max_score": 6,
+      "normalized": 1
     },
     {
       "id": "liuyao-004",
@@ -311,9 +354,25 @@
       "category": "六亲六神",
       "difficulty": "easy",
       "question_text": "数字起卦(1,2,3)，天泽履第3爻动，本卦与六亲配置？",
-      "output_excerpt": "",
-      "output_length": 0,
-      "error": "农历引擎未加载，无法保证时间起卦和干支准确"
+      "output_excerpt": "【事实·卦象】本卦：天泽履\n【事实·动爻】共1个动爻：第3爻\n【事实·互卦】互卦为风火家人\n【事实·动爻六亲】三爻丁丑(兄弟)\n【事实·官鬼爻】本卦有1个官鬼爻：二爻(静)\n【事实·伏神】五爻下伏丙子(妻财)\n【事实·世爻】第5爻五爻壬申（子孙）持世\n【事实·应爻】第2爻二爻丁卯（官鬼）应爻\n【事实·世应生克】世爻金克应爻木（我克对方，主胜）\n【事实·月建日辰】月建午（本气火），日辰酉（本气金）\n",
+      "output_length": 506,
+      "error": null,
+      "fact_keywords_hit": [
+        "天泽履",
+        "第3爻",
+        "父母",
+        "兄弟",
+        "妻财",
+        "官鬼"
+      ],
+      "fact_keywords_missing": [],
+      "fact_hit_rate": 1,
+      "fact_score": 3,
+      "judgment_match": null,
+      "judgment_score": 0,
+      "raw_score": 3,
+      "max_score": 3,
+      "normalized": 1
     },
     {
       "id": "liuyao-005",
@@ -321,9 +380,25 @@
       "category": "纳甲",
       "difficulty": "medium",
       "question_text": "雷泽归妹卦象与世应？",
-      "output_excerpt": "",
-      "output_length": 0,
-      "error": "农历引擎未加载，无法保证时间起卦和干支准确"
+      "output_excerpt": "【事实·卦象】本卦：兑为泽\n【事实·动爻】共1个动爻：第4爻\n【事实·互卦】互卦为风火家人\n【事实·动爻六亲】四爻丁亥(子孙)\n【事实·妻财爻】本卦有1个妻财爻：二爻(静)\n【事实·官鬼爻】本卦有1个官鬼爻：初爻(静)\n【事实·世爻】第6爻上爻丁未（父母）持世\n【事实·应爻】第3爻三爻丁丑（父母）应爻\n【事实·世应生克】世应五行同为土（比和，主平稳）\n【事实·月建日辰】月建午（本气火），日辰酉（本",
+      "output_length": 562,
+      "error": null,
+      "fact_keywords_hit": [
+        "父母",
+        "世爻",
+        "应爻",
+        "第4爻"
+      ],
+      "fact_keywords_missing": [
+        "雷泽归妹"
+      ],
+      "fact_hit_rate": 0.8,
+      "fact_score": 3.2,
+      "judgment_match": null,
+      "judgment_score": 0,
+      "raw_score": 3.2,
+      "max_score": 4,
+      "normalized": 0.8
     },
     {
       "id": "liuyao-006",
@@ -331,9 +406,25 @@
       "category": "旺衰",
       "difficulty": "hard",
       "question_text": "雷泽归妹世应关系与五行？",
-      "output_excerpt": "",
-      "output_length": 0,
-      "error": "农历引擎未加载，无法保证时间起卦和干支准确"
+      "output_excerpt": "【事实·卦象】本卦：兑为泽\n【事实·动爻】共1个动爻：第4爻\n【事实·互卦】互卦为风火家人\n【事实·动爻六亲】四爻丁亥(子孙)\n【事实·妻财爻】本卦有1个妻财爻：二爻(静)\n【事实·官鬼爻】本卦有1个官鬼爻：初爻(静)\n【事实·世爻】第6爻上爻丁未（父母）持世\n【事实·应爻】第3爻三爻丁丑（父母）应爻\n【事实·世应生克】世应五行同为土（比和，主平稳）\n【事实·月建日辰】月建午（本气火），日辰酉（本",
+      "output_length": 562,
+      "error": null,
+      "fact_keywords_hit": [
+        "比和",
+        "妻财",
+        "父母",
+        "月建"
+      ],
+      "fact_keywords_missing": [
+        "雷泽归妹"
+      ],
+      "fact_hit_rate": 0.8,
+      "fact_score": 3.2,
+      "judgment_match": "中",
+      "judgment_score": 2,
+      "raw_score": 5.2,
+      "max_score": 6,
+      "normalized": 0.8666666666666667
     },
     {
       "id": "liuyao-007",
@@ -341,9 +432,20 @@
       "category": "用神",
       "difficulty": "hard",
       "question_text": "数字起卦(7,8,3)，事业占，用神取哪一爻？",
-      "output_excerpt": "",
-      "output_length": 0,
-      "error": "农历引擎未加载，无法保证时间起卦和干支准确"
+      "output_excerpt": "【事实·卦象】本卦：山地剥\n【事实·动爻】共1个动爻：第3爻\n【事实·互卦】互卦为坤为地\n【事实·动爻六亲】三爻乙卯(妻财)\n【事实·妻财爻】本卦有2个妻财爻：三爻(动)、上爻(静)\n【事实·官鬼爻】本卦有1个官鬼爻：二爻(静)\n【事实·伏神】五爻下伏壬申(兄弟)\n【事实·世爻】第5爻五爻丙子（子孙）持世\n【事实·应爻】第2爻二爻乙巳（官鬼）应爻\n【事实·世应生克】世爻水克应爻火（我克对方，主胜）",
+      "output_length": 550,
+      "error": null,
+      "fact_keywords_hit": [
+        "官鬼"
+      ],
+      "fact_keywords_missing": [],
+      "fact_hit_rate": 1,
+      "fact_score": 1,
+      "judgment_match": "中",
+      "judgment_score": 0,
+      "raw_score": 1,
+      "max_score": 1,
+      "normalized": 1
     },
     {
       "id": "liuyao-008",
@@ -351,9 +453,24 @@
       "category": "旬空月破",
       "difficulty": "medium",
       "question_text": "癸巳日柱的旬空是哪两个支？",
-      "output_excerpt": "",
-      "output_length": 0,
-      "error": "农历引擎未加载，无法保证时间起卦和干支准确"
+      "output_excerpt": "【事实·卦象】本卦：兑为泽\n【事实·动爻】共1个动爻：第4爻\n【事实·互卦】互卦为风火家人\n【事实·动爻六亲】四爻丁亥(子孙)\n【事实·妻财爻】本卦有1个妻财爻：二爻(静)\n【事实·官鬼爻】本卦有1个官鬼爻：初爻(静)\n【事实·世爻】第6爻上爻丁未（父母）持世\n【事实·应爻】第3爻三爻丁丑（父母）应爻\n【事实·世应生克】世应五行同为土（比和，主平稳）\n【事实·月建日辰】月建午（本气火），日辰酉（本",
+      "output_length": 562,
+      "error": null,
+      "fact_keywords_hit": [
+        "午",
+        "未",
+        "空"
+      ],
+      "fact_keywords_missing": [
+        "甲申旬"
+      ],
+      "fact_hit_rate": 0.75,
+      "fact_score": 3,
+      "judgment_match": null,
+      "judgment_score": 0,
+      "raw_score": 3,
+      "max_score": 4,
+      "normalized": 0.75
     },
     {
       "id": "ziwei-001",

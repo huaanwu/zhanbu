@@ -24,41 +24,51 @@ const path = require('path');
 const assert = require('node:assert');
 
 // ============= 加载运行环境 =============
-// 用 vm.createContext 隔离 var 声明,避免重复 eval 报 SyntaxError
-const vm = require('vm');
-const ctx = vm.createContext({ window: {}, console, fs });
-
-// v3.0.5 拆分后,expert.js 成了 12 行 shim,真正的实现在 expert/*.js + lib/ganzhi.js
-// 必须按 index.html 的顺序加载:lib/ganzhi.js → expert/tables.js → expert/*.js → expert/chain.js
+// v3.0.5 拆分后,expert.js 成了 12 行 shim,真正的实现在 expert/tables.js +
+// expert/{bazi,ziwei,liuyao,qimen,chain}.js + lib/ganzhi.js
+//
+// 加载策略:把全部 7 个 expert 文件 + lunisolar append 一次性 concat,顶层直接 eval。
+// 不能拆函数包装的 eval (函数内 indirect eval 让 var 进函数局部,拆了后第二个文件
+// 看不到第一个文件的 var Expert = {} —— 'Expert is not defined' at expert/bazi.js:10)。
+// 也不能用 vm.runInContext(隔离 require/process,导致 lib/ganzhi.js 的
+// _loadSolarFromNode 找不到 lunar.bundle.js,liuyao 8 题全 ERR)。
+//
+// 顺序 (与 index.html script load 一致):lib/ganzhi.js → expert/tables.js →
+// expert/bazi.js → expert/liuyao.js → expert/qimen.js → expert/ziwei.js →
+// expert/chain.js → liuyao.js → qimen.js → xingshi.js (后者非 expert,但若 xingshi
+// 需 Expert,专家层先 load 好)
+//
 // 不然 Expert.bazi / Expert.ziwei / getYearGZ 等会全 undefined (ref 7201f99 回归)
-function _load(file) {
-  try {
-    vm.runInContext(fs.readFileSync(file, 'utf-8'), ctx);
-    return true;
-  } catch (e) {
-    console.error('[load fail]', file, e.message);
-    return false;
-  }
+globalThis.window = globalThis.window || {};
+
+const _files = [
+  'lib/ganzhi.js',
+  'expert/tables.js',
+  'expert/bazi.js',
+  'expert/liuyao.js',
+  'expert/qimen.js',
+  'expert/ziwei.js',
+  'expert/chain.js',
+  'liuyao.js',
+  'qimen.js',
+  'xingshi.js',
+];
+
+let _concatSource = '';
+for (const f of _files) {
+  try { _concatSource += '\n// ===== ' + f + ' =====\n' + fs.readFileSync(f, 'utf-8') + '\n'; }
+  catch (e) { console.error('[load skip]', f, e.message); }
 }
-_load('lib/ganzhi.js');
-_load('expert/tables.js');
-_load('expert/bazi.js');
-_load('expert/liuyao.js');
-_load('expert/qimen.js');
-_load('expert/ziwei.js');
-_load('expert/chain.js');
+try { eval(_concatSource); }
+catch (e) {
+  console.error('[fatal] concatenated eval failed:', e.message);
+  process.exit(2);
+}
 
-// 还需加载非 expert/ 的领域实现 — 沿用旧路径
-const LIUYAO_OK = _load('liuyao.js');
-const QIMEN_OK  = _load('qimen.js');
-_load('xingshi.js');
-
-const { liuyao, qimen } = ctx.window;
-// 把 liuyao/qimen 也挂到 ctx,这样 vm.runInContext 里能直接引用
-ctx.liuyao = liuyao;
-ctx.qimen = qimen;
-// 不解构 Expert — 始终从 ctx.window 取,保证 `this` 绑定到 vm context
-function getExpert() { return ctx.window.Expert; }
+const liuyao = globalThis.window.liuyao;
+const qimen = globalThis.window.qimen;
+// 不解构 Expert — 始终从 window 取
+function getExpert() { return globalThis.window.Expert; }
 
 // ============= 加载题库 =============
 const FIXTURE_PATH = path.join(__dirname, 'tests', 'fixtures', 'accuracy_baseline.json');
@@ -118,7 +128,7 @@ function scoreFixture(fx, output) {
 // ============= 构造 input (处理 input_loader) =============
 function resolveInput(fx) {
   if (fx.input_loader) {
-    if (!LIUYAO_OK || !QIMEN_OK) {
+    if (!liuyao || !qimen) {
       throw new Error('liuyao.js / qimen.js load failed; cannot resolve input_loader');
     }
     if (/^liuyao\.panGua\(/.test(fx.input_loader)) {
@@ -146,13 +156,22 @@ fixtures.forEach(fx => {
   let err = null;
   const fnName = ({ bazi:'bazi', liuyao:'liuyao', ziwei:'ziwei', qimen:'qimen' })[fx.domain];
   try {
-    let vmCode;
+    const Expert = getExpert();
+    const fn = Expert?.[fnName];
+    if (!fn) throw new Error(`Expert.${fx.domain} not loaded (typeof Expert=${typeof Expert})`);
+    let input;
     if (fx.input_loader) {
-      vmCode = `Expert.${fnName}((${fx.input_loader}))`;
+      // input_loader 是 'liuyao.panGua(...)' / 'qimen.panQimen(...)' 形式
+      // 直接 eval 该表达式拿到 pan — 用 new Function 拿到 liuyao/qimen 闭包变量
+      const loaderBody = fx.input_loader;
+      const wrapper = new Function('liuyao', 'qimen', `return (${loaderBody});`);
+      input = wrapper(liuyao, qimen);
     } else {
-      vmCode = `Expert.${fnName}(${JSON.stringify(fx.input)})`;
+      input = fx.input;
     }
-    output = vm.runInContext(vmCode, ctx);
+    // Expert.liuyao 等函数体内部用 this._calcLiuyaoWangShai(...),挂在 Expert 上(不是 window)
+    // 浏览器里 Expert.liuyao(pan) 由 window.Expert.liuyao(...) 调,this 被自动绑到 Expert
+    output = fn.call(Expert, input);
     if (typeof output !== 'string') throw new Error(`Expert.${fx.domain} returned non-string: ${typeof output}`);
     if (!output) throw new Error(`Expert.${fx.domain} returned empty string`);
   } catch (e) {

@@ -90,7 +90,7 @@ async function onSxFileSelect(e, hand, side) {
           setTimeout(() => { if (imgEl.onload) onDone(); }, 30000);
         });
       }
-      const detection = await window.ShouXiangMP.detectHand(imgEl);
+      const detection = await window.ShouXiangMP.detectHand(imgEl, sxGender);
       if (detection) {
         const quant = window.ShouXiangMP.quantifyHand(detection);
         sxKeypoints[hand][side] = quant;
@@ -216,7 +216,7 @@ async function sxToggleMediaPipe() {
   } catch (e) {
     sxMPEnabled = false;
     // 加载失败也要 dispose 掉半加载的 model (finding #2 risk)
-    try { await window.ShouXiangMP.disposeHandpose?.(); } catch (_) {}
+    try { await window.ShouXiangMP.disposeHandpose?.(); } catch (disposeErr) { console.warn('[sx] handpose dispose warn:', disposeErr.message); }
     updateSxMPStatus();
     showToast('MediaPipe 加载失败,降级为纯 AI 解读: ' + e.message, 'error');
   }
@@ -391,9 +391,10 @@ async function doShouxiang() {
   const Cache = window.Cache;
   const hasAnyKPs = sxKeypoints.left.palm || sxKeypoints.left.back || sxKeypoints.right.palm || sxKeypoints.right.back;
   const cacheParams = {
-    ...linkPan,
+    linkPan: linkPan || null,
     images: imagesForCache,
     keypoints: hasAnyKPs ? 1 : 0,
+    sxGender: sxGender,
     question: '',
   };
   const sxCacheKey = Cache ? Cache.makeKey('shouxiang', cacheParams) : null;
@@ -409,73 +410,65 @@ async function doShouxiang() {
   // ========== 通用 VL 调用封装 (本地→云端 fallback + 流式 + abort) ==========
   // interpret() 不支持 multimodal,所以这里手写一个 multimodal 版,但复用
   // Core.Stream 的 indicator + Core.AI 的 abort 管理,保持 v3.0.5 全局状态一致
-  let multimodalAbort = null;
-  function _setAbort(c) {
-    multimodalAbort = c;
-    if (c) Core.AI.setCurrentStreamAbort(c);
-    else Core.AI.clearCurrentStreamAbort();
-  }
+  // note: 下面直接调 Core.AI.setCurrentStreamAbort / clearCurrentStreamAbort,
+  // 不再需要 _setAbort 闭包胶水 — callMultimodalVision 内部一个 try/finally 直接接 Core.AI.
 
   async function callMultimodalVision(endpoint, headers, body, label, timeoutMs) {
     let fullText = '';
+    const ctrl = new AbortController();
+    Core.AI.setCurrentStreamAbort(ctrl);
+    // 计时器只能在 finally 清,不能在 fetch resolve 后清:
+    // fetch resolve 只代表 headers 返回,SSE body 可能再 hang 远超 timeoutMs
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    Core.Stream.showStreamIndicator();
     try {
-      Core.Stream.showStreamIndicator();
-      const ctrl = new AbortController();
-      _setAbort(ctrl);
-      const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-      try {
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(body),
-          signal: ctrl.signal,
-        });
-        clearTimeout(timer);
-        if (!res.ok) {
-          let errMsg = 'HTTP ' + res.status;
-          try { const j = await res.json(); errMsg = j.error?.message || errMsg; } catch (_) {}
-          throw new Error(`${label} HTTP ${res.status}: ${errMsg}`);
-        }
-        // 支持 SSE 流式:若响应是 ndjson/chunked,逐 token 累加
-        if (res.body && res.headers.get('content-type')?.includes('text/event-stream')) {
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder();
-          let buf = '';
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buf += decoder.decode(value, { stream: true });
-            const lines = buf.split('\n');
-            buf = lines.pop() || '';
-            for (const line of lines) {
-              const t = line.trim();
-              if (!t || !t.startsWith('data:')) continue;
-              const payload = t.slice(5).trim();
-              if (payload === '[DONE]') continue;
-              try {
-                const j = JSON.parse(payload);
-                const delta = j.choices?.[0]?.delta?.content || j.choices?.[0]?.message?.content || '';
-                if (delta) {
-                  fullText += delta;
-                  resultEl.innerHTML = '<div style="white-space:pre-wrap;">[' + label + ' · ' + imageUrls.length + ' 张图 · 流式]\n\n' + escapeHtml(fullText) + '</div>';
-                }
-              } catch (_) { /* skip non-JSON keepalive */ }
-            }
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      });
+      if (!res.ok) {
+        let errMsg = 'HTTP ' + res.status;
+        try { const j = await res.json(); errMsg = j.error?.message || errMsg; } catch (jsonErr) { console.warn('[sx] parse api error body fail:', jsonErr.message); }
+        throw new Error(`${label} HTTP ${res.status}: ${errMsg}`);
+      }
+      // 支持 SSE 流式
+      if (res.body && res.headers.get('content-type')?.includes('text/event-stream')) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder('utf-8'); // 显式 utf-8,某些 Windows LM 可能兜底是 GBK;TODO: 探测 content-type/encoding
+        let buf = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split('\n');
+          buf = lines.pop() || '';
+          for (const line of lines) {
+            const t = line.trim();
+            if (!t || !t.startsWith('data:')) continue;
+            const payload = t.slice(5).trim();
+            if (payload === '[DONE]') continue;
+            try {
+              const j = JSON.parse(payload);
+              // 只用 delta.content,避免服务端回 cumulative message.content 导致指数放大
+              const delta = j.choices?.[0]?.delta?.content || '';
+              if (delta) {
+                fullText += delta;
+                resultEl.innerHTML = '<div style="white-space:pre-wrap;">[' + label + ' · ' + imageUrls.length + ' 张图 · 流式]\n\n' + escapeHtml(fullText) + '</div>';
+              }
+            } catch (jsonErr) { /* skip non-JSON keepalive */ }
           }
-        } else {
-          const data = await res.json();
-          fullText = data.choices?.[0]?.message?.content?.trim() || '';
         }
-      } finally {
-        clearTimeout(timer);
-        _setAbort(null);
-        Core.Stream.hideStreamIndicator();
+      } else {
+        const data = await res.json();
+        fullText = data.choices?.[0]?.message?.content?.trim() || '';
       }
       return fullText;
-    } catch (e) {
+    } finally {
+      clearTimeout(timer);
+      Core.AI.clearCurrentStreamAbort();
       Core.Stream.hideStreamIndicator();
-      _setAbort(null);
-      throw e;
     }
   }
 
@@ -511,7 +504,11 @@ async function doShouxiang() {
     usedSource = `本地 VL (${localPort})`;
     resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在深度思考(最长8分钟)...</div>`;
     try {
-      const localModelName = localStorage.getItem('local_model_name') || 'local';
+      // 用 Core.AI.getLocalModelName() 通过 /v1/models 自动发现 Ollama/llama-server 实际 model 名
+      // 旧 fallback `|| 'local'` 会让 Ollama 报 404 'model "local" not found'
+      const localModelName = (typeof Core.AI.getLocalModelName === 'function')
+        ? await Core.AI.getLocalModelName()
+        : (localStorage.getItem('local_model_name') || 'local');
       fullText = await callMultimodalVision(
         `${getLocalServerUrl()}/v1/chat/completions`,
         { 'Content-Type': 'application/json' },
@@ -520,6 +517,11 @@ async function doShouxiang() {
         600000
       );
     } catch (e) {
+      // 用户手动停 (⏹) → 不降级云端,直接结束
+      if (e?.name === 'AbortError') {
+        resultEl.innerHTML = '<div class="info">已停止生成。</div>';
+        return;
+      }
       console.warn('[sx] 本地 VL 失败,降级云端:', e.message);
       resultEl.innerHTML = `<div class="loading">本地模型失败: ${escapeHtml(e.message)} — 切云端...</div>`;
       fullText = '';
@@ -527,6 +529,7 @@ async function doShouxiang() {
   }
 
   // ========== 云端 VL fallback ==========
+  // 透传 AbortError:用户停掉了本地/云端任一,都不应该继续另一个
   if (!fullText) {
     const vKey = localStorage.getItem('vision_api_key') || '';
     if (!vKey) {

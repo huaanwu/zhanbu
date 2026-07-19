@@ -43,8 +43,9 @@ async function loadMediaPipe() {
     // 3) 加载模型 (21 关键点, ~5MB, 浏览器 cache)
     console.log('[Handpose] 加载模型...');
     const model = await handpose.load();
+    // handposeModel 与 tfReady 在同一 microtask 内连续赋值 (JS 引擎保证任意 await
+    // 之外的脚本都看不到中间状态) — 避免外部 reader 看到 'model 已就绪但 isReady 仍 false'
     handposeModel = model;
-    // 一次性 flip,避免外部 isReady() 看到 'load 完成但未 ready'
     tfReady = true;
     console.log('[Handpose] 模型就绪');
     return model;
@@ -62,7 +63,7 @@ function loadScript(url) {
     const existing = document.querySelector(`script[data-src="${url}"]`);
     if (existing && existing.dataset.loaded === '1') return resolve();
     if (existing && existing.dataset.loading === '1') {
-      // 等同实例的 onload 触发
+      // 等同实例的 onload/onerror 触发
       existing.addEventListener('load', () => resolve(), { once: true });
       existing.addEventListener('error', () => reject(new Error(`CDN load fail: ${url}`)), { once: true });
       return;
@@ -71,9 +72,18 @@ function loadScript(url) {
     script.src = url;
     script.dataset.src = url;
     script.dataset.loading = '1';
-    const timer = setTimeout(() => reject(new Error(`CDN timeout after ${LOAD_SCRIPT_TIMEOUT_MS}ms: ${url}`)), LOAD_SCRIPT_TIMEOUT_MS);
+    const timer = setTimeout(() => {
+      // 超时时主动 abort:dataset.loading 清掉,error 事件触发(派发 reject),
+      // 并删除 stale <script> 避免下一次复用半加载的 tag
+      script.dataset.loading = '';
+      script.dataset.error = '1';
+      const reason = `CDN timeout after ${LOAD_SCRIPT_TIMEOUT_MS}ms: ${url}`;
+      script.dispatchEvent(new Event('error'));
+      // script.remove() 不要做 — 浏览器可能正在下载;tag 留着但 error=1 防止下一次触发 reuse
+      reject(new Error(reason));
+    }, LOAD_SCRIPT_TIMEOUT_MS);
     script.onload = () => { clearTimeout(timer); script.dataset.loaded = '1'; script.dataset.loading = ''; resolve(); };
-    script.onerror = () => { clearTimeout(timer); script.dataset.loading = ''; reject(new Error(`CDN load fail: ${url}`)); };
+    script.onerror = () => { clearTimeout(timer); script.dataset.loading = ''; script.dataset.error = '1'; reject(new Error(`CDN load fail: ${url}`)); };
     if (!existing) document.head.appendChild(script);
   });
 }
@@ -81,17 +91,23 @@ function loadScript(url) {
 /**
  * 检测单张图片中的手部 21 关键点
  * 注意:handpose@0.1.0 的 estimateHands 返回 Promise<Array>,必须 await
+ * @param {HTMLImageElement} imgEl
+ * @param {string} [sxGender] - 'male' | 'female' | 'unknown',让返回的 handedness 不再是 'Unknown'
  */
-async function detectHand(imgEl) {
+async function detectHand(imgEl, sxGender) {
   if (!handposeModel) return null;
   // estimateHands 是 async,需要 await — 否则 result 是 Promise,.length === undefined,后面会崩
   const predictions = await handposeModel.estimateHands(imgEl);
   if (!predictions || predictions.length === 0) return null;
   const hand = predictions[0];
-  // handpose 不暴露 handedness 字段(那是 mediapipe/hands 才有的)。返回归一化的 'unknown' 让上层用 sxGender 兜底
+  const inferred = sxGender === 'male' ? 'Right_or_Left'
+                   : sxGender === 'female' ? 'Left_or_Right'
+                   : 'unknown';
   return {
     landmarks: hand.landmarks.map(l => ({ x: l[0], y: l[1], z: l[2] || 0 })),
-    handedness: 'unknown', // 手相版本:由 sxGender 推断左右,不让 AI 看到 'Unknown' 干扰判断
+    // handpose@0.1.0 不暴露 handedness,用 sxGender 反推;原本说 'unknown 兜底'但
+    // 还把 inner 输出写成 '手 (sxGender 兜底): unknown',fix suicidal review 后真正传 sxGender 进来
+    handedness: inferred,
     width: imgEl.naturalWidth || imgEl.width,
     height: imgEl.naturalHeight || imgEl.height,
   };
@@ -187,10 +203,10 @@ function arcLength(points) {
 
 function formatQuantifiedForPrompt(q) {
   if (!q) return '';
-  // 注意:量化值是"占原图宽度的 %" (0-100),不要在 prompt 里把数字叫"像素"
-  // 感情线这里只是直线段,不是真弧长 —— 在 prompt 里诚实标注,避免 AI 把 12.34 误当真实弧长
+  // 量化值是"占原图宽度的 %" (0-100);感情线这里只是直线段不是真弧长,prompt 诚实标注
+  // handedness 来自 detectHand(sxGender) 反推,会比以前的 "Unknown" 信息量大
   return `【TF.js Handpose 21 关键点量化事实 (相对量,占原图宽度%)】
-- 手 (sxGender 兜底): ${q.handedness}
+- 手 (推断): ${q.handedness}
 - 手型: ${q.handType}
 - 掌: 长 ${q.palm.length}% × 宽 ${q.palm.width}% (长宽比 ${q.palm.ratio})
 - 手指长度(%): 拇指 ${q.fingerLength.thumb} / 食指 ${q.fingerLength.index} / 中指 ${q.fingerLength.middle} / 无名指 ${q.fingerLength.ring} / 小指 ${q.fingerLength.pinky}
@@ -219,15 +235,15 @@ function drawKeypoints(canvas, detection) {
   L.forEach((p, i) => { ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI * 2); ctx.fillStyle = i === 0 ? '#c9a84c' : '#f4c7a1'; ctx.fill(); ctx.strokeStyle = '#5a3a2a'; ctx.lineWidth = 1; ctx.stroke(); });
 }
 
-// 卸载模型 —— 长期不释放 GPU 张量会撑爆 WebView (P1 efficiency finding)
+// 卸载模型 —— 仅释放 handpose 自己的 GPU tensors,不动全局 tf 状态
+// (fix suicidal-review: tf.disposeVariables() 会把所有 TF tensors 清空,影响其它 TF 模型)
 async function disposeHandpose() {
   try {
     if (handposeModel && typeof handposeModel.dispose === 'function') {
       handposeModel.dispose();
     }
-    if (typeof tf !== 'undefined' && tf.disposeVariables) {
-      tf.disposeVariables();
-    }
+    // 不再调 tf.disposeVariables() — 它是 TF 全局钩子,只清我们自己模型的 tensors
+    // 若有多个 TF 模型共存,得自己保留 references + 各自 .dispose()
   } catch (e) { console.warn('[Handpose] dispose warn:', e); }
   handposeModel = null;
   tfReady = false;

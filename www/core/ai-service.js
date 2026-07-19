@@ -474,8 +474,8 @@
         signalFn: function(p) { return p.handSummary || 'shouxiang'; },
         isCustom: true,
         kbFlags: { daoism: false, chainOfThought: false },
-        // 支持 pan.bazi / pan.ziwei 跨域联动: 自动注入命盘关键事实
-        crossLink: { bazi: true, ziwei: true, liuyao: false, qimen: false },
+        // v3.0.5 + fix(suicidal-review): 扩 liuyao/qimen,匹配 shouxiang.js linkHint 声明的 6 路联动
+        crossLink: { bazi: true, ziwei: true, liuyao: true, qimen: true },
         ragBudget: 1200
       },
       daofobuddhism: { label: '道佛化解', isCustom: true, kbFlags: { primary: false, extended: false, daoism: false, chainOfThought: false } },

@@ -62,14 +62,20 @@ const Cache = {
         parts.push(params.address);
         break;
       case 'shouxiang':
-        // v3.0.5: 4 张图 + Tier-3 关键点 + 跨域 linkPan 全计入 cache key
-        // 之前用旧 2 图 (leftBase64/rightBase64),会导致不同照片解读串号 (finding #9)
-        parts.push(params.images?.leftPalm?.slice(0, 80) || 'no-left-palm');
-        parts.push(params.images?.leftBack?.slice(0, 80) || 'no-left-back');
-        parts.push(params.images?.rightPalm?.slice(0, 80) || 'no-right-palm');
-        parts.push(params.images?.rightBack?.slice(0, 80) || 'no-right-back');
+        // v3.0.5 + fix(suicidal-review): 4 张图 base64 算稳定指纹要够长才不撞库
+        // 旧版 slice(0,80) 在压缩 JPEG 时仍可能碰撞(同一 JFIF 头 + quant table)
+        // 改用 256 字符指纹 = head + mid + tail,既能区分真实不同图,又不太影响性能
+        function fp(s) { return s ? s.slice(0, 96) + '|' + s.slice(Math.floor(s.length/2), Math.floor(s.length/2)+80) + '|' + s.slice(-80) : '∅'; }
+        // sxGender 决定先天/后天手左右映射 (男性 左先天 / 女性 右先天)
+        // 不进 key 会导致男/女切换复用同一份解读(链接已指出)
+        parts.push(params.sxGender || 'unknown');
+        parts.push(fp(params.images?.leftPalm));
+        parts.push(fp(params.images?.leftBack));
+        parts.push(fp(params.images?.rightPalm));
+        parts.push(fp(params.images?.rightBack));
         parts.push('kp:' + (params.keypoints ? 'yes' : 'no'));
         // linkPan 指纹:把命盘关键干支/卦名拼起来,确保不同命盘不同 key
+        // (key=linkPan 是 wrapper,见 doShouxiang cacheParams)
         if (params.linkPan) {
           var lp = params.linkPan;
           if (lp.bazi?.gz?.day) parts.push('bazi-day:' + lp.bazi.gz.day);
