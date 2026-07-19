@@ -279,51 +279,53 @@ class PaiPan {
     const xs = this.shichenXunshou();
     const xsGan = LiuYiXunShou_DiZhi[xs[1]].slice(-1);
 
-    let targetGong = null;
-    for (const g of this.pan) {
-      for (const qy of g.dipan) {
-        if (qy.name === xsGan) { targetGong = g; break; }
-      }
-      if (targetGong) break;
-    }
+    // === 第1步:找出值使门(旬首干落宫对应的固定寄宫门) ===
+    // 八门固定本位: 休1/生8/伤3/杜4/景9/死2/惊7/开6
+    const GAN_TO_LUOSHU = { '戊':1, '己':2, '庚':3, '辛':4, '壬':9, '癸':8 };
+    // 值符星/值使门原始寄宫:戊→坎1=休,己→坤2=死,庚→震3=伤,辛→巽4=杜,壬→离9=景,癸→艮8=生
+    const MEN_ORDER = ['休门','生门','伤门','杜门','景门','死门','惊门','开门'];
+    const LUOSHU_TO_MEN = { 1:'休门', 8:'生门', 3:'伤门', 4:'杜门', 9:'景门', 2:'死门', 7:'惊门', 6:'开门' };
 
-    // 8门→洛书数映射（八门宫位：休1坎、生8艮、伤3震、杜4巽、景9离、死2坤、惊7兑、开6乾）
-    // 中五宫不排门（寄坤二宫或不动）
-    const MEN_TO_LUOSHU = { '休门':1, '生门':8, '伤门':3, '杜门':4, '景门':9, '死门':2, '惊门':7, '开门':6 };
-    const LUO_TO_DIR = { 1:'坎一宫', 2:'坤二宫', 3:'震三宫', 4:'巽四宫', 5:'中五宫', 6:'乾六宫', 7:'兑七宫', 8:'艮八宫', 9:'离九宫' };
-    // 找到值使门所在的洛书数（targetGong 对应数）
-    let targetLuoshu = null;
-    for (const [k, v] of Object.entries(LUO_TO_DIR)) {
-      if (v === targetGong.name) { targetLuoshu = Number(k); break; }
+    let zhifuLuoshU = GAN_TO_LUOSHU[xsGan];
+    if (!zhifuLuoshU) return;
+    const zhishiMen = LUOSHU_TO_MEN[zhifuLuoshU];
+
+    // === 第2步:定位值使落宫(随时宫,阳顺阴逆) ===
+    // 时辰地支数: 子=1, 丑=2, ..., 亥=12. 但此处"阳遁顺数1→2→3→…→9"是指洛书九宫顺序
+    // 时辰支数计算: ZHI = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
+    // shichen 已从四柱取到,取末位地支
+    const shiZhi = this.shichen[1]; // 时柱末位
+    const shiZhiNum = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'].indexOf(shiZhi) + 1;
+    // 从"子位"开始数,阳顺: 子=1, 丑=2, 寅=3, ..., 亥=9 (逢9归1)
+    // 阴逆: 子=1, 丑=9, 寅=8, ..., 亥=2 (逢0归9)
+    let shiLuoshU;
+    if (this.isYangdun) {
+      shiLuoshU = ((shiZhiNum - 1) % 9) + 1;
+    } else {
+      shiLuoshU = shiZhiNum === 1 ? 1 : 10 - shiZhiNum;
     }
-    if (!targetLuoshu) return;
+    // 中5寄坤2
+    if (shiLuoshU === 5) shiLuoshU = 2;
+
+    // === 第3步:飞布八门(以值使落宫为起点,按休生伤杜景死惊开顺序顺时针旋转填入) ===
+    const LUO_TRAVEL_CW = [1,8,3,4,9,2,7,6]; // 洛书后天八卦顺时针顺序
+    const startIdx = LUO_TRAVEL_CW.indexOf(shiLuoshU);
+    if (startIdx < 0) return;
 
     // 先把 9 宫的 renpan 清空
     for (const gong of dirOrdered) gong.renpan = null;
 
-    // 8门按"门→宫"固定关系排，从值使门所在洛书数开始旋转
-    // 阳遁：顺时针旋转（顺行）；阴遁：逆时针旋转（逆行）
-    // 九宫洛书顺时针顺序：1(坎)→8(艮)→3(震)→4(巽)→9(离)→2(坤)→7(兑)→6(乾)→1
-    const LUO_TRAVEL_CW = [1,8,3,4,9,2,7,6]; // 顺时针（阳遁）
-    const LUO_TRAVEL_CCW = [1,6,7,2,9,4,3,8]; // 逆时针（阴遁）
-    const travel = this.isYangdun ? LUO_TRAVEL_CW : LUO_TRAVEL_CCW;
-    const startIdx = travel.indexOf(targetLuoshu);
+    const zhishiStep0Gong = dirOrdered.find(g => g.luoshu === LUO_TRAVEL_CW[startIdx]);
+    const startMenIdx = MEN_ORDER.indexOf(zhishiMen);
 
-    if (startIdx >= 0) {
-      const doorNames = Object.keys(MEN_TO_LUOSHU);
-      for (let i = 0; i < 8; i++) {
-        const luoshu = travel[(startIdx + i) % 8];
-        if (luoshu === 5) continue; // 中五宫不排门
-        const menName = doorNames.find(m => MEN_TO_LUOSHU[m] === luoshu);
-        if (!menName) continue;
-        const gongName = LUO_TO_DIR[luoshu];
-        const gong = dirOrdered.find(g => g.name === gongName);
-        if (gong) {
-          gong.renpan = new BaMen(menName);
-          gong.zhishiStep = i; // 值使门从值符宫出发的运行步数（0=起点）
-          if (i === 0) gong.isRenpanZhishi = true;
-        }
-      }
+    for (let i = 0; i < 8; i++) {
+      const luoshu = LUO_TRAVEL_CW[(startIdx + i) % 8];
+      const gong = dirOrdered.find(g => g.luoshu === luoshu);
+      if (!gong) continue;
+      const menName = MEN_ORDER[(startMenIdx + i) % 8];
+      gong.renpan = new BaMen(menName);
+      gong.zhishiStep = i;
+      if (i === 0) gong.isRenpanZhishi = true;
     }
   }
 
