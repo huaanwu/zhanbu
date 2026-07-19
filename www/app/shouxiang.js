@@ -435,33 +435,12 @@ async function doShouxiang() {
         try { const j = await res.json(); errMsg = j.error?.message || errMsg; } catch (jsonErr) { console.warn('[sx] parse api error body fail:', jsonErr.message); }
         throw new Error(`${label} HTTP ${res.status}: ${errMsg}`);
       }
-      // 支持 SSE 流式
+      // 支持 SSE 流式 — 复用 Core.AI.readSSE (v3.0.6 cleanup)
       if (res.body && res.headers.get('content-type')?.includes('text/event-stream')) {
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder('utf-8'); // 显式 utf-8,某些 Windows LM 可能兜底是 GBK;TODO: 探测 content-type/encoding
-        let buf = '';
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buf += decoder.decode(value, { stream: true });
-          const lines = buf.split('\n');
-          buf = lines.pop() || '';
-          for (const line of lines) {
-            const t = line.trim();
-            if (!t || !t.startsWith('data:')) continue;
-            const payload = t.slice(5).trim();
-            if (payload === '[DONE]') continue;
-            try {
-              const j = JSON.parse(payload);
-              // 只用 delta.content,避免服务端回 cumulative message.content 导致指数放大
-              const delta = j.choices?.[0]?.delta?.content || '';
-              if (delta) {
-                fullText += delta;
-                renderSx(label + ' · ' + imageUrls.length + ' 张图 · 流式', fullText);
-              }
-            } catch (jsonErr) { /* skip non-JSON keepalive */ }
-          }
-        }
+        await Core.AI.readSSE(res.body, function (_delta, filteredFull) {
+          fullText = filteredFull;
+          renderSx(label + ' · ' + imageUrls.length + ' 张图 · 流式', fullText);
+        });
       } else {
         const data = await res.json();
         fullText = data.choices?.[0]?.message?.content?.trim() || '';

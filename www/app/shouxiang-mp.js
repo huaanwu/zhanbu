@@ -17,16 +17,17 @@
 
 const TFJS_URL = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js';
 const HANDPOSE_URL = 'https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose@0.1.0/dist/handpose.js';
-const LOAD_SCRIPT_TIMEOUT_MS = 30000; // CDN 卡死兜底超时
+const CDN_LOAD_TIMEOUT_MS = 30000;
+// loadCDNScript 迁到 core/util.js,保留别名让文件内仍可调用
+function loadScript(url) {
+  return window.Core && window.Core.Util && window.Core.Util.loadCDNScript
+    ? window.Core.Util.loadCDNScript(url, CDN_LOAD_TIMEOUT_MS)
+    : new Promise(function(_, reject) { reject(new Error('Core.Util.loadCDNScript not loaded')); });
+}
 
 let tfReady = false;
 let handposeModel = null;
 let loadingPromise = null;
-// tfReady 与 handposeModel 是同一个事实的两个开关:存在 race,
-// detectHand 已经通过 handposeModel 直接判空,所以 tfReady 只给外部 isReady() 用
-// 真正 ready 的语义下应该二者在 await handpose.load() resolve 的同一刻一起 flip
-// ——但 await 同一行只能赋一个,所以中间存在一个 handposeModel 非 null / tfReady=still-false 的窗口
-// 这里用一个 8ms microtask 后置翻转来闭合窗口
 async function loadMediaPipe() {
   if (tfReady && handposeModel) return handposeModel;
   if (loadingPromise) return loadingPromise;
@@ -54,37 +55,6 @@ async function loadMediaPipe() {
     throw e;
   });
   return loadingPromise;
-}
-
-function loadScript(url) {
-  return new Promise((resolve, reject) => {
-    // 即使 script tag 已存在,也必须等 onload 触发过 — 否则下一次并发的 loadMediaPipe 复用 tag
-    // 会拿到一个尚未初始化的全局 (ReferenceError: tf is not defined)
-    const existing = document.querySelector(`script[data-src="${url}"]`);
-    if (existing && existing.dataset.loaded === '1') return resolve();
-    // dataset.error='1' 表示上次加载失败(超时或网络错) — 删了 tag 重新走完整路径
-    // round-2 fix: 之前 dataset.error='1' 写了不读,导致 timeout 后永远卡死
-    if (existing && existing.dataset.error === '1') existing.remove();
-    if (existing && existing.dataset.loading === '1') {
-      existing.addEventListener('load', () => resolve(), { once: true });
-      existing.addEventListener('error', () => reject(new Error(`CDN load fail: ${url}`)), { once: true });
-      return;
-    }
-    const script = existing || document.createElement('script');
-    script.src = url;
-    script.dataset.src = url;
-    script.dataset.loading = '1';
-    const timer = setTimeout(() => {
-      // 超时:dataset.loading 清掉,标记 dataset.error,删 stale <script> 让下一次复用从干净开始
-      script.dataset.loading = '';
-      script.dataset.error = '1';
-      script.remove();
-      reject(new Error(`CDN timeout after ${LOAD_SCRIPT_TIMEOUT_MS}ms: ${url}`));
-    }, LOAD_SCRIPT_TIMEOUT_MS);
-    script.onload = () => { clearTimeout(timer); script.dataset.loaded = '1'; script.dataset.loading = ''; resolve(); };
-    script.onerror = () => { clearTimeout(timer); script.dataset.loading = ''; script.dataset.error = '1'; script.remove(); reject(new Error(`CDN load fail: ${url}`)); };
-    if (!existing || !existing.parentNode) document.head.appendChild(script);
-  });
 }
 
 /**

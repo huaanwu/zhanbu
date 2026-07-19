@@ -157,5 +157,35 @@
   }
 
   window.Core = window.Core || {};
-  window.Core.Util = { escapeHtml, safeHTML, WX, judgeWangShuai, initDateInputs, selCal, selLeap, selGender };
+  window.Core.Util = { escapeHtml, safeHTML, WX, judgeWangShuai, initDateInputs, selCal, selLeap, selGender,
+    // v3.0.6: 通用 CDN <script> 加载器 (从 shouxiang-mp.js 提升)
+    // 支持已加载/加载中/失败状态的去重,30s 超时 + 失败后自动删 tag
+    loadCDNScript: function(url, timeoutMs) {
+      if (typeof timeoutMs !== 'number') timeoutMs = 30000;
+      return new Promise((resolve, reject) => {
+        var existing = document.querySelector('script[data-src="' + url + '"]');
+        if (existing && existing.dataset.loaded === '1') return resolve();
+        // 上次失败 → 删 tag 重新来
+        if (existing && existing.dataset.error === '1') existing.remove();
+        if (existing && existing.dataset.loading === '1') {
+          existing.addEventListener('load', function() { resolve(); }, { once: true });
+          existing.addEventListener('error', function() { reject(new Error('CDN load fail: ' + url)); }, { once: true });
+          return;
+        }
+        var script = existing || document.createElement('script');
+        script.src = url;
+        script.dataset.src = url;
+        script.dataset.loading = '1';
+        var timer = setTimeout(function() {
+          script.dataset.loading = '';
+          script.dataset.error = '1';
+          script.remove();
+          reject(new Error('CDN timeout after ' + timeoutMs + 'ms: ' + url));
+        }, timeoutMs);
+        script.onload = function() { clearTimeout(timer); script.dataset.loaded = '1'; script.dataset.loading = ''; resolve(); };
+        script.onerror = function() { clearTimeout(timer); script.dataset.loading = ''; script.dataset.error = '1'; script.remove(); reject(new Error('CDN load fail: ' + url)); };
+        if (!existing || !existing.parentNode) document.head.appendChild(script);
+      });
+    }
+  };
 })();
