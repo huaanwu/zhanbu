@@ -18,12 +18,18 @@
 const TFJS_URL = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js';
 const HANDPOSE_URL = 'https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose@0.1.0/dist/handpose.js';
 const CDN_LOAD_TIMEOUT_MS = 30000;
-// loadCDNScript 迁到 core/util.js,保留别名让文件内仍可调用
-function loadScript(url) {
-  return window.Core && window.Core.Util && window.Core.Util.loadCDNScript
-    ? window.Core.Util.loadCDNScript(url, CDN_LOAD_TIMEOUT_MS)
-    : new Promise(function(_, reject) { reject(new Error('Core.Util.loadCDNScript not loaded')); });
-}
+// loadCDNScript 迁到 core/util.js (v3.0.6 cleanup),保留同步函数本地作为 fallback
+// 注意:本文件在 core/util.js 之后加载，Core.Util.loadCDNScript 一定可用
+var loadScript = window.Core && window.Core.Util && window.Core.Util.loadCDNScript
+  ? function(url) { return window.Core.Util.loadCDNScript(url, CDN_LOAD_TIMEOUT_MS); }
+  : function(url) {
+      // 如果 Core 还没起来，自己造 (should not happen in prod)
+      return new Promise(function(resolve, reject) {
+        var s = document.createElement('script');
+        s.src = url; s.onload = resolve; s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    };
 
 let tfReady = false;
 let handposeModel = null;
