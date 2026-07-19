@@ -408,39 +408,36 @@ async function doShouxiang() {
   // 不再需要 _setAbort 闭包胶水 — callMultimodalVision 内部一个 try/finally 直接接 Core.AI.
 
   async function callMultimodalVision(endpoint, headers, body, label, timeoutMs) {
-    // 改用和 Core.AI.callDeepSeek 同一种模式:signal 由内部 AC 创建,finally 清理
-    // 之前用 Core.AI.setCurrentStreamAbort(ctrl) 共享状态,导致前一个未清理的 ctrl 让这次 fetch 立即 abort
-    const externalSignal = null; // 不共享,每次新建
-    const ctrl = externalSignal || new AbortController();
-    // 用 Core.AI 暴露的 setCurrentStreamAbort,这次保证 finally 一定清
-    Core.AI.setCurrentStreamAbort(ctrl);
-    const timer = setTimeout(() => {
-      try { ctrl.abort('sx-timeout'); } catch (_) {}
-    }, timeoutMs || 60000);
-    Core.Stream.showStreamIndicator();
+    const nonStreamBody = Object.assign({}, body, { stream: false });
+    const bodyJson = JSON.stringify(nonStreamBody);
+    console.log("[sx] callMultimodalVision endpoint:", endpoint, "body大小:", bodyJson.length, "bytes");
+    // WebView 内部 fetch + signal 在某些 Android 版本会 signal is aborted without reason
+    // 不要 signal,只用 setTimeout 实现超时
+    const timeoutMsFinal = timeoutMs || 60000;
+    const startTime = Date.now();
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; }, timeoutMsFinal);
     try {
-      const nonStreamBody = Object.assign({}, body, { stream: false });
       const res = await fetch(endpoint, {
         method: 'POST',
         headers,
-        body: JSON.stringify(nonStreamBody),
-        signal: ctrl.signal,
+        body: bodyJson,
       });
+      clearTimeout(timer);
+      if (timedOut) throw new Error(`${label} timeout after ${timeoutMsFinal}ms`);
       if (!res.ok) {
         let errMsg = 'HTTP ' + res.status;
         try { const j = await res.json(); errMsg = j.error?.message || errMsg; } catch (jsonErr) { console.warn('[sx] parse api error body fail:', jsonErr.message); }
         throw new Error(`${label} HTTP ${res.status}: ${errMsg}`);
       }
       const data = await res.json();
+      const elapsed = Date.now() - startTime;
+      console.log("[sx] OK, elapsed:", elapsed, "ms, content length:", (data.choices?.[0]?.message?.content || '').length);
       return (data.choices?.[0]?.message?.content?.trim() || '');
     } catch (e) {
+      clearTimeout(timer);
       throw e;
     } finally {
-      clearTimeout(timer);
-      // 关键修复 (任务 #43):保证 clearCurrentStreamAbort 一定执行
-      // 不然下次 callMultimodalVision 启动时 Core.AI.getCurrentStreamAbort() 还是这个 ctrl
-      // Ctrl.signal 已经被 abort, fetch 立即 abort
-      Core.AI.clearCurrentStreamAbort();
       Core.Stream.hideStreamIndicator();
     }
   }
