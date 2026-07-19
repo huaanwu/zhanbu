@@ -61,49 +61,47 @@ async function onSxFileSelect(e, hand, side) {
   const file = e.target.files?.[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = async ev => {
-    const compressed = await compressImage(ev.target.result);
-    sxImages[hand][side] = compressed;
-    const previewId = `sxPreview${hand.charAt(0).toUpperCase() + hand.slice(1)}${side.charAt(0).toUpperCase() + side.slice(1)}`;
-    const wrapId = `sxPreviewWrap${hand.charAt(0).toUpperCase() + hand.slice(1)}${side.charAt(0).toUpperCase() + side.slice(1)}`;
-    const uploadId = `sxUploadArea${hand.charAt(0).toUpperCase() + hand.slice(1)}${side.charAt(0).toUpperCase() + side.slice(1)}`;
-    document.getElementById(previewId).src = compressed;
-    document.getElementById(wrapId).style.display = 'block';
-    document.getElementById(uploadId).style.display = 'none';
-    document.getElementById('sxResult').style.display = 'none';
-    if (sxHasAll()) {
-      document.getElementById('sxActionArea').style.display = 'block';
-    }
-
-  // Tier 3 关键点:检测关键点 + 在原图上叠加骨架
-  // 修复(任务 #43):4张图依次跑,每张图等图片loaded=浪费30s
-  // 改: 不等,直接调 detectHand,handpose内部会处理
-  const imgEl = document.getElementById(previewId);
-  if (sxMPEnabled && window.ShouXiangMP?.isReady?.()) {
-    try {
-      // 不等待 imgEl.onload,直接把 detectHand 加上 5秒超时
-      // handpose 自己会处理图片加载,失败就 catch
-      const detection = await Promise.race([
-        window.ShouXiangMP.detectHand(imgEl, sxGender),
-        new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 5000); })
-      ]);
-      if (detection) {
-        const quant = window.ShouXiangMP.quantifyHand(detection);
-        sxKeypoints[hand][side] = quant;
-        // 在原图上叠加关键点骨架
-        drawKeypointsOverlay(imgEl, detection);
-        updateSxMPStatus();
-        showToast(`✓ ${hand === 'left' ? '左' : '右'}手·${side === 'palm' ? '掌心' : '手背'} 21 关键点检测完成`, 'success');
-      } else {
-        sxKeypoints[hand][side] = null;
-        updateSxMPStatus();
-        showToast('⚠️ ' + (hand === 'left' ? '左' : '右') + '手·' + side + ' 未检测到手,请重新拍照(手指展开、掌心清晰)', 'warning');
+  reader.onload = ev => {
+    (async () => {
+      const compressed = await compressImage(ev.target.result);
+      sxImages[hand][side] = compressed;
+      const previewId = `sxPreview${hand.charAt(0).toUpperCase() + hand.slice(1)}${side.charAt(0).toUpperCase() + side.slice(1)}`;
+      const wrapId = `sxPreviewWrap${hand.charAt(0).toUpperCase() + hand.slice(1)}${side.charAt(0).toUpperCase() + side.slice(1)}`;
+      const uploadId = `sxUploadArea${hand.charAt(0).toUpperCase() + hand.slice(1)}${side.charAt(0).toUpperCase() + side.slice(1)}`;
+      document.getElementById(previewId).src = compressed;
+      document.getElementById(wrapId).style.display = 'block';
+      document.getElementById(uploadId).style.display = 'none';
+      document.getElementById('sxResult').style.display = 'none';
+      if (sxHasAll()) {
+        document.getElementById('sxActionArea').style.display = 'block';
       }
-    } catch (err) {
-      console.warn('[sx] keypoint detect fail:', err.message);
-      sxKeypoints[hand][side] = null;
-    }
-  }
+
+      // Tier 3 关键点: fire-and-forget
+      // 关键修复(任务 #43):之前 await detectHand 卡住整个 onload
+      // 改:不 await,后台跑
+      if (sxMPEnabled && window.ShouXiangMP?.isReady?.()) {
+        const imgEl = document.getElementById(previewId);
+        Promise.race([
+          window.ShouXiangMP.detectHand(imgEl, sxGender),
+          new Promise((resolve) => setTimeout(() => resolve(null), 3000))
+        ]).then((detection) => {
+          if (detection) {
+            const quant = window.ShouXiangMP.quantifyHand(detection);
+            sxKeypoints[hand][side] = quant;
+            drawKeypointsOverlay(imgEl, detection);
+            updateSxMPStatus();
+            showToast(`✓ ${hand === 'left' ? '左' : '右'}手·${side === 'palm' ? '掌心' : '手背'} 21 关键点检测完成`, 'success');
+          } else {
+            sxKeypoints[hand][side] = null;
+            updateSxMPStatus();
+            showToast('⚠️ ' + (hand === 'left' ? '左' : '右') + '手·' + side + ' 未检测到手,请重新拍照(手指展开、掌心清晰)', 'warning');
+          }
+        }).catch((err) => {
+          console.warn('[sx] keypoint detect fail:', err.message);
+          sxKeypoints[hand][side] = null;
+        });
+      }
+    })();
   };
   reader.readAsDataURL(file);
 }
