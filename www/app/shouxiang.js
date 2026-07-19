@@ -75,20 +75,27 @@ async function onSxFileSelect(e, hand, side) {
       document.getElementById('sxActionArea').style.display = 'block';
     }
 
-  // Tier 3 关键点:等图加载完成,同时挂 onerror 处理,防止 corrupt 图让 await 永远 hang
-  // (finding C6: img.onerror 永远不 reject)
-  // 注意:detectHand 现在是 async,必须 await;并发的同元素 onload 不要互相覆盖
+  // Tier 3 关键点:检测关键点 + 在原图上叠加骨架
+  // 修复(任务 #43):之前用 setTimeout(30s) 等 onload,导致手相AI解读极慢
+  // 实际:compressImage 已经把图片渲染到 canvas,再 toDataURL 给 <img> 的 src
+  // 浏览器解析 base64 几乎是同步的,imgEl.complete 应该立即 true
+  // 但为了兼容旧图片,加一个 200ms 的等待 + 30s兜底
   const imgEl = document.getElementById(previewId);
   if (sxMPEnabled && window.ShouXiangMP?.isReady?.()) {
     try {
-      if (!imgEl.complete || imgEl.naturalWidth === 0) {
-        await new Promise((resolve, reject) => {
-          const onDone = () => { imgEl.onload = null; imgEl.onerror = null; resolve(); };
-          imgEl.onload = onDone;
-          imgEl.onerror = () => { imgEl.onload = null; imgEl.onerror = null; reject(new Error('image decode fail')); };
-          // 30s 兜底超时,避免 corrupt 大图占住 UI
-          setTimeout(() => { if (imgEl.onload) onDone(); }, 30000);
+      // 如果图片还没加载完,等它
+      if (imgEl.complete && imgEl.naturalWidth === 0) {
+        await new Promise((resolve) => {
+          var done = false;
+          var finish = function () { if (!done) { done = true; resolve(); } };
+          imgEl.onload = finish;
+          imgEl.onerror = finish;
+          // 30s 兜底(图片已损坏等)
+          setTimeout(finish, 30000);
         });
+      } else if (!imgEl.complete) {
+        // complete=false 但图片正在加载,等 200ms 通常足够
+        await new Promise((resolve) => setTimeout(resolve, 200));
       }
       const detection = await window.ShouXiangMP.detectHand(imgEl, sxGender);
       if (detection) {
