@@ -437,10 +437,12 @@ async function doShouxiang() {
       }
       // 支持 SSE 流式 — 复用 Core.AI.readSSE (v3.0.6 cleanup)
       if (res.body && res.headers.get('content-type')?.includes('text/event-stream')) {
-        await Core.AI.readSSE(res.body, function (_delta, filteredFull) {
-          fullText = filteredFull;
-          renderSx(label + ' · ' + imageUrls.length + ' 张图 · 流式', fullText);
-        });
+        // 本地VL模型处理4张大图时可能前2-3分钟都在"思考"无中文输出
+        // 用 showRawInProgress 让thinking过程逐字显示,用户体验更直观
+        await Core.AI.readSSE(res.body, function (_delta, content) {
+          fullText = content;
+          renderSx(label + ' · ' + imageUrls.length + ' 张图 · 流式', content);
+        }, { showRawInProgress: true });
       } else {
         const data = await res.json();
         fullText = data.choices?.[0]?.message?.content?.trim() || '';
@@ -471,11 +473,9 @@ async function doShouxiang() {
   // ========== 本地 VL 一把搞定 ==========
   if (await checkLocalModel(localPort)) {
     usedSource = `本地 VL (${localPort})`;
-    resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在深度思考(最长8分钟)...</div>`;
+    resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在深度思考(最长10分钟)...<br><small>模型需处理4张图片+分析手相,请耐心等待</small></div>`;
     try {
       // Core.AI.getLocalModelName() 通过 /v1/models 自动发现 Ollama/llama-server 实际 model 名
-      // (round-2 fix:去掉 typeof guard —— getLocalModelName 现已在 Core.AI export 列表里;
-      // 旧 fallback `|| 'local'` 会让 Ollama 报 404 'model "local" not found')
       const localModelName = await Core.AI.getLocalModelName();
       fullText = await callMultimodalVision(
         `${getLocalServerUrl()}/v1/chat/completions`,
@@ -485,10 +485,6 @@ async function doShouxiang() {
         600000
       );
     } catch (e) {
-      // 用户手动停 (⏹) → 不降级云端,直接结束
-      // 区分 timeout (10 分钟到) vs user-stop:
-      //   timeout: e.name === 'AbortError' 且 ctrl.signal.reason === 'sx-timeout' 或 e.message 含 'timeout'
-      //   user-stop: AbortError 但 reason 不含 timeout
       const isTimeoutAbort = e?.name === 'AbortError' && (
         e.message?.includes('timeout') ||
         e.message?.includes('exceeded') ||
@@ -498,7 +494,6 @@ async function doShouxiang() {
         resultEl.innerHTML = '<div class="info">已停止生成。</div>';
         return;
       }
-      // timeout / 真错误 → 继续尝试云端 fallback
       const reasonLabel = isTimeoutAbort ? '本地模型超时' : '本地模型失败';
       console.warn(`[sx] ${reasonLabel},降级云端:`, e.message);
       resultEl.innerHTML = `<div class="loading">${reasonLabel}: ${escapeHtml(e.message)} — 切云端...</div>`;
