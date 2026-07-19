@@ -41,7 +41,6 @@
   }
 
   // SSE 流式读取器(OpenAI 兼容格式),实时过滤 thinking
-  // 当设置 showRawInProgress 时,thinking 阶段保留原始内容用于实时显示(仅多模态路径使用)
   async function readSSE(body, onChunk, opts) {
     const showRaw = opts && opts.showRawInProgress;
     const reader = body.getReader();
@@ -71,11 +70,11 @@
               rawFull += text;
               chunkCount++;
               const newFiltered = stripThinking(rawFull);
+              filteredFull = newFiltered;
               if (newFiltered.length > filteredFull.length || showRaw) {
                 const passThrough = newFiltered.slice(filteredFull.length);
                 filteredFull = newFiltered;
-                // 多模态路径:即使没新中文内容,也回调更新显示(让用户看到 thinking 进度)
-                onChunk(passThrough || (showRaw ? '' : undefined), showRaw ? rawFull : filteredFull);
+                onChunk(passThrough, filteredFull);
               }
             }
           } catch (e) { /* 忽略单行解析错误,继续 */ }
