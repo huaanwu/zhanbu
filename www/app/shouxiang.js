@@ -489,9 +489,11 @@ async function doShouxiang() {
 
   // ping: 探测 /v1/models
   const localAlive = await checkLocalModel(localPort);
+  // (诊断):把 endpoint 显示给用户,看实际发了哪
+  resultEl.innerHTML = `<div class="loading">ping ${getLocalServerUrl()}/v1/models ...</div>`;
   if (localAlive) {
     usedSource = `本地 VL (${localPort})`;
-    resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在分析${imageUrls.length}张图片...<br><small>当前模型: ${localModelName}</small></div>`;
+    resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在分析${imageUrls.length}张图片...<br><small>当前模型: ${localModelName} | endpoint: ${getLocalServerUrl()}</small></div>`;
     try {
       const localModelName = (typeof Core.AI === 'object' && typeof Core.AI.getLocalModelName === 'function'
         ? await Core.AI.getLocalModelName()
