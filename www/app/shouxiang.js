@@ -1,7 +1,11 @@
 // ========== 看手相 (Tier 1: 双手掌心+手背 4 张图 + 结构化提示词) ==========
 // sxImages[hand][side] = base64  hand: 'left'|'right'  side: 'palm'|'back'
+// sxKeypoints[hand][side] = MediaPipe 量化结果 (可选, 启用 MediaPipe 后填充)
+// shouxiang-mp.js 通过 type=module script 标签加载,挂到 window.ShouXiangMP
 const sxImages = { left: { palm: '', back: '' }, right: { palm: '', back: '' } };
+const sxKeypoints = { left: { palm: null, back: null }, right: { palm: null, back: null } };
 let sxGender = 'male';
+let sxMPEnabled = false;  // 用户是否启用 MediaPipe 关键点检测
 
 function sxGet(hand, side) { return sxImages[hand][side] || ''; }
 function sxHasAll() { return sxGet('left','palm') && sxGet('left','back') && sxGet('right','palm') && sxGet('right','back'); }
@@ -70,14 +74,60 @@ async function onSxFileSelect(e, hand, side) {
     if (sxHasAll()) {
       document.getElementById('sxActionArea').style.display = 'block';
     }
+
+    // Tier 3: 如果 MediaPipe 已启用, 上传时自动检测关键点
+    if (sxMPEnabled && window.ShouXiangMP?.isReady?.()) {
+      try {
+        const imgEl = document.getElementById(previewId);
+        // 等图片加载完
+        if (!imgEl.complete) await new Promise(r => imgEl.onload = r);
+        const detection = window.ShouXiangMP.detectHand(imgEl);
+        if (detection) {
+          const quant = window.ShouXiangMP.quantifyHand(detection);
+          sxKeypoints[hand][side] = quant;
+          // 在原图上叠加关键点骨架 (临时画到 preview img 上层)
+          drawKeypointsOverlay(imgEl, detection);
+          updateSxMPStatus();
+          showToast(`✓ ${hand === 'left' ? '左' : '右'}手·${side === 'palm' ? '掌心' : '手背'} 21 关键点检测完成`, 'success');
+        } else {
+          sxKeypoints[hand][side] = null;
+          updateSxMPStatus();
+          showToast('⚠️ ' + (hand === 'left' ? '左' : '右') + '手·' + side + ' 未检测到手,请重新拍照(手指展开、掌心清晰)', 'warning');
+        }
+      } catch (err) {
+        console.warn('[sx] MediaPipe detect fail:', err.message);
+      }
+    }
   };
   reader.readAsDataURL(file);
+}
+
+// 在 img 上叠加 canvas 显示关键点骨架
+function drawKeypointsOverlay(imgEl, detection) {
+  if (!window.ShouXiangMP?.drawKeypoints) return;
+  // 创建一个覆盖在 img 上方的 canvas
+  let canvas = imgEl.nextElementSibling;
+  if (!canvas || !canvas.classList.contains('sx-kp-overlay')) {
+    canvas = document.createElement('canvas');
+    canvas.className = 'sx-kp-overlay';
+    canvas.style.position = 'absolute';
+    canvas.style.top = imgEl.offsetTop + 'px';
+    canvas.style.left = imgEl.offsetLeft + 'px';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.pointerEvents = 'none';
+    imgEl.parentElement.style.position = 'relative';
+    imgEl.parentElement.appendChild(canvas);
+  }
+  window.ShouXiangMP.drawKeypoints(canvas, detection);
 }
 window.onSxFileSelect = onSxFileSelect;
 
 function clearShouxiang() {
   sxImages.left = { palm: '', back: '' };
   sxImages.right = { palm: '', back: '' };
+  sxKeypoints.left = { palm: null, back: null };
+  sxKeypoints.right = { palm: null, back: null };
   [['left','palm'], ['left','back'], ['right','palm'], ['right','back']].forEach(function(p) {
     var hand = p[0], side = p[1];
     var cap = hand.charAt(0).toUpperCase() + hand.slice(1);
@@ -91,8 +141,60 @@ function clearShouxiang() {
   });
   document.getElementById('sxActionArea').style.display = 'none';
   document.getElementById('sxResult').style.display = 'none';
+  updateSxMPStatus();
 }
 window.clearShouxiang = clearShouxiang;
+
+// MediaPipe 关键点开关 + 状态显示
+function updateSxMPStatus() {
+  var statusEl = document.getElementById('sxMPStatus');
+  var btn = document.getElementById('sxMPToggleBtn');
+  if (!statusEl || !btn) return;
+  if (!sxMPEnabled) {
+    statusEl.textContent = '未启用';
+    statusEl.style.color = 'var(--text-muted)';
+    btn.textContent = '启用关键点';
+    btn.style.background = 'var(--accent-gold)';
+    return;
+  }
+  var ready = window.ShouXiangMP?.isReady?.();
+  if (ready) {
+    var done = sxKeypoints.left.palm || sxKeypoints.left.back || sxKeypoints.right.palm || sxKeypoints.right.back;
+    statusEl.textContent = done ? '✓ 已检测' : '就绪';
+    statusEl.style.color = done ? 'var(--accent-green)' : 'var(--accent-gold)';
+    btn.textContent = '已启用';
+    btn.style.background = 'var(--bg-inner)';
+  } else {
+    statusEl.textContent = '加载中...';
+    statusEl.style.color = 'var(--accent-gold)';
+  }
+}
+
+async function sxToggleMediaPipe() {
+  if (sxMPEnabled && window.ShouXiangMP?.isReady?.()) {
+    // 关闭
+    sxMPEnabled = false;
+    sxKeypoints.left = { palm: null, back: null };
+    sxKeypoints.right = { palm: null, back: null };
+    updateSxMPStatus();
+    showToast('已关闭 AI 关键点检测', 'info');
+    return;
+  }
+  // 启用: 加载 MediaPipe
+  sxMPEnabled = true;
+  updateSxMPStatus();
+  try {
+    showToast('正在加载 MediaPipe Hands 模型...', 'info');
+    await window.ShouXiangMP.loadMediaPipe();
+    updateSxMPStatus();
+    showToast('MediaPipe 加载完成,上传图时自动检测', 'success');
+  } catch (e) {
+    sxMPEnabled = false;
+    updateSxMPStatus();
+    showToast('MediaPipe 加载失败,降级为纯 AI 解读: ' + e.message, 'error');
+  }
+}
+window.sxToggleMediaPipe = sxToggleMediaPipe;
 
 function sxFlipImage(hand, side) {
   var base64 = sxGet(hand, side);
@@ -169,7 +271,21 @@ async function doShouxiang() {
   const isMale = sxGender === 'male';
   const 先天Hand = isMale ? '左手' : '右手';
   const 后天Hand = isMale ? '右手' : '左手';
-  const visionPrompt = buildShouxiangPrompt(先天Hand, 后天Hand, isMale);
+
+  // Tier 3: MediaPipe 量化事实 (如果有)
+  var quantFacts = '';
+  [['left', 先天Hand], ['right', 后天Hand]].forEach(function(p) {
+    var hand = p[0], handName = p[1];
+    var palm = sxKeypoints[hand].palm, back = sxKeypoints[hand].back;
+    if (palm || back) {
+      quantFacts += '\n【' + handName + '·MediaPipe 量化】\n';
+      if (palm) quantFacts += window.ShouXiangMP.formatQuantifiedForPrompt(palm) + '\n';
+      if (back) quantFacts += '(手背图: ' + window.ShouXiangMP.formatQuantifiedForPrompt(back).split('\n').slice(0, 3).join(' / ') + ')\n';
+    }
+  });
+  if (quantFacts) quantFacts = '\n\n【量化锚点·100%准确(MediaPipe 21 关键点本地检测,代码给出精确数值,不要用"看起来"等模糊描述)】\n' + quantFacts;
+
+  var visionPrompt = buildShouxiangPrompt(先天Hand, 后天Hand, isMale) + quantFacts;
 
   // 构造图片数组 (按提示词对应顺序: 先天掌心→先天手背→后天掌心→后天手背)
   const imageUrls = [];

@@ -430,8 +430,20 @@
       </div>
 
       <!-- 拍照提示 -->
-      <div style="font-size:0.75rem;color:var(--text-muted);background:var(--bg-inner);padding:0.5rem 0.8rem;border-radius:6px;margin-bottom:1rem;line-height:1.6;">
+      <div style="font-size:0.75rem;color:var(--text-muted);background:var(--bg-inner);padding:0.5rem 0.8rem;border-radius:6px;margin-bottom:0.6rem;line-height:1.6;">
         💡 <b>拍照建议</b>:掌心照手指自然张开、掌心朝上、光线均匀;手背照使指甲/关节可见。双手共 4 张图,AI 可交叉识别主线弧度、长短、分叉、岛纹等。
+      </div>
+
+      <!-- MediaPipe 关键点检测 (Tier 3) -->
+      <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.6rem;padding:0.4rem 0.6rem;background:var(--bg-card);border:1px solid var(--accent-gold);border-radius:6px;font-size:0.75rem;">
+        <span style="color:var(--accent-gold);font-weight:bold;">📐 AI 量化分析</span>
+        <span style="color:var(--text-secondary);flex:1;">
+          自动检测 21 个手部关键点,计算主线弧长/手指比例/手型 (纯本地,首次约 5-8MB 加载,缓存后秒级)
+        </span>
+        <button id="sxMPToggleBtn" onclick="sxToggleMediaPipe()" style="background:var(--accent-gold);color:#1a1612;border:none;padding:0.3rem 0.7rem;border-radius:4px;font-size:0.7rem;cursor:pointer;white-space:nowrap;">
+          启用关键点
+        </button>
+        <span id="sxMPStatus" style="color:var(--text-muted);font-size:0.7rem;min-width:60px;text-align:right;">未启用</span>
       </div>
 
       <div id="sxActionArea" style="display:none;text-align:center;margin-bottom:0.5rem;">
@@ -784,6 +796,8 @@
 <script src="app/liuyao.js?v=310"></script>
 <script src="app/qimen.js?v=310"></script>
 <script src="app/shouxiang.js?v=310"></script>
+<!-- MediaPipe Hands (ES Module, 跳过 vite HMR, 直接走 CDN) -->
+<script type="module" src="app/shouxiang-mp.js?v=310"></script>
 <script src="app/xingshi.js?v=310"></script>
 <script src="app/cross.js?v=310"></script>
 <script src="app/fengshui.js?v=310"></script>
