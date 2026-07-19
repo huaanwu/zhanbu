@@ -76,9 +76,9 @@ async function onSxFileSelect(e, hand, side) {
         document.getElementById('sxActionArea').style.display = 'block';
       }
 
-      // Tier 3 关键点: fire-and-forget
-      // 关键修复(任务 #43):之前 await detectHand 卡住整个 onload
-      // 改:不 await,后台跑
+      // Tier 3 关键点: 临时屏蔽 (任务 #43 诊断)
+      // 用户要求先验证手相 AI 解读主流程,关掉 detectHand 排除干扰
+      /*
       if (sxMPEnabled && window.ShouXiangMP?.isReady?.()) {
         const imgEl = document.getElementById(previewId);
         Promise.race([
@@ -101,6 +101,7 @@ async function onSxFileSelect(e, hand, side) {
           sxKeypoints[hand][side] = null;
         });
       }
+      */
     })();
   };
   reader.readAsDataURL(file);
