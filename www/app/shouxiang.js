@@ -269,30 +269,34 @@ async function doShouxiang() {
   await loadKBGroup('shouxiang');
 
   const isMale = sxGender === 'male';
+  // 男左先天/右后天; 女右先天/左后天(传统手相学)
   const 先天Hand = isMale ? '左手' : '右手';
   const 后天Hand = isMale ? '右手' : '左手';
+  // 物理手映射: sxImages[sxImagesKey] 存文件, 左 = 'left'
+  const 先天Side = isMale ? 'left' : 'right';
+  const 后天Side = isMale ? 'right' : 'left';
 
   // Tier 3: MediaPipe 量化事实 (如果有)
   var quantFacts = '';
-  [['left', 先天Hand], ['right', 后天Hand]].forEach(function(p) {
-    var hand = p[0], handName = p[1];
-    var palm = sxKeypoints[hand].palm, back = sxKeypoints[hand].back;
+  [[先天Side, 先天Hand], [后天Side, 后天Hand]].forEach(function(p) {
+    var sideKey = p[0], handName = p[1];
+    var palm = sxKeypoints[sideKey].palm, back = sxKeypoints[sideKey].back;
     if (palm || back) {
       quantFacts += '\n【' + handName + '·MediaPipe 量化】\n';
       if (palm) quantFacts += window.ShouXiangMP.formatQuantifiedForPrompt(palm) + '\n';
       if (back) quantFacts += '(手背图: ' + window.ShouXiangMP.formatQuantifiedForPrompt(back).split('\n').slice(0, 3).join(' / ') + ')\n';
     }
   });
-  if (quantFacts) quantFacts = '\n\n【量化锚点·100%准确(MediaPipe 21 关键点本地检测,代码给出精确数值,不要用"看起来"等模糊描述)】\n' + quantFacts;
+  if (quantFacts) quantFacts = '\n\n【量化锚点·100%准确】\n' + quantFacts;
 
   var visionPrompt = buildShouxiangPrompt(先天Hand, 后天Hand, isMale) + quantFacts;
 
   // 构造图片数组 (按提示词对应顺序: 先天掌心→先天手背→后天掌心→后天手背)
   const imageUrls = [];
-  [['left', 先天Hand], ['right', 后天Hand]].forEach(function(p) {
-    var hand = p[0];
+  [[先天Side, 先天Hand], [后天Side, 后天Hand]].forEach(function(p) {
+    var sideKey = p[0];
     ['palm', 'back'].forEach(function(side) {
-      var data = sxGet(hand, side);
+      var data = sxGet(sideKey, side);
       if (data) imageUrls.push({ type: 'image_url', image_url: { url: data } });
     });
   });
