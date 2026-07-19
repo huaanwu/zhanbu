@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-06-28T14:33:18.620Z",
+  "generated_at": "2026-07-19T16:58:48.398Z",
   "version": "1.0",
   "pass_threshold": 0.6,
   "overall": {
     "total": 30,
-    "pass": 30,
-    "fail": 0,
-    "pass_rate": "1.000",
-    "mean_norm": 0.9071428571428573
+    "pass": 20,
+    "fail": 10,
+    "pass_rate": "0.667",
+    "mean_norm": 0.6282539682539683
   },
   "per_domain": {
     "bazi": {
@@ -18,9 +18,9 @@
     },
     "liuyao": {
       "total": 8,
-      "pass": 8,
-      "pass_rate": "1.000",
-      "mean_norm": "0.885"
+      "pass": 0,
+      "pass_rate": "0.000",
+      "mean_norm": 0
     },
     "ziwei": {
       "total": 6,
@@ -30,9 +30,9 @@
     },
     "qimen": {
       "total": 6,
-      "pass": 6,
-      "pass_rate": "1.000",
-      "mean_norm": "0.867"
+      "pass": 4,
+      "pass_rate": "0.667",
+      "mean_norm": "0.503"
     }
   },
   "fixtures": [
@@ -281,22 +281,9 @@
       "category": "卦象",
       "difficulty": "easy",
       "question_text": "2026-06-28 14:30 时间起卦，本卦与动爻？",
-      "output_excerpt": "【事实·卦象】本卦：雷泽归妹\n【事实·动爻】共1个动爻：第4爻\n【事实·互卦】互卦为山风蛊\n【事实·动爻六亲】四爻庚午(官鬼)\n【事实·妻财爻】本卦有1个妻财爻：二爻(静)\n【事实·官鬼爻】本卦有2个官鬼爻：初爻(静)、四爻(动)\n【事实·世爻】第3爻三爻丁丑（父母）持世\n【事实·应爻】第6爻上爻庚戌（父母）应爻\n【事实·世应生克】世应五行同为土（比和，主平稳）\n【事实·月建日辰】月建未（本气土）",
-      "output_length": 504,
-      "error": null,
-      "fact_keywords_hit": [
-        "雷泽归妹",
-        "第4爻",
-        "山风蛊"
-      ],
-      "fact_keywords_missing": [],
-      "fact_hit_rate": 1,
-      "fact_score": 3,
-      "judgment_match": null,
-      "judgment_score": 0,
-      "raw_score": 3,
-      "max_score": 3,
-      "normalized": 1
+      "output_excerpt": "",
+      "output_length": 0,
+      "error": "农历引擎未加载，无法保证时间起卦和干支准确"
     },
     {
       "id": "liuyao-002",
@@ -304,23 +291,9 @@
       "category": "世应",
       "difficulty": "medium",
       "question_text": "雷泽归妹世爻应爻位置与六亲？",
-      "output_excerpt": "【事实·卦象】本卦：雷泽归妹\n【事实·动爻】共1个动爻：第4爻\n【事实·互卦】互卦为山风蛊\n【事实·动爻六亲】四爻庚午(官鬼)\n【事实·妻财爻】本卦有1个妻财爻：二爻(静)\n【事实·官鬼爻】本卦有2个官鬼爻：初爻(静)、四爻(动)\n【事实·世爻】第3爻三爻丁丑（父母）持世\n【事实·应爻】第6爻上爻庚戌（父母）应爻\n【事实·世应生克】世应五行同为土（比和，主平稳）\n【事实·月建日辰】月建未（本气土）",
-      "output_length": 504,
-      "error": null,
-      "fact_keywords_hit": [
-        "世爻",
-        "应爻",
-        "父母",
-        "官鬼"
-      ],
-      "fact_keywords_missing": [],
-      "fact_hit_rate": 1,
-      "fact_score": 4,
-      "judgment_match": null,
-      "judgment_score": 0,
-      "raw_score": 4,
-      "max_score": 4,
-      "normalized": 1
+      "output_excerpt": "",
+      "output_length": 0,
+      "error": "农历引擎未加载，无法保证时间起卦和干支准确"
     },
     {
       "id": "liuyao-003",
@@ -328,24 +301,9 @@
       "category": "动变",
       "difficulty": "hard",
       "question_text": "四爻动变，变化关系？",
-      "output_excerpt": "【事实·卦象】本卦：雷泽归妹\n【事实·动爻】共1个动爻：第4爻\n【事实·互卦】互卦为山风蛊\n【事实·动爻六亲】四爻庚午(官鬼)\n【事实·妻财爻】本卦有1个妻财爻：二爻(静)\n【事实·官鬼爻】本卦有2个官鬼爻：初爻(静)、四爻(动)\n【事实·世爻】第3爻三爻丁丑（父母）持世\n【事实·应爻】第6爻上爻庚戌（父母）应爻\n【事实·世应生克】世应五行同为土（比和，主平稳）\n【事实·月建日辰】月建未（本气土）",
-      "output_length": 504,
-      "error": null,
-      "fact_keywords_hit": [
-        "第4爻",
-        "变卦",
-        "变爻",
-        "动爻",
-        "卦"
-      ],
-      "fact_keywords_missing": [],
-      "fact_hit_rate": 1,
-      "fact_score": 4,
-      "judgment_match": "吉",
-      "judgment_score": 0,
-      "raw_score": 4,
-      "max_score": 6,
-      "normalized": 0.6666666666666666
+      "output_excerpt": "",
+      "output_length": 0,
+      "error": "农历引擎未加载，无法保证时间起卦和干支准确"
     },
     {
       "id": "liuyao-004",
@@ -353,25 +311,9 @@
       "category": "六亲六神",
       "difficulty": "easy",
       "question_text": "数字起卦(1,2,3)，天泽履第3爻动，本卦与六亲配置？",
-      "output_excerpt": "【事实·卦象】本卦：天泽履\n【事实·动爻】共1个动爻：第3爻\n【事实·互卦】互卦为乾为天\n【事实·动爻六亲】三爻丁丑(父母)\n【事实·妻财爻】本卦有1个妻财爻：二爻(静)\n【事实·官鬼爻】本卦有2个官鬼爻：初爻(静)、四爻(静)\n【事实·世爻】第5爻五爻壬申（兄弟）持世\n【事实·应爻】第2爻二爻丁卯（妻财）应爻\n【事实·世应生克】世爻金克应爻木（我克对方，主胜）\n【事实·月建日辰】月建未（本气土）",
-      "output_length": 513,
-      "error": null,
-      "fact_keywords_hit": [
-        "天泽履",
-        "第3爻",
-        "父母",
-        "兄弟",
-        "妻财",
-        "官鬼"
-      ],
-      "fact_keywords_missing": [],
-      "fact_hit_rate": 1,
-      "fact_score": 3,
-      "judgment_match": null,
-      "judgment_score": 0,
-      "raw_score": 3,
-      "max_score": 3,
-      "normalized": 1
+      "output_excerpt": "",
+      "output_length": 0,
+      "error": "农历引擎未加载，无法保证时间起卦和干支准确"
     },
     {
       "id": "liuyao-005",
@@ -379,24 +321,9 @@
       "category": "纳甲",
       "difficulty": "medium",
       "question_text": "雷泽归妹卦象与世应？",
-      "output_excerpt": "【事实·卦象】本卦：雷泽归妹\n【事实·动爻】共1个动爻：第4爻\n【事实·互卦】互卦为山风蛊\n【事实·动爻六亲】四爻庚午(官鬼)\n【事实·妻财爻】本卦有1个妻财爻：二爻(静)\n【事实·官鬼爻】本卦有2个官鬼爻：初爻(静)、四爻(动)\n【事实·世爻】第3爻三爻丁丑（父母）持世\n【事实·应爻】第6爻上爻庚戌（父母）应爻\n【事实·世应生克】世应五行同为土（比和，主平稳）\n【事实·月建日辰】月建未（本气土）",
-      "output_length": 504,
-      "error": null,
-      "fact_keywords_hit": [
-        "雷泽归妹",
-        "父母",
-        "世爻",
-        "应爻",
-        "第4爻"
-      ],
-      "fact_keywords_missing": [],
-      "fact_hit_rate": 1,
-      "fact_score": 4,
-      "judgment_match": null,
-      "judgment_score": 0,
-      "raw_score": 4,
-      "max_score": 4,
-      "normalized": 1
+      "output_excerpt": "",
+      "output_length": 0,
+      "error": "农历引擎未加载，无法保证时间起卦和干支准确"
     },
     {
       "id": "liuyao-006",
@@ -404,24 +331,9 @@
       "category": "旺衰",
       "difficulty": "hard",
       "question_text": "雷泽归妹世应关系与五行？",
-      "output_excerpt": "【事实·卦象】本卦：雷泽归妹\n【事实·动爻】共1个动爻：第4爻\n【事实·互卦】互卦为山风蛊\n【事实·动爻六亲】四爻庚午(官鬼)\n【事实·妻财爻】本卦有1个妻财爻：二爻(静)\n【事实·官鬼爻】本卦有2个官鬼爻：初爻(静)、四爻(动)\n【事实·世爻】第3爻三爻丁丑（父母）持世\n【事实·应爻】第6爻上爻庚戌（父母）应爻\n【事实·世应生克】世应五行同为土（比和，主平稳）\n【事实·月建日辰】月建未（本气土）",
-      "output_length": 504,
-      "error": null,
-      "fact_keywords_hit": [
-        "雷泽归妹",
-        "比和",
-        "妻财",
-        "父母",
-        "月建"
-      ],
-      "fact_keywords_missing": [],
-      "fact_hit_rate": 1,
-      "fact_score": 4,
-      "judgment_match": "吉",
-      "judgment_score": 0,
-      "raw_score": 4,
-      "max_score": 6,
-      "normalized": 0.6666666666666666
+      "output_excerpt": "",
+      "output_length": 0,
+      "error": "农历引擎未加载，无法保证时间起卦和干支准确"
     },
     {
       "id": "liuyao-007",
@@ -429,20 +341,9 @@
       "category": "用神",
       "difficulty": "hard",
       "question_text": "数字起卦(7,8,3)，事业占，用神取哪一爻？",
-      "output_excerpt": "【事实·卦象】本卦：山地剥\n【事实·动爻】共1个动爻：第3爻\n【事实·互卦】互卦为水雷屯\n【事实·动爻六亲】三爻乙卯(官鬼)\n【事实·妻财爻】本卦有1个妻财爻：五爻(静)\n【事实·官鬼爻】本卦有2个官鬼爻：三爻(动)、上爻(静)\n【事实·世爻】第5爻五爻丙子（妻财）持世\n【事实·应爻】第2爻二爻乙巳（父母）应爻\n【事实·世应生克】世爻水克应爻火（我克对方，主胜）\n【事实·月建日辰】月建未（本气土）",
-      "output_length": 489,
-      "error": null,
-      "fact_keywords_hit": [
-        "官鬼"
-      ],
-      "fact_keywords_missing": [],
-      "fact_hit_rate": 1,
-      "fact_score": 1,
-      "judgment_match": "吉",
-      "judgment_score": 0,
-      "raw_score": 1,
-      "max_score": 1,
-      "normalized": 1
+      "output_excerpt": "",
+      "output_length": 0,
+      "error": "农历引擎未加载，无法保证时间起卦和干支准确"
     },
     {
       "id": "liuyao-008",
@@ -450,24 +351,9 @@
       "category": "旬空月破",
       "difficulty": "medium",
       "question_text": "癸巳日柱的旬空是哪两个支？",
-      "output_excerpt": "【事实·卦象】本卦：雷泽归妹\n【事实·动爻】共1个动爻：第4爻\n【事实·互卦】互卦为山风蛊\n【事实·动爻六亲】四爻庚午(官鬼)\n【事实·妻财爻】本卦有1个妻财爻：二爻(静)\n【事实·官鬼爻】本卦有2个官鬼爻：初爻(静)、四爻(动)\n【事实·世爻】第3爻三爻丁丑（父母）持世\n【事实·应爻】第6爻上爻庚戌（父母）应爻\n【事实·世应生克】世应五行同为土（比和，主平稳）\n【事实·月建日辰】月建未（本气土）",
-      "output_length": 504,
-      "error": null,
-      "fact_keywords_hit": [
-        "午",
-        "未",
-        "空"
-      ],
-      "fact_keywords_missing": [
-        "甲申旬"
-      ],
-      "fact_hit_rate": 0.75,
-      "fact_score": 3,
-      "judgment_match": null,
-      "judgment_score": 0,
-      "raw_score": 3,
-      "max_score": 4,
-      "normalized": 0.75
+      "output_excerpt": "",
+      "output_length": 0,
+      "error": "农历引擎未加载，无法保证时间起卦和干支准确"
     },
     {
       "id": "ziwei-001",
@@ -624,8 +510,8 @@
       "category": "排盘",
       "difficulty": "easy",
       "question_text": "2026-11-22 12:00（小雪节气刚过），问阳遁阴遁与局数？",
-      "output_excerpt": "【事实·局数】阴遁5局（小雪节气，已过1.7天）\n【事实·四柱】丙午 庚子 庚申 壬午\n【事实·旬首】甲戌\n【事实·值符】地盘值符在震三宫（己）\n【事实·值使】人盘值使伤门在震三宫（阴遁逆行第0步，起点，事情刚启动）\n【事实·值使宫门】值使伤门属木，落震三宫属木，宫门比和，值使有力\n【事实·符使同宫】值符值使同落震三宫，符使同心，事体统一，效率最高\n【事实·生门】生门在艮八宫（东北），主财位\n【事",
-      "output_length": 220,
+      "output_excerpt": "【事实·局数】阴遁5局（小雪节气，已过1.7天）\n【事实·四柱】丙午 庚子 庚子 壬午\n【事实·旬首】甲戌\n【事实·值符】地盘值符在震三宫（己）\n【事实·值符星】天乙天冲临震三宫，主事体性质冲动\n【事实·值符宫星】震三宫属木，值符星天冲属木，宫星比和，值符有力\n【事实·值使】人盘值使死门在震三宫（阴遁逆行第0步，起点，事情刚启动）\n【事实·值使宫门】宫木克门土，值使受宫压制（门迫），执行受阻\n【事",
+      "output_length": 304,
       "error": null,
       "fact_keywords_hit": [
         "阴遁",
@@ -647,23 +533,24 @@
       "category": "值符值使",
       "difficulty": "medium",
       "question_text": "此局值符落宫与值使落宫？",
-      "output_excerpt": "【事实·局数】阴遁5局（小雪节气，已过1.7天）\n【事实·四柱】丙午 庚子 庚申 壬午\n【事实·旬首】甲戌\n【事实·值符】地盘值符在震三宫（己）\n【事实·值使】人盘值使伤门在震三宫（阴遁逆行第0步，起点，事情刚启动）\n【事实·值使宫门】值使伤门属木，落震三宫属木，宫门比和，值使有力\n【事实·符使同宫】值符值使同落震三宫，符使同心，事体统一，效率最高\n【事实·生门】生门在艮八宫（东北），主财位\n【事",
-      "output_length": 220,
+      "output_excerpt": "【事实·局数】阴遁5局（小雪节气，已过1.7天）\n【事实·四柱】丙午 庚子 庚子 壬午\n【事实·旬首】甲戌\n【事实·值符】地盘值符在震三宫（己）\n【事实·值符星】天乙天冲临震三宫，主事体性质冲动\n【事实·值符宫星】震三宫属木，值符星天冲属木，宫星比和，值符有力\n【事实·值使】人盘值使死门在震三宫（阴遁逆行第0步，起点，事情刚启动）\n【事实·值使宫门】宫木克门土，值使受宫压制（门迫），执行受阻\n【事",
+      "output_length": 304,
       "error": null,
       "fact_keywords_hit": [
         "值符",
         "震三宫",
-        "值使",
+        "值使"
+      ],
+      "fact_keywords_missing": [
         "伤门"
       ],
-      "fact_keywords_missing": [],
-      "fact_hit_rate": 1,
-      "fact_score": 3,
+      "fact_hit_rate": 0.75,
+      "fact_score": 2.25,
       "judgment_match": null,
       "judgment_score": 0,
-      "raw_score": 3,
+      "raw_score": 2.25,
       "max_score": 3,
-      "normalized": 1
+      "normalized": 0.75
     },
     {
       "id": "qimen-003",
@@ -671,23 +558,24 @@
       "category": "九星八门",
       "difficulty": "medium",
       "question_text": "此局含哪些关键星门？",
-      "output_excerpt": "【事实·局数】阴遁5局（小雪节气，已过1.7天）\n【事实·四柱】丙午 庚子 庚申 壬午\n【事实·旬首】甲戌\n【事实·值符】地盘值符在震三宫（己）\n【事实·值使】人盘值使伤门在震三宫（阴遁逆行第0步，起点，事情刚启动）\n【事实·值使宫门】值使伤门属木，落震三宫属木，宫门比和，值使有力\n【事实·符使同宫】值符值使同落震三宫，符使同心，事体统一，效率最高\n【事实·生门】生门在艮八宫（东北），主财位\n【事",
-      "output_length": 220,
+      "output_excerpt": "【事实·局数】阴遁5局（小雪节气，已过1.7天）\n【事实·四柱】丙午 庚子 庚子 壬午\n【事实·旬首】甲戌\n【事实·值符】地盘值符在震三宫（己）\n【事实·值符星】天乙天冲临震三宫，主事体性质冲动\n【事实·值符宫星】震三宫属木，值符星天冲属木，宫星比和，值符有力\n【事实·值使】人盘值使死门在震三宫（阴遁逆行第0步，起点，事情刚启动）\n【事实·值使宫门】宫木克门土，值使受宫压制（门迫），执行受阻\n【事",
+      "output_length": 304,
       "error": null,
       "fact_keywords_hit": [
-        "伤门",
         "生门",
-        "震三宫",
+        "震三宫"
+      ],
+      "fact_keywords_missing": [
+        "伤门",
         "艮八宫"
       ],
-      "fact_keywords_missing": [],
-      "fact_hit_rate": 1,
-      "fact_score": 4,
+      "fact_hit_rate": 0.5,
+      "fact_score": 2,
       "judgment_match": null,
       "judgment_score": 0,
-      "raw_score": 4,
+      "raw_score": 2,
       "max_score": 4,
-      "normalized": 1
+      "normalized": 0.5
     },
     {
       "id": "qimen-004",
@@ -695,8 +583,8 @@
       "category": "符使关系",
       "difficulty": "hard",
       "question_text": "此局符使关系（符使同宫/异宫）？",
-      "output_excerpt": "【事实·局数】阴遁5局（小雪节气，已过1.7天）\n【事实·四柱】丙午 庚子 庚申 壬午\n【事实·旬首】甲戌\n【事实·值符】地盘值符在震三宫（己）\n【事实·值使】人盘值使伤门在震三宫（阴遁逆行第0步，起点，事情刚启动）\n【事实·值使宫门】值使伤门属木，落震三宫属木，宫门比和，值使有力\n【事实·符使同宫】值符值使同落震三宫，符使同心，事体统一，效率最高\n【事实·生门】生门在艮八宫（东北），主财位\n【事",
-      "output_length": 220,
+      "output_excerpt": "【事实·局数】阴遁5局（小雪节气，已过1.7天）\n【事实·四柱】丙午 庚子 庚子 壬午\n【事实·旬首】甲戌\n【事实·值符】地盘值符在震三宫（己）\n【事实·值符星】天乙天冲临震三宫，主事体性质冲动\n【事实·值符宫星】震三宫属木，值符星天冲属木，宫星比和，值符有力\n【事实·值使】人盘值使死门在震三宫（阴遁逆行第0步，起点，事情刚启动）\n【事实·值使宫门】宫木克门土，值使受宫压制（门迫），执行受阻\n【事",
+      "output_length": 304,
       "error": null,
       "fact_keywords_hit": [
         "符使同宫",
@@ -718,22 +606,23 @@
       "category": "用神",
       "difficulty": "hard",
       "question_text": "问财运，看生门落宫？",
-      "output_excerpt": "【事实·局数】阴遁5局（小雪节气，已过1.7天）\n【事实·四柱】丙午 庚子 庚申 壬午\n【事实·旬首】甲戌\n【事实·值符】地盘值符在震三宫（己）\n【事实·值使】人盘值使伤门在震三宫（阴遁逆行第0步，起点，事情刚启动）\n【事实·值使宫门】值使伤门属木，落震三宫属木，宫门比和，值使有力\n【事实·符使同宫】值符值使同落震三宫，符使同心，事体统一，效率最高\n【事实·生门】生门在艮八宫（东北），主财位\n【事",
-      "output_length": 220,
+      "output_excerpt": "【事实·局数】阴遁5局（小雪节气，已过1.7天）\n【事实·四柱】丙午 庚子 庚子 壬午\n【事实·旬首】甲戌\n【事实·值符】地盘值符在震三宫（己）\n【事实·值符星】天乙天冲临震三宫，主事体性质冲动\n【事实·值符宫星】震三宫属木，值符星天冲属木，宫星比和，值符有力\n【事实·值使】人盘值使死门在震三宫（阴遁逆行第0步，起点，事情刚启动）\n【事实·值使宫门】宫木克门土，值使受宫压制（门迫），执行受阻\n【事",
+      "output_length": 304,
       "error": null,
       "fact_keywords_hit": [
         "生门",
-        "艮八宫",
         "财位"
       ],
-      "fact_keywords_missing": [],
-      "fact_hit_rate": 1,
-      "fact_score": 3,
+      "fact_keywords_missing": [
+        "艮八宫"
+      ],
+      "fact_hit_rate": 0.6666666666666666,
+      "fact_score": 2,
       "judgment_match": "凶",
       "judgment_score": 0,
-      "raw_score": 3,
+      "raw_score": 2,
       "max_score": 5,
-      "normalized": 0.6
+      "normalized": 0.4
     },
     {
       "id": "qimen-006",
@@ -741,22 +630,23 @@
       "category": "宫门关系",
       "difficulty": "medium",
       "question_text": "值使宫门五行关系？",
-      "output_excerpt": "【事实·局数】阴遁5局（小雪节气，已过1.7天）\n【事实·四柱】丙午 庚子 庚申 壬午\n【事实·旬首】甲戌\n【事实·值符】地盘值符在震三宫（己）\n【事实·值使】人盘值使伤门在震三宫（阴遁逆行第0步，起点，事情刚启动）\n【事实·值使宫门】值使伤门属木，落震三宫属木，宫门比和，值使有力\n【事实·符使同宫】值符值使同落震三宫，符使同心，事体统一，效率最高\n【事实·生门】生门在艮八宫（东北），主财位\n【事",
-      "output_length": 220,
+      "output_excerpt": "【事实·局数】阴遁5局（小雪节气，已过1.7天）\n【事实·四柱】丙午 庚子 庚子 壬午\n【事实·旬首】甲戌\n【事实·值符】地盘值符在震三宫（己）\n【事实·值符星】天乙天冲临震三宫，主事体性质冲动\n【事实·值符宫星】震三宫属木，值符星天冲属木，宫星比和，值符有力\n【事实·值使】人盘值使死门在震三宫（阴遁逆行第0步，起点，事情刚启动）\n【事实·值使宫门】宫木克门土，值使受宫压制（门迫），执行受阻\n【事",
+      "output_length": 304,
       "error": null,
       "fact_keywords_hit": [
-        "伤门",
         "震三宫",
         "比和"
       ],
-      "fact_keywords_missing": [],
-      "fact_hit_rate": 1,
-      "fact_score": 3,
+      "fact_keywords_missing": [
+        "伤门"
+      ],
+      "fact_hit_rate": 0.6666666666666666,
+      "fact_score": 2,
       "judgment_match": null,
       "judgment_score": 0,
-      "raw_score": 3,
+      "raw_score": 2,
       "max_score": 3,
-      "normalized": 1
+      "normalized": 0.6666666666666666
     }
   ]
 }

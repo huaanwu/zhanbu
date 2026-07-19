@@ -27,10 +27,31 @@ const assert = require('node:assert');
 // 用 vm.createContext 隔离 var 声明,避免重复 eval 报 SyntaxError
 const vm = require('vm');
 const ctx = vm.createContext({ window: {}, console, fs });
-const LIUYAO_OK = (() => { try { vm.runInContext(fs.readFileSync('liuyao.js', 'utf-8'), ctx); return true; } catch(e) { console.error('liuyao.js load fail:', e.message); return false; }})();
-const QIMEN_OK  = (() => { try { vm.runInContext(fs.readFileSync('qimen.js',  'utf-8'), ctx); return true; } catch(e) { console.error('qimen.js load fail:', e.message);  return false; }})();
-vm.runInContext(fs.readFileSync('expert.js', 'utf-8'), ctx);
-vm.runInContext(fs.readFileSync('xingshi.js', 'utf-8'), ctx);
+
+// v3.0.5 拆分后,expert.js 成了 12 行 shim,真正的实现在 expert/*.js + lib/ganzhi.js
+// 必须按 index.html 的顺序加载:lib/ganzhi.js → expert/tables.js → expert/*.js → expert/chain.js
+// 不然 Expert.bazi / Expert.ziwei / getYearGZ 等会全 undefined (ref 7201f99 回归)
+function _load(file) {
+  try {
+    vm.runInContext(fs.readFileSync(file, 'utf-8'), ctx);
+    return true;
+  } catch (e) {
+    console.error('[load fail]', file, e.message);
+    return false;
+  }
+}
+_load('lib/ganzhi.js');
+_load('expert/tables.js');
+_load('expert/bazi.js');
+_load('expert/liuyao.js');
+_load('expert/qimen.js');
+_load('expert/ziwei.js');
+_load('expert/chain.js');
+
+// 还需加载非 expert/ 的领域实现 — 沿用旧路径
+const LIUYAO_OK = _load('liuyao.js');
+const QIMEN_OK  = _load('qimen.js');
+_load('xingshi.js');
 
 const { liuyao, qimen } = ctx.window;
 // 把 liuyao/qimen 也挂到 ctx,这样 vm.runInContext 里能直接引用
