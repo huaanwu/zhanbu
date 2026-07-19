@@ -468,6 +468,16 @@
       cross:  { label: '三术同参', source: '三术同参', signalFn: function(p) { return p.bazi?.gz?.day; }, isCross: true, kbFlags: { primary: false, extended: false, daoism: true } },
       fengshui:  { label: '风水',     isCustom: true, kbFlags: { daoism: false, chainOfThought: false }, ragBudget: 1200 },
       xingshi:   { label: '姓名学',   isCustom: true, kbFlags: { daoism: false, chainOfThought: false } },
+      shouxiang: {
+        label: '手相',
+        source: '手相',
+        signalFn: function(p) { return p.handSummary || 'shouxiang'; },
+        isCustom: true,
+        kbFlags: { daoism: false, chainOfThought: false },
+        // 支持 pan.bazi / pan.ziwei 跨域联动: 自动注入命盘关键事实
+        crossLink: { bazi: true, ziwei: true, liuyao: false, qimen: false },
+        ragBudget: 1200
+      },
       daofobuddhism: { label: '道佛化解', isCustom: true, kbFlags: { primary: false, extended: false, daoism: false, chainOfThought: false } },
     };
     var cfg = CFG[domain];
@@ -557,12 +567,35 @@
         + '6. 用神一致时结论更可靠，用神不一致时需分别说明各术视角\n\n';
     }
 
+    // 6.5) 手相特殊: 跨域联动 (八字/紫微)
+    // 如果 pan 含 bazi/ziwei, 自动注入对应命盘的关键事实,
+    // 让手相 AI 同时引用掌纹 + 命盘综合判断, 大幅提升准确度
+    var shouxiangLink = '';
+    if (cfg.crossLink && pan) {
+      try {
+        var linkParts = [];
+        if (cfg.crossLink.bazi && pan.bazi && window.Expert?.bazi) {
+          linkParts.push('【八字事实·用于交叉印证手相】\n' + window.Expert.bazi(pan.bazi));
+        }
+        if (cfg.crossLink.ziwei && pan.ziwei && window.Expert?.ziwei) {
+          linkParts.push('【紫微事实·用于交叉印证手相】\n' + window.Expert.ziwei(pan.ziwei));
+        }
+        if (linkParts.length > 0) {
+          shouxiangLink = '【跨域联动】\n'
+            + '本手相解读必须结合下方命盘事实做交叉验证。掌纹反映先天/当下身体, '
+            + '命盘反映运势方向, 二者吻合=高置信, 二者矛盾=需谨慎, 必须分别说明。\n\n'
+            + linkParts.join('\n');
+        }
+      } catch (e) { console.warn('[AI] shouxiang cross-link fail:', e); }
+    }
+
     // 7) 组装 — 简洁版(任务 #33:删除分层/Few-shot/CoT/JSON 强制)
     // 保留:Expert 事实 + RAG + 历史校准 + 反馈校准 + KB
     // 删除:CorePrompts 分层/动态 Few-shot/Chain-of-Thought/JSON 结构化约束
     var system = extraSystem || crossPrefix;
     if (!cfg.isCross && facts) system += '【确定事实】\n' + facts + '\n';
     if (cfg.isCross) system += facts;
+    if (shouxiangLink) system += shouxiangLink + '\n';
     system += (ragContent || '')
       + (historyPrompt || '')
       + (feedbackCalib || '')

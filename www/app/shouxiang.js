@@ -181,6 +181,31 @@ async function doShouxiang() {
     });
   });
 
+  // Tier 2 联动: 把八字/紫微/三术同参最近一次排盘注入 system prompt
+  // 从 currentBazi/currentZw/currentCross/currentLy/currentQm 中按优先级取一个
+  var linkPan = null;
+  var linkSrc = '';
+  if (window.currentCross && (window.currentCross.bazi || window.currentCross.ziwei)) {
+    linkPan = window.currentCross;
+    linkSrc = '三术同参';
+  } else if (window.currentBazi) {
+    linkPan = { bazi: window.currentBazi };
+    linkSrc = '八字';
+  } else if (window.currentZw) {
+    linkPan = { ziwei: window.currentZw };
+    linkSrc = '紫微';
+  }
+  var linkHint = '';
+  if (linkPan) {
+    linkHint = `\n\n【已联动】本次手相解读结合用户最新一次${linkSrc}排盘做交叉印证。`;
+  }
+  const system = await Core.AI.buildSystemPrompt({
+    domain: 'shouxiang',
+    pan: linkPan,
+    question: '',
+    extraSystem: (visionPrompt || '') + linkHint
+  });
+
   // 检测本地模型
   async function checkLocalModel(port) {
     try {
@@ -195,19 +220,24 @@ async function doShouxiang() {
   const localPort = getLocalServerPort();
   const hasVL = await checkLocalModel(localPort);
 
-  // 本地 VL 一把搞定
+  // 统一调用: 本地 VL 优先, 失败则降级到云端
+  // system 由 Core.AI.buildSystemPrompt 统一组装(含跨域命盘事实 + KB + 反馈)
+  // user 内容 = visionPrompt + 4 张图
+  const messages = [{
+    role: 'user',
+    content: [{ type: 'text', text: visionPrompt + '\n\n【语言约束】所有输出必须使用纯中文,禁止英文/思考过程/分析步骤。' }].concat(imageUrls)
+  }];
+
+  // ========== 本地 VL 一把搞定 ==========
   if (hasVL) {
     try {
-      resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在深度思考（最长8分钟）...</div>`;
+      resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在深度思考(最长8分钟)...</div>`;
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 600000);
-      const feedbackCalib = window.FeedbackLoop ? window.FeedbackLoop.getCalibrationPrompt('shouxiang') : '';
-      const fullPrompt = visionPrompt + '\n\n知识库参考:\n' + kbPrimary('shouxiang') + kbExtended('shouxiang', '') + (feedbackCalib ? '\n\n' + feedbackCalib : '') + '\n\n【语言约束】所有输出必须使用纯中文，禁止输出任何英文单词、句子或混合中英文内容。禁止输出思考过程、分析步骤、"thinking process"等元内容。';
-      const content = [{ type: 'text', text: fullPrompt }].concat(imageUrls);
       const res = await fetch(`${getLocalServerUrl()}/v1/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'local', messages: [{ role: 'user', content }], temperature: 0.15, max_tokens: 4096 }),
+        body: JSON.stringify({ model: 'local', system, messages, temperature: 0.15, max_tokens: 4096 }),
         signal: ctrl.signal
       });
       clearTimeout(timer);
@@ -223,24 +253,22 @@ async function doShouxiang() {
     }
   }
 
-  // 云端 VL fallback
+  // ========== 云端 VL fallback ==========
   const vKey = localStorage.getItem('vision_api_key') || '';
   if (!vKey) {
     resultEl.innerHTML = `<div class="error">本地识图服务未启动(${localPort})，且未配置识图 API Key。<br>请在设置页填写阿里云百炼 API Key，或启动本地 VL 模型。</div>`;
     return;
   }
 
-  resultEl.innerHTML = '<div class="loading">调用云端识图（' + imageUrls.length + ' 张图分析）...</div>';
+  resultEl.innerHTML = '<div class="loading">调用云端识图(' + imageUrls.length + ' 张图分析)...</div>';
   try {
     const model = localStorage.getItem('vision_model') || 'qwen-vl-plus';
-    const promptText = visionPrompt + '\n\n' + kbPrimary('shouxiang') + kbExtended('shouxiang', '') + (window.FeedbackLoop ? window.FeedbackLoop.getCalibrationPrompt('shouxiang') : '') + '\n\n【语言约束】所有输出必须使用纯中文，禁止输出任何英文单词、句子或混合中英文内容。禁止输出思考过程、分析步骤、"thinking process"等元内容。';
-    const content = [{ type: 'text', text: promptText }].concat(imageUrls);
     const ctrl3 = new AbortController();
     const t3 = setTimeout(() => ctrl3.abort(), 120000);
     const res = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + vKey },
-      body: JSON.stringify({ model, messages: [{ role: 'user', content }], temperature: 0.6, max_tokens: 4096 }),
+      body: JSON.stringify({ model, system, messages, temperature: 0.6, max_tokens: 4096 }),
       signal: ctrl3.signal
     });
     clearTimeout(t3);
