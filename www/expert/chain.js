@@ -320,9 +320,15 @@ Expert.score = function(domain, pan) {
   if (domain === 'xingshi') {
     // 姓名评分：五格吉凶、三才配置、数理得分
     // xingshi.calculateGege() 返回扁平对象 {tiange, renge, ...},无 wuge wrapper
+    // 吉凶判定使用 Xingshi.WUGE_JIXIONG 全数值表,不再用尾数简化(尾数查法对 26/36/46/56/66/76 等全误判)
     const ge = pan.wuge || pan;
-    const goodGe = [1,3,5,6,7,8,11,13,15,16,17,18,21,23,24,25,31,32,33,35,37,39,41,45,47,48,52,57,61,63,65,67,68,77,78,81];
-    const scores_list = [ge.tiange, ge.renge, ge.dige, ge.waige, ge.zongge].map(g => goodGe.includes(g) ? 80 : 50);
+    const judgeFn = (window.Xingshi && window.Xingshi.judgeNumberLuck) || function(n){ return '大吉'; /* fallback */ };
+    const scores_list = [ge.tiange, ge.renge, ge.dige, ge.waige, ge.zongge].map(function(g) {
+      const luck = judgeFn(g);
+      if (luck === '大吉') return 80;
+      if (luck === '中吉') return 65;
+      return 50;
+    });
     scores.overall = Math.round(scores_list.reduce((a,b)=>a+b,0) / 5);
     scores.career = scores_list[1]; // 人格
     scores.wealth = scores_list[0]; // 天格
