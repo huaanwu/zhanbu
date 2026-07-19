@@ -356,40 +356,82 @@
         </div>
       </div>
 
-      <!-- 左右手上传 -->
+      <!-- 左右手上传 (每手掌心+手背 2 张, 共 4 张) -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <!-- 左手 -->
         <div>
           <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.3rem;text-align:center;">
             左手 · <span id="sxLeftLabel">先天命格</span>
           </div>
-          <div id="sxUploadAreaLeft" style="border:2px dashed var(--border);border-radius:12px;padding:1.5rem;text-align:center;cursor:pointer;transition:border-color 0.2s;" onclick="document.getElementById('sxFileInputLeft').click()">
-            <div style="font-size:1.5rem;margin-bottom:0.3rem;">✋</div>
-            <div style="color:var(--text-secondary);font-size:0.8rem;">点击上传左手照片</div>
-            <input type="file" id="sxFileInputLeft" accept="image/*" style="display:none;" onchange="onSxFileSelect(event, 'left')">
-          </div>
-          <div id="sxPreviewWrapLeft" style="display:none;margin-top:0.5rem;text-align:center;">
-            <img id="sxPreviewLeft" style="max-width:100%;max-height:150px;border-radius:8px;border:1px solid var(--border);">
-            <div style="margin-top:0.3rem;">
-              <button onclick="sxFlipImage('left')" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-secondary);padding:0.3rem 0.8rem;border-radius:4px;font-size:0.75rem;cursor:pointer;">↔️ 镜像翻转</button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;">
+            <div>
+              <div style="font-size:0.7rem;color:var(--text-muted);text-align:center;margin-bottom:0.2rem;">掌心</div>
+              <div id="sxUploadAreaLeftPalm" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('sxFileInputLeftPalm').click()">
+                <div style="font-size:1.2rem;">🤚</div>
+                <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
+                <input type="file" id="sxFileInputLeftPalm" accept="image/*" style="display:none;" onchange="onSxFileSelect(event, 'left', 'palm')">
+              </div>
+              <div id="sxPreviewWrapLeftPalm" style="display:none;margin-top:0.3rem;text-align:center;">
+                <img id="sxPreviewLeftPalm" style="max-width:100%;max-height:90px;border-radius:6px;border:1px solid var(--border);">
+              </div>
+            </div>
+            <div>
+              <div style="font-size:0.7rem;color:var(--text-muted);text-align:center;margin-bottom:0.2rem;">手背</div>
+              <div id="sxUploadAreaLeftBack" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('sxFileInputLeftBack').click()">
+                <div style="font-size:1.2rem;">✋</div>
+                <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
+                <input type="file" id="sxFileInputLeftBack" accept="image/*" style="display:none;" onchange="onSxFileSelect(event, 'left', 'back')">
+              </div>
+              <div id="sxPreviewWrapLeftBack" style="display:none;margin-top:0.3rem;text-align:center;">
+                <img id="sxPreviewLeftBack" style="max-width:100%;max-height:90px;border-radius:6px;border:1px solid var(--border);">
+              </div>
             </div>
           </div>
+          <div style="display:flex;gap:0.3rem;justify-content:center;margin-top:0.3rem;">
+            <button onclick="sxFlipImage('left','palm')" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-secondary);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.7rem;cursor:pointer;">↔️ 掌心翻转</button>
+            <button onclick="sxFlipImage('left','back')" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-secondary);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.7rem;cursor:pointer;">↔️ 手背翻转</button>
+          </div>
         </div>
+
+        <!-- 右手 -->
         <div>
           <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.3rem;text-align:center;">
             右手 · <span id="sxRightLabel">后天运势</span>
           </div>
-          <div id="sxUploadAreaRight" style="border:2px dashed var(--border);border-radius:12px;padding:1.5rem;text-align:center;cursor:pointer;transition:border-color 0.2s;" onclick="document.getElementById('sxFileInputRight').click()">
-            <div style="font-size:1.5rem;margin-bottom:0.3rem;">✋</div>
-            <div style="color:var(--text-secondary);font-size:0.8rem;">点击上传右手照片</div>
-            <input type="file" id="sxFileInputRight" accept="image/*" style="display:none;" onchange="onSxFileSelect(event, 'right')">
-          </div>
-          <div id="sxPreviewWrapRight" style="display:none;margin-top:0.5rem;text-align:center;">
-            <img id="sxPreviewRight" style="max-width:100%;max-height:150px;border-radius:8px;border:1px solid var(--border);">
-            <div style="margin-top:0.3rem;">
-              <button onclick="sxFlipImage('right')" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-secondary);padding:0.3rem 0.8rem;border-radius:4px;font-size:0.75rem;cursor:pointer;">↔️ 镜像翻转</button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;">
+            <div>
+              <div style="font-size:0.7rem;color:var(--text-muted);text-align:center;margin-bottom:0.2rem;">掌心</div>
+              <div id="sxUploadAreaRightPalm" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('sxFileInputRightPalm').click()">
+                <div style="font-size:1.2rem;">🤚</div>
+                <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
+                <input type="file" id="sxFileInputRightPalm" accept="image/*" style="display:none;" onchange="onSxFileSelect(event, 'right', 'palm')">
+              </div>
+              <div id="sxPreviewWrapRightPalm" style="display:none;margin-top:0.3rem;text-align:center;">
+                <img id="sxPreviewRightPalm" style="max-width:100%;max-height:90px;border-radius:6px;border:1px solid var(--border);">
+              </div>
+            </div>
+            <div>
+              <div style="font-size:0.7rem;color:var(--text-muted);text-align:center;margin-bottom:0.2rem;">手背</div>
+              <div id="sxUploadAreaRightBack" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('sxFileInputRightBack').click()">
+                <div style="font-size:1.2rem;">✋</div>
+                <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
+                <input type="file" id="sxFileInputRightBack" accept="image/*" style="display:none;" onchange="onSxFileSelect(event, 'right', 'back')">
+              </div>
+              <div id="sxPreviewWrapRightBack" style="display:none;margin-top:0.3rem;text-align:center;">
+                <img id="sxPreviewRightBack" style="max-width:100%;max-height:90px;border-radius:6px;border:1px solid var(--border);">
+              </div>
             </div>
           </div>
+          <div style="display:flex;gap:0.3rem;justify-content:center;margin-top:0.3rem;">
+            <button onclick="sxFlipImage('right','palm')" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-secondary);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.7rem;cursor:pointer;">↔️ 掌心翻转</button>
+            <button onclick="sxFlipImage('right','back')" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-secondary);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.7rem;cursor:pointer;">↔️ 手背翻转</button>
+          </div>
         </div>
+      </div>
+
+      <!-- 拍照提示 -->
+      <div style="font-size:0.75rem;color:var(--text-muted);background:var(--bg-inner);padding:0.5rem 0.8rem;border-radius:6px;margin-bottom:1rem;line-height:1.6;">
+        💡 <b>拍照建议</b>:掌心照手指自然张开、掌心朝上、光线均匀;手背照使指甲/关节可见。双手共 4 张图,AI 可交叉识别主线弧度、长短、分叉、岛纹等。
       </div>
 
       <div id="sxActionArea" style="display:none;text-align:center;margin-bottom:0.5rem;">
