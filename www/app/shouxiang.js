@@ -312,6 +312,7 @@ function pickLinkPan() {
 }
 
 async function doShouxiang() {
+  console.log("[sx] doShouxiang 入口, images:", JSON.stringify(Object.keys(sxImages).map(function(h){return [h,Object.keys(sxImages[h]).filter(function(s){return !!sxImages[h][s]}).join(",")];})), "localPort:", getLocalServerPort(), "localUrl:", getLocalServerUrl());
   if (!sxHasAny()) {
     showToast('请至少上传一只手的一张手相照片', 'error');
     return;
@@ -413,21 +414,19 @@ async function doShouxiang() {
   // 不再需要 _setAbort 闭包胶水 — callMultimodalVision 内部一个 try/finally 直接接 Core.AI.
 
   async function callMultimodalVision(endpoint, headers, body, label, timeoutMs) {
-    let fullText = '';
+    console.log("[sx] callMultimodalVision 入口, endpoint:", endpoint, "body大小:", JSON.stringify(body).length);
     const ctrl = new AbortController();
     Core.AI.setCurrentStreamAbort(ctrl);
-    // 计时器只能在 finally 清,不能在 fetch resolve 后清:
-    // fetch resolve 只代表 headers 返回,SSE body 可能再 hang 远超 timeoutMs
-    // 用 timer 标志区分 user-stop 与 timeout:ctrl.signal.reason = 'sx-timeout' vs default 'user-stop'
     const timer = setTimeout(() => {
       try { ctrl.abort('sx-timeout'); } catch (_) {}
     }, timeoutMs);
     Core.Stream.showStreamIndicator();
     try {
+      const nonStreamBody = Object.assign({}, body, { stream: false });
       const res = await fetch(endpoint, {
         method: 'POST',
         headers,
-        body: JSON.stringify(body),
+        body: JSON.stringify(nonStreamBody),
         signal: ctrl.signal,
       });
       if (!res.ok) {
@@ -435,34 +434,14 @@ async function doShouxiang() {
         try { const j = await res.json(); errMsg = j.error?.message || errMsg; } catch (jsonErr) { console.warn('[sx] parse api error body fail:', jsonErr.message); }
         throw new Error(`${label} HTTP ${res.status}: ${errMsg}`);
       }
-      // 本地VL请求:检测WebView是否支持ReadableStream
-      // Capacitor在某些Android版本不支持body.getReader()
-      // 不支持就走非流式
-      if (res.body && typeof res.body.getReader === 'function' && res.headers.get('content-type')?.includes('text/event-stream')) {
-        // 流式路径 (支持ReadableStream的浏览器)
-        fullText = await Core.AI.readSSE(res.body, function (_delta, content) {
-          var el = document.getElementById('sxResult');
-          if (el) {
-            if (!el._sxResultInited) {
-              el.innerHTML = '';
-              el._sxResultInited = true;
-            }
-            el.textContent = '[' + label + ' · ' + imageUrls.length + ' 张图 · 流式]\n\n' + content;
-          }
-        });
-      } else {
-        // 非流式路径 (Capacitor WebView / 不支持ReadableStream)
-        const data = await res.json();
-        fullText = data.choices?.[0]?.message?.content?.trim() || '';
-      }
-      return fullText;
+      const data = await res.json();
+      return (data.choices?.[0]?.message?.content?.trim() || '');
     } finally {
       clearTimeout(timer);
       Core.AI.clearCurrentStreamAbort();
       Core.Stream.hideStreamIndicator();
     }
   }
-
   // 检测本地模型 (Core.AI.pingLocalModel 已在 core/ai-service.js export)
   async function checkLocalModel(port) { return await Core.AI.pingLocalModel(port); }
 
@@ -479,12 +458,18 @@ async function doShouxiang() {
   let usedSource = '';
 
   // ========== 本地 VL 一把搞定 ==========
-  if (await checkLocalModel(localPort)) {
+  // getLocalServerUrl = http://{local_server_ip}:{local_server_port}
+  // 手机上 IP 默认是 127.0.0.1 → 手机自己的 IP,不是电脑!
+
+  // ping: 探测 /v1/models
+  const localAlive = await checkLocalModel(localPort);
+  if (localAlive) {
     usedSource = `本地 VL (${localPort})`;
     resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在分析${imageUrls.length}张图片...<br><small>当前模型: ${localModelName}</small></div>`;
     try {
-      // Core.AI.getLocalModelName() 通过 /v1/models 自动发现 Ollama/llama-server 实际 model 名
-      const localModelName = await Core.AI.getLocalModelName();
+      const localModelName = (typeof Core.AI === 'object' && typeof Core.AI.getLocalModelName === 'function'
+        ? await Core.AI.getLocalModelName()
+        : (localStorage.getItem('local_model_name') || 'local'));
       fullText = await callMultimodalVision(
         `${getLocalServerUrl()}/v1/chat/completions`,
         { 'Content-Type': 'application/json' },
@@ -507,33 +492,36 @@ async function doShouxiang() {
       resultEl.innerHTML = `<div class="loading">${reasonLabel}: ${escapeHtml(e.message)} — 切云端...</div>`;
       fullText = '';
     }
+  } else {
+    // 模型不可达 → 直接进入云端 fallback (页面保持 loading)
+    console.warn('[sx] 本地模型 ' + getLocalServerUrl() + ' 不可达');
   }
 
-  // ========== 云端 VL fallback ==========
+  // ========== 云端 VL fallback (DeepSeek,任务 #42 统一 DeepSeek) ==========
   if (!fullText) {
-    const vKey = localStorage.getItem('vision_api_key') || '';
+    const vKey = localStorage.getItem('ds_api_key') || '';
     if (!vKey) {
-      resultEl.innerHTML = `<div class="error">本地识图服务未启动(${localPort})，且未配置识图 API Key。<br>请在设置页填写阿里云百炼 API Key，或启动本地 VL 模型。</div>`;
+      resultEl.innerHTML = `<div class="error">本地识图服务未启动(${localPort})，且未配置 DeepSeek API Key。<br>请在设置页填写 DeepSeek API Key，或启动本地 VL 模型。</div>`;
       return;
     }
-    usedSource = '云端 VL (DashScope)';
+    usedSource = '云端 DeepSeek (VL)';
     resultEl.innerHTML = '<div class="loading">调用云端识图(' + imageUrls.length + ' 张图分析)...</div>';
     try {
-      const model = localStorage.getItem('vision_model') || 'qwen-vl-plus';
+      // 与其他域统一:deepseek-v4-flash 走 DeepSeek, 与其他域一致(不再用 DashScope)
+      const model = localStorage.getItem('vision_model') || 'deepseek-v4-flash';
       fullText = await callMultimodalVision(
-        'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+        (localStorage.getItem('ds_base_url') || 'https://api.deepseek.com/v1').replace(/\/v1\/?$/, '') + '/v1/chat/completions',
         { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + vKey },
         { model, messages, temperature: 0.6, max_tokens: 4096, stream: true },
         usedSource,
         120000
       );
     } catch (e) {
-      // (round-2 fix) 用户主动 ⏹ 云端 → 显示'已停止',不显示误导的"本地模型无法连接"
       if (e?.name === 'AbortError') {
         resultEl.innerHTML = '<div class="info">已停止生成。</div>';
         return;
       }
-      resultEl.innerHTML = `<div class="error"><strong>分析失败</strong><br>本地模型无法连接，云端模型也未配置或不可用。<br><br><strong>解决步骤：</strong><br>1. 确认手机和电脑在同一WiFi下<br>2. 检查本地模型是否已启动（${localPort}端口）<br>3. 或在设置页配置阿里云百炼API Key<br><br>错误详情: ` + escapeHtml(e.message) + '</div>';
+      resultEl.innerHTML = `<div class="error"><strong>分析失败</strong><br>本地模型无法连接，云端模型也未配置或不可用。<br><br><strong>解决步骤：</strong><br>1. 确认手机和电脑在同一WiFi下<br>2. 检查本地模型是否已启动（${localPort}端口）<br>3. 或在设置页配置 DeepSeek API Key<br><br>错误详情: ` + escapeHtml(e.message) + '</div>';
       return;
     }
   }
