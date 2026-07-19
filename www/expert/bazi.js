@@ -44,14 +44,12 @@ Expert.bazi = function(pan) {
   // 格局（基于月支）
   const monthZhi = gz.month[1];
   const monthGan = gz.month[0];
-  const tgMap = { '甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水' };
-  const monthGanWx = tgMap[monthGan];
-  // 月支本气
+  const monthGanWx = TG_WX[monthGan];
+  // 月支本气(本宫藏干,单一来源在 tables.js BRANCH_HIDE_GAN)
   const zhiMain = { '寅':'甲','卯':'乙','巳':'丙','午':'丁','申':'庚','酉':'辛','亥':'壬','子':'癸','辰':'戊','戌':'戊','丑':'己','未':'己' };
-  const geMap = { '甲':'木', '乙':'木', '丙':'火', '丁':'火', '戊':'土', '己':'土', '庚':'金', '辛':'金', '壬':'水', '癸':'水' };
   if (zhiMain[monthZhi]) {
     const geZhiGan = zhiMain[monthZhi];
-    const geZhiWx = geMap[geZhiGan];
+    const geZhiWx = TG_WX[geZhiGan];
     // 简单判断：月支本气五行与日主同→比肩格
     if (geZhiWx === wx) {
       facts.push(`【事实·月令】月支${monthZhi}本气${geZhiGan}，与日主同属${wx}，得月令之助`);
@@ -158,8 +156,7 @@ Expert.bazi = function(pan) {
     }
   }
 
-  // 【新增】地支六合（子丑合、寅亥合等）
-  const LIU_HE = { '子':'丑', '丑':'子', '寅':'亥', '亥':'寅', '卯':'戌', '戌':'卯', '辰':'酉', '酉':'辰', '巳':'申', '申':'巳', '午':'未', '未':'午' };
+  // 【新增】地支六合（子丑合、寅亥合等）— LIU_HE/LIU_CHONG/LIU_HAI 来自 Expert 全局
   const zhis = ['year', 'month', 'day', 'hour'].map(k => ({ k, z: gz[k][1] }));
   for (let i = 0; i < zhis.length; i++) {
     for (let j = i + 1; j < zhis.length; j++) {
@@ -170,7 +167,6 @@ Expert.bazi = function(pan) {
   }
 
   // 【新增】地支六冲（子午冲、丑未冲等）
-  const LIU_CHONG = { '子':'午', '午':'子', '丑':'未', '未':'丑', '寅':'申', '申':'寅', '卯':'酉', '酉':'卯', '辰':'戌', '戌':'辰', '巳':'亥', '亥':'巳' };
   for (let i = 0; i < zhis.length; i++) {
     for (let j = i + 1; j < zhis.length; j++) {
       if (LIU_CHONG[zhis[i].z] === zhis[j].z) {
@@ -268,7 +264,6 @@ Expert.bazi = function(pan) {
       }
     }
     // 害
-    const LIU_HAI = { '子':'未','未':'子','丑':'午','午':'丑','寅':'巳','巳':'寅','卯':'辰','辰':'卯','申':'亥','亥':'申','酉':'戌','戌':'酉' };
     for (const { k, z } of zhiList) {
       if (LIU_HAI[lnZhi] === z) {
         facts.push(`【事实·流年害】流年${lnZhi}害${k==='year'?'年':k==='month'?'月':k==='day'?'日':'时'}支${z}（暗害，主小人暗算）`);

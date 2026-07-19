@@ -1,10 +1,6 @@
 // ========== 八字 ==========
-
-var DI_ZHI_CANG_GAN = {
-  '子': ['癸'], '丑': ['己','癸','辛'], '寅': ['甲','丙','戊'], '卯': ['乙'],
-  '辰': ['戊','乙','癸'], '巳': ['丙','庚','戊'], '午': ['丁','己'], '未': ['己','丁','乙'],
-  '申': ['庚','壬','戊'], '酉': ['辛'], '戌': ['戊','辛','丁'], '亥': ['壬','甲']
-};
+// 地支藏干表来自 Expert.BRANCH_HIDE_GAN 单一来源 (expert/tables.js)
+// 通过 window.Expert.BRANCH_HIDE_GAN 访问,加载顺序: tables.js → app/bazi.js
 
 function getBaziPan(solar, gender) {
   const ec = solar.getLunar().getEightChar();
@@ -98,7 +94,7 @@ function calcTenGods(dayGan, gz) {
   for (const k of ['year','month','day','hour']) {
     r[k + '_gan'] = tenGodRelation(dayGan, gz[k][0]);
     const zhi = gz[k][1];
-    const cangGan = DI_ZHI_CANG_GAN[zhi] || [];
+    const cangGan = (window.Expert && window.Expert.BRANCH_HIDE_GAN && window.Expert.BRANCH_HIDE_GAN[zhi]) || [];
     r[k + '_zhi'] = cangGan.map(g => `${g}(${tenGodRelation(dayGan, g)})`).join('、');
   }
   return r;

@@ -32,8 +32,7 @@ Expert.qimen = function(pan) {
       const xingName = (zf.jiuxing || '').split(/\s+/).find(n => XING_WX[n]) || '';
       const gongWx = GONG_WX[zf.name];
       const xingWx = XING_WX[xingName];
-      const SHENG = { '木':'火','火':'土','土':'金','金':'水','水':'木' };
-      const KE = { '木':'土','土':'水','水':'火','火':'金','金':'木' };
+      // SHENG/KE 来自 Expert 全局 (expert/tables.js)
       if (gongWx && xingWx) {
         if (gongWx === xingWx) facts.push(`【事实·值符宫星】${zf.name}属${gongWx}，值符星${xingName}属${xingWx}，宫星比和，值符有力`);
         else if (SHENG[gongWx] === xingWx) facts.push(`【事实·值符宫星】宫${gongWx}生星${xingWx}，值符得宫生助，事体有根基`);
@@ -57,8 +56,7 @@ Expert.qimen = function(pan) {
       if (zf && zs) {
         const MEN_WX = { '开门':'金','休门':'水','生门':'土','伤门':'木','杜门':'木','景门':'火','死门':'土','惊门':'金' };
         const GONG_WX = { '坎一宫':'水','坤二宫':'土','震三宫':'木','巽四宫':'木','中五宫':'土','乾六宫':'金','兑七宫':'金','艮八宫':'土','离九宫':'火' };
-        const SHENG = { '木':'火','火':'土','土':'金','金':'水','水':'木' };
-        const KE = { '木':'土','土':'水','水':'火','火':'金','金':'木' };
+        // SHENG/KE 来自 Expert 全局 (expert/tables.js)
         const menWx = MEN_WX[zs.renpan];
         const zfGongWx = GONG_WX[zf.name];
         const zsGongWx = GONG_WX[zs.name];
@@ -139,7 +137,7 @@ Expert.qimen = function(pan) {
     // 【新增】门迫检查（门克宫）
     const MEN_WX = { '开门':'金','休门':'水','生门':'土','伤门':'木','杜门':'木','景门':'火','死门':'土','惊门':'金' };
     const GONG_WX = { '坎一宫':'水','坤二宫':'土','震三宫':'木','巽四宫':'木','中五宫':'土','乾六宫':'金','兑七宫':'金','艮八宫':'土','离九宫':'火' };
-    const KE = { '金':'木','木':'土','土':'水','水':'火','火':'金' };
+    // KE 来自 Expert 全局 (expert/tables.js)
     const menPoList = [];
     for (const g of pan.gong9) {
       if (!g.renpan || !g.name) continue;

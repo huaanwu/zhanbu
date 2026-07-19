@@ -41,9 +41,8 @@
     '子': '水', '丑': '土', '寅': '木', '卯': '木', '辰': '土', '巳': '火', '午': '火', '未': '土', '申': '金', '酉': '金', '戌': '土', '亥': '水',
   };
 
-  // 五行生克
-  const SHENG = { 木: '火', 火: '土', 土: '金', 金: '水', 水: '木' };
-  const KE = { 木: '土', 土: '水', 水: '火', 火: '金', 金: '木' };
+  // 五行生克/天干五行/地支五行 — 来自 Expert 单一来源 (expert/tables.js)
+  // 注: util.js 在 Expert 之前加载,函数内调用时 Expert.SHENG/WX 已有值
 
   // v1.2.x 12 令旺衰判断:基于月令 + 根 + 比劫
   function judgeWangShuai(dayGan, gz) {
@@ -158,5 +157,5 @@
   }
 
   window.Core = window.Core || {};
-  window.Core.Util = { escapeHtml, safeHTML, WX, SHENG, KE, judgeWangShuai, initDateInputs, selCal, selLeap, selGender };
+  window.Core.Util = { escapeHtml, safeHTML, WX, judgeWangShuai, initDateInputs, selCal, selLeap, selGender };
 })();

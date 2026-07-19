@@ -61,8 +61,7 @@ Expert.liuyao = function(pan) {
         // 世应关系
         if (shiYao && yingYao) {
           const shiWx = shiYao.wuxing, yingWx = yingYao.wuxing;
-          const SHENG = { '木':'火','火':'土','土':'金','金':'水','水':'木' };
-          const KE = { '木':'土','土':'水','水':'火','火':'金','金':'木' };
+          // SHENG/KE 来自 Expert 全局 (expert/tables.js)
           if (SHENG[shiWx] === yingWx) facts.push(`【事实·世应生克】世爻${shiWx}生应爻${yingWx}（我生对方，主耗）`);
           else if (SHENG[yingWx] === shiWx) facts.push(`【事实·世应生克】应爻${yingWx}生世爻${shiWx}（对方生我，主吉）`);
           else if (KE[shiWx] === yingWx) facts.push(`【事实·世应生克】世爻${shiWx}克应爻${yingWx}（我克对方，主胜）`);
@@ -80,9 +79,7 @@ Expert.liuyao = function(pan) {
       const zhiMain = { '寅':'木','卯':'木','巳':'火','午':'火','申':'金','酉':'金','亥':'水','子':'水','辰':'土','戌':'土','丑':'土','未':'土' };
       const monthMain = zhiMain[monthZhi];
       const dayMain = zhiMain[dayZhi];
-      const SHENG = { '木':'火','火':'土','土':'金','金':'水','水':'木' };
-      const SHENGED = { '木':'水','火':'木','土':'火','金':'土','水':'金' };
-      const KE = { '木':'土','土':'水','水':'火','火':'金','金':'木' };
+      // SHENG/SHENGED/KE 来自 Expert 全局 (expert/tables.js)
 
       // 旬空优先使用排盘层已计算结果，兼容旧盘再查专家表。
       const xunKong = Array.isArray(pan.xunKong)

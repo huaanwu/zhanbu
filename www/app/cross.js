@@ -33,7 +33,8 @@ window.selCxLeap = selCxLeap;
 function extractSignals(pan, domain) {
   const signals = [];
   if (domain === 'bazi' && pan.gz) {
-    const wx = { '甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水' }[pan.gz.day[0]];
+    // 日主五行 — 来自 Expert.TG_WX 单一来源 (expert/tables.js)
+    const wx = (window.Expert && window.Expert.TG_WX && window.Expert.TG_WX[pan.gz.day[0]]) || '';
     signals.push(pan.gz.day[0] + wx); // 日主五行
     if (pan.tenGods) {
       const gods = new Set();

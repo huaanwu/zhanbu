@@ -95,6 +95,14 @@ var KE = { '木':'土','土':'水','水':'火','火':'金','金':'木' };     //
 var SHENGED = { '木':'水','火':'木','土':'火','金':'土','水':'金' }; // 被生（印）
 var KEED = { '木':'金','火':'水','土':'木','金':'火','水':'土' };     // 被克（官杀）
 
+// 地支六关系(全 12 支覆盖,互逆且无自指) — 单一来源
+// 六冲: 子午/丑未/寅申/卯酉/辰戌/巳亥
+var LIU_CHONG = { '子':'午','午':'子','丑':'未','未':'丑','寅':'申','申':'寅','卯':'酉','酉':'卯','辰':'戌','戌':'辰','巳':'亥','亥':'巳' };
+// 六合: 子丑/寅亥/卯戌/辰酉/巳申/午未
+var LIU_HE = { '子':'丑','丑':'子','寅':'亥','亥':'寅','卯':'戌','戌':'卯','辰':'酉','酉':'辰','巳':'申','申':'巳','午':'未','未':'午' };
+// 六害: 子未/丑午/寅巳/卯辰/申亥/酉戌
+var LIU_HAI = { '子':'未','未':'子','丑':'午','午':'丑','寅':'巳','巳':'寅','卯':'辰','辰':'卯','申':'亥','亥':'申','酉':'戌','戌':'酉' };
+
 // 纳音（60甲子 → 纳音五行）
 var NAYIN_60JIAZI = {};
 (function buildNayin() {
@@ -147,4 +155,20 @@ var XUNKONG = {
   '戊午': ['子','丑'], '己未': ['子','丑'], '庚申': ['子','丑'], '辛酉': ['子','丑'],
   '壬戌': ['子','丑'], '癸亥': ['子','丑']
 };
+
+// 显式挂载到 Expert 命名空间,供其他模块统一引用 (避免内联副本漂移)
+Expert.TG_WX = TG_WX;
+Expert.DZ_WX = DZ_WX;
+Expert.SHENG = SHENG;
+Expert.KE = KE;
+Expert.SHENGED = SHENGED;
+Expert.KEED = KEED;
+Expert.LIU_CHONG = LIU_CHONG;
+Expert.LIU_HE = LIU_HE;
+Expert.LIU_HAI = LIU_HAI;
+Expert.BRANCH_HIDE_GAN = BRANCH_HIDE_GAN;
+Expert.NAYIN_60JIAZI = NAYIN_60JIAZI;
+Expert.XUNKONG = XUNKONG;
+Expert.SHI_YING = SHI_YING;
+Expert.GUA_FULL_TO_SHORT = GUA_FULL_TO_SHORT;
 

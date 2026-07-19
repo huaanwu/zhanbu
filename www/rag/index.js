@@ -206,8 +206,8 @@ const RAG = {
         // 新增：日主五行+旺衰
         const dayGan = pan.gz.day[0];
         if (dayGan) {
-          const wxMap = { '甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水' };
-          if (wxMap[dayGan]) signals.push(wxMap[dayGan] + pan.wangShuai);
+          // 日主五行 — 来自 Expert.TG_WX 单一来源 (expert/tables.js)
+          if (window.Expert && window.Expert.TG_WX && window.Expert.TG_WX[dayGan]) signals.push(window.Expert.TG_WX[dayGan] + pan.wangShuai);
         }
       }
       // 紫微

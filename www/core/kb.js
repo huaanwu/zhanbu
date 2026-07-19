@@ -444,8 +444,9 @@ function kbBazi(pan) {
   const k = _kb?.bazi || {};
   const dayGan = pan.gz?.day?.[0];
   if (!dayGan) return '';
-  const wxMap = {'甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水'};
-  const dmKey = dayGan + wxMap[dayGan];
+  // 日主五行 — 来自 Expert.TG_WX 单一来源
+  const dayWx = (window.Expert && window.Expert.TG_WX && window.Expert.TG_WX[dayGan]) || '';
+  const dmKey = dayGan + dayWx;
   let s = '\n\n【知识库参考】';
   if (k.day_master?.[dmKey]) s += `\n· 日主${dmKey}：${k.day_master[dmKey]}`;
   const tenGodNames = ['比肩','劫财','食神','伤官','偏财','正财','七杀','正官','偏印','正印'];
@@ -456,7 +457,7 @@ function kbBazi(pan) {
   }
   for (const god of godSet) { if (k.ten_gods?.[god]) s += `\n· ${god}：${k.ten_gods[god]}`; }
   const wangShuai = judgeWangShuai(dayGan, pan.gz);
-  const wsKey = wangShuai + wxMap[dayGan];
+  const wsKey = wangShuai + dayWx;
   if (k.useful_god?.[wsKey]) s += `\n· ${wsKey}用神喜忌：${k.useful_god[wsKey]}`;
   s += kbBaziDayun();
   s += kbWannianli();
