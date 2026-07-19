@@ -435,11 +435,12 @@ async function doShouxiang() {
         try { const j = await res.json(); errMsg = j.error?.message || errMsg; } catch (jsonErr) { console.warn('[sx] parse api error body fail:', jsonErr.message); }
         throw new Error(`${label} HTTP ${res.status}: ${errMsg}`);
       }
-      // 支持 SSE 流式 — 复用 Core.AI.readSSE (v3.0.6 cleanup)
-      if (res.body && res.headers.get('content-type')?.includes('text/event-stream')) {
-        // readSSE返回stripThinking后的最终文本
+      // 本地VL请求:检测WebView是否支持ReadableStream
+      // Capacitor在某些Android版本不支持body.getReader()
+      // 不支持就走非流式
+      if (res.body && typeof res.body.getReader === 'function' && res.headers.get('content-type')?.includes('text/event-stream')) {
+        // 流式路径 (支持ReadableStream的浏览器)
         fullText = await Core.AI.readSSE(res.body, function (_delta, content) {
-          // 实时更新显示
           var el = document.getElementById('sxResult');
           if (el) {
             if (!el._sxResultInited) {
@@ -450,6 +451,7 @@ async function doShouxiang() {
           }
         });
       } else {
+        // 非流式路径 (Capacitor WebView / 不支持ReadableStream)
         const data = await res.json();
         fullText = data.choices?.[0]?.message?.content?.trim() || '';
       }
