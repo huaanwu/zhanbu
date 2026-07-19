@@ -437,12 +437,21 @@ async function doShouxiang() {
       }
       // 支持 SSE 流式 — 复用 Core.AI.readSSE (v3.0.6 cleanup)
       if (res.body && res.headers.get('content-type')?.includes('text/event-stream')) {
-        // 本地VL模型处理4张大图时可能前2-3分钟都在"思考"无中文输出
-        // 用 showRawInProgress 让thinking过程逐字显示,用户体验更直观
+        // 复用 Core.AI.readSSE 解析流式输出
         await Core.AI.readSSE(res.body, function (_delta, content) {
           fullText = content;
-          renderSx(label + ' · ' + imageUrls.length + ' 张图 · 流式', content);
-        }, { showRawInProgress: true });
+          // 使用 textContent 替代 innerHTML,避免每 token 一次 DOM 重绘
+          // 先保留包裹结构,只更新文本内容
+          var el = document.getElementById('sxResult');
+          if (el) {
+            // 如果当前是loading状态,替换成结果容器
+            if (!el._sxResultInited) {
+              el.innerHTML = '';
+              el._sxResultInited = true;
+            }
+            el.textContent = '[' + label + ' · ' + imageUrls.length + ' 张图 · 流式]\n\n' + content;
+          }
+        });
       } else {
         const data = await res.json();
         fullText = data.choices?.[0]?.message?.content?.trim() || '';
