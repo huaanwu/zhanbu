@@ -410,63 +410,40 @@ async function doShouxiang() {
   async function callMultimodalVision(endpoint, headers, body, label, timeoutMs) {
     const bodyJson = JSON.stringify(Object.assign({}, body, { stream: false }));
     console.log("[sx] callMultimodalVision endpoint:", endpoint, "body大小:", bodyJson.length, "bytes");
-    // 用 XMLHttpRequest 代替 fetch,Android 老版 WebView 对大 body 的 fetch 有兼容问题
-    // 改用 XHR 后只发一次请求,完全可预测
-    return new Promise(function (resolve, reject) {
-      var xhr = new XMLHttpRequest();
-      var settled = false;
-      var finish = function (ok, payload, errMsg) {
-        if (settled) return;
-        settled = true;
-        try { xhr.abort(); } catch (_) {}
-        if (ok) { try { resolve(payload); } catch (e) { reject(e); } }
-        else { try { reject(new Error(errMsg || 'XHR fail')); } catch (e) { reject(e); } }
-      };
-      var timer = setTimeout(function () {
-        finish(false, null, label + ' timeout ' + timeoutMs + 'ms');
-      }, timeoutMs || 600000);
-      xhr.open('POST', endpoint, true);
-      try {
-        xhr.responseType = 'text';
-        xhr.timeout = timeoutMs || 600000;
-      } catch (_) {}
-      if (headers) {
-        for (var k in headers) {
-          try { xhr.setRequestHeader(k, headers[k]); } catch (_) {}
-        }
+    // 之前用 XHR 但大 body 在 Android WebView 里发不出或挂起
+    // 改用 fetch (流式读 ReadableStream) - 和八字走同一个 fetch 路径
+    const ctrl = new AbortController();
+    Core.AI.setCurrentStreamAbort(ctrl);
+    const timer = setTimeout(() => {
+      try { ctrl.abort('sx-timeout'); } catch (_) {}
+    }, timeoutMs || 60000);
+    Core.Stream.showStreamIndicator();
+    try {
+      console.log("[sx] fetch start");
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: bodyJson,
+        signal: ctrl.signal,
+      });
+      console.log("[sx] fetch resolved, status:", res.status);
+      if (!res.ok) {
+        let errMsg = 'HTTP ' + res.status;
+        try { const j = await res.json(); errMsg = j.error?.message || errMsg; } catch (jsonErr) { console.warn('[sx] parse api error body fail:', jsonErr.message); }
+        throw new Error(`${label} HTTP ${res.status}: ${errMsg}`);
       }
-      xhr.onload = function () {
-        clearTimeout(timer);
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            var data = JSON.parse(xhr.responseText);
-            var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
-            console.log("[sx] XHR OK content长度:", text.length);
-            finish(true, (text || '').trim() || '');
-          } catch (e) {
-            finish(false, null, label + ' JSON parse fail: ' + e.message);
-          }
-        } else {
-          finish(false, null, label + ' HTTP ' + xhr.status + ': ' + (xhr.responseText || '').slice(0, 200));
-        }
-      };
-      xhr.onerror = function () {
-        clearTimeout(timer);
-        finish(false, null, label + ' network error');
-      };
-      xhr.ontimeout = function () {
-        clearTimeout(timer);
-        finish(false, null, label + ' XHR timeout');
-      };
-      xhr.onabort = function () {
-        clearTimeout(timer);
-        finish(false, null, label + ' aborted');
-      };
-      try { xhr.send(bodyJson); } catch (e) {
-        clearTimeout(timer);
-        finish(false, null, label + ' send fail: ' + e.message);
-      }
-    });
+      console.log("[sx] reading body");
+      const data = await res.json();
+      console.log("[sx] JSON parsed");
+      return (data.choices?.[0]?.message?.content?.trim() || '');
+    } catch (e) {
+      console.log("[sx] callMultimodalVision error:", e.name, e.message);
+      throw e;
+    } finally {
+      clearTimeout(timer);
+      Core.AI.clearCurrentStreamAbort();
+      Core.Stream.hideStreamIndicator();
+    }
   }
   // 检测本地模型 (Core.AI.pingLocalModel 已在 core/ai-service.js export)
   async function checkLocalModel(port) { return await Core.AI.pingLocalModel(port); }
