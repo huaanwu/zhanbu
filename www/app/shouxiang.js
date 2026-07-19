@@ -474,25 +474,8 @@ async function doShouxiang() {
     }
   }
 
-  // 检测本地模型
-  async function checkLocalModel(port) {
-    // 用共享 helper,与 ai-service.js 内 callDeepSeek 的 health-check 路径共用
-    return typeof Core.AI.pingLocalModel === 'function'
-      ? await Core.AI.pingLocalModel(port)
-      : await (async () => {
-          try {
-            const ctrl = new AbortController();
-            const t = setTimeout(() => ctrl.abort(), 15000);
-            const res = await fetch(`http://${getLocalServerIp()}:${port}/v1/models`, { method: 'GET', signal: ctrl.signal });
-            clearTimeout(t);
-            return res.ok;
-          } catch (e) {
-            // CLAUDE.md:catch 内必须有日志 (finding #12:port 探测失败被静默)
-            console.warn('[sx] local LLM probe fail on', port + ':', e.message);
-            return false;
-          }
-        })();
-  }
+  // 检测本地模型 (Core.AI.pingLocalModel 已在 core/ai-service.js export)
+  async function checkLocalModel(port) { return await Core.AI.pingLocalModel(port); }
 
   // messages 构造:system → role=system message;user → 文本 + image_url 内容块列表
   // (修复 finding P1-5:OpenAI/DashScope 不认顶层 system 字段,会被静默丢弃)

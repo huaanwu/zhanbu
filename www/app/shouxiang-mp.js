@@ -93,16 +93,19 @@ function loadScript(url) {
  * @param {HTMLImageElement} imgEl
  * @param {string} [sxGender] - 'male' | 'female' | 'unknown'
  */
+// 推断 handpose 无法返回的 handedness — 按 KB 约定映射
+// 将来加新 domain 可在枚举里扩展;formatQuantifiedForPrompt 与这里共引
+var HANDEDNESS_VIA_GENDER = {
+  male: 'Male_hand_inferred',
+  female: 'Female_hand_inferred',
+  unknown: 'unknown',
+};
 async function detectHand(imgEl, sxGender) {
   if (!handposeModel) return null;
   const predictions = await handposeModel.estimateHands(imgEl);
   if (!predictions || predictions.length === 0) return null;
   const hand = predictions[0];
-  // (round-2 fix) 'Right_or_Left' 是 gibberish AI 解析不了,改用 KB 约定有信息量的 token:
-  // 男性左手=先天;女性右手=先天。空值兜底 'unknown'
-  let inferred = 'unknown';
-  if (sxGender === 'male') inferred = 'Male_hand_inferred';
-  else if (sxGender === 'female') inferred = 'Female_hand_inferred';
+  var inferred = HANDEDNESS_VIA_GENDER[sxGender] || HANDEDNESS_VIA_GENDER.unknown;
   return {
     landmarks: hand.landmarks.map(l => ({ x: l[0], y: l[1], z: l[2] || 0 })),
     handedness: inferred,
