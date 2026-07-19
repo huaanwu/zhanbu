@@ -487,9 +487,6 @@ async function doShouxiang() {
       // 之前拆4张独立请求导致每张只能看1张图,模型没全局观
       // 改回4张一起发,但用 SSE 流式输出逐步显示
       resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在分析${imageUrls.length}张图片...<br><small>当前模型: ${localModelName} | endpoint: ${getLocalServerUrl()}</small></div>`;
-      const localModelName = (typeof Core.AI === 'object' && typeof Core.AI.getLocalModelName === 'function'
-        ? await Core.AI.getLocalModelName()
-        : (localStorage.getItem('local_model_name') || 'local'));
       fullText = await callMultimodalVision(
         `${getLocalServerUrl()}/v1/chat/completions`,
         { 'Content-Type': 'application/json' },
