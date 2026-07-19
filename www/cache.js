@@ -68,29 +68,30 @@ const Cache = {
         parts.push(params.address);
         break;
       case 'shouxiang': {
-        // (round-2 fix) _imgFingerprint 抽到 module-scope
-        // sxGender 决定先天/后天手左右映射 (男性 左先天 / 女性 右先天)
-        // 不进 key 会导致男/女切换复用同一份解读
+        // v3.0.5 + cleanup: _imgFingerprint 与 sxGender + keypoints 组合,
+        // 4 图指纹用 forEach 去掉复制粘贴,linkPan 指纹用 lookup 对象遍历
         if (params.sxGender) parts.push('gender:' + params.sxGender);
-        parts.push(this._imgFingerprint(params.images?.leftPalm));
-        parts.push(this._imgFingerprint(params.images?.leftBack));
-        parts.push(this._imgFingerprint(params.images?.rightPalm));
-        parts.push(this._imgFingerprint(params.images?.rightBack));
+        ['leftPalm', 'leftBack', 'rightPalm', 'rightBack'].forEach(function (k) {
+          parts.push(this._imgFingerprint(params.images?.[k]));
+        }, this);
         parts.push('kp:' + (params.keypoints ? 'yes' : 'no'));
-        // linkPan 指纹:把命盘关键干支/卦名拼起来,确保不同命盘不同 key
-        // (key=linkPan 是 wrapper,见 doShouxiang cacheParams)
         if (params.linkPan) {
           var lp = params.linkPan;
-          if (lp.bazi?.gz?.day) parts.push('bazi-day:' + lp.bazi.gz.day);
-          else if (lp.bazi) parts.push('bazi');
-          if (lp.ziwei?.mingGong?.ganzhi) parts.push('zw:' + lp.ziwei.mingGong.ganzhi);
-          else if (lp.ziwei) parts.push('zw');
-          if (lp.liuyao?.gua?.name) parts.push('ly:' + lp.liuyao.gua.name);
-          else if (lp.liuyao) parts.push('ly');
-          if (lp.qimen?.jushu_text) parts.push('qm:' + lp.qimen.jushu_text);
-          else if (lp.qimen) parts.push('qm');
+          // 按命盘类型→提取器 遍历:命中第一个真值就 push,否则 push 空 flag
+          var lpKeys = [
+            ['bazi-day', function () { return lp.bazi?.gz?.day; }],
+            ['bazi',     function () { return lp.bazi; }],
+            ['zw',       function () { var gz = lp.ziwei?.mingGong?.ganzhi; if (gz) return 'zw:' + gz; else if (lp.ziwei) return 'zw'; }],
+            ['ly',       function () { if (lp.liuyao?.gua?.name) return 'ly:' + lp.liuyao.gua.name; else if (lp.liuyao) return 'ly'; }],
+            ['qm',       function () { if (lp.qimen?.jushu_text) return 'qm:' + lp.qimen.jushu_text; else if (lp.qimen) return 'qm'; }],
+          ];
+          lpKeys.forEach(function (_a) {
+            var key = _a[0], fn = _a[1];
+            var v = fn();
+            if (v) parts.push(key.startsWith('bazi') || key === 'zw' || key === 'ly' || key === 'qm' ? v : key);
+          });
         }
-        parts.push('sx-v3.0.5-fix'); // 防止旧 2 图缓存串到新用户
+        parts.push('sx-v3.0.5-fix');
         break;
       }
       case 'cross':

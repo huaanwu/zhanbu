@@ -294,6 +294,23 @@ function buildShouxiangPrompt(先天Hand, 后天Hand, isMale) {
 【语言约束】纯中文输出,禁止英文/思考过程/分析步骤。`;
 }
 
+// ===== doShouxiang 帮助函数 (v3.0.6 cleanup) =====
+// 统一渲染调用结果 — 避免 pre-wrap + escapeHtml 在 3 处重复(cache-hit / streaming / final)
+function renderSx(label, text) {
+  resultEl.innerHTML = '<div style="white-space:pre-wrap;">[' + label + ' · ' + imageUrls.length + ' 张图]\n\n' + escapeHtml(text) + '</div>';
+}
+// 从 window.current* 全局中取第一个有效命盘,返回 {pan, src} 或 null
+function pickLinkPan() {
+  if (window.currentCross && (window.currentCross.bazi || window.currentCross.ziwei || window.currentCross.liuyao || window.currentCross.qimen)) {
+    return { pan: window.currentCross, src: '三术同参' };
+  }
+  if (window.currentBazi) return { pan: { bazi: window.currentBazi }, src: '八字' };
+  if (window.currentZw)  return { pan: { ziwei: window.currentZw }, src: '紫微' };
+  if (window.currentLy)  return { pan: { liuyao: window.currentLy }, src: '六爻' };
+  if (window.currentQm)  return { pan: { qimen: window.currentQm }, src: '奇门' };
+  return null;
+}
+
 async function doShouxiang() {
   if (!sxHasAny()) {
     showToast('请至少上传一只手的一张手相照片', 'error');
@@ -341,9 +358,7 @@ async function doShouxiang() {
     var sideKey = p[0], handName = p[1];
     ['palm', 'back'].forEach(function(side) {
       var data = sxGet(sideKey, side);
-      const isLeft = sideKey === 'left';
-      const cacheKey4 = isLeft ? (side === 'palm' ? 'leftPalm' : 'leftBack')
-                                : (side === 'palm' ? 'rightPalm' : 'rightBack');
+      const cacheKey4 = sideKey + (side === 'palm' ? 'Palm' : 'Back');
       if (data) {
         imagesForCache[cacheKey4] = data;
         imageUrls.push({ type: 'image_url', image_url: { url: data } });
@@ -356,26 +371,10 @@ async function doShouxiang() {
     visionPrompt += `\n\n【缺失照片】以下位置用户未上传,解读时不要瞎编:${missingSlots.join('、')}`;
   }
 
-  // Tier 2 联动: 把八字/紫微/三术同参最近一次排盘注入 system prompt
-  // 修复 crossLink chain: 三术同参时如果有 liuyao/qimen 也纳入 linkPan,不再只接受 bazi/ziwei 字段
-  var linkPan = null;
-  var linkSrc = '';
-  if (window.currentCross && (window.currentCross.bazi || window.currentCross.ziwei || window.currentCross.liuyao || window.currentCross.qimen)) {
-    linkPan = window.currentCross;
-    linkSrc = '三术同参';
-  } else if (window.currentBazi) {
-    linkPan = { bazi: window.currentBazi };
-    linkSrc = '八字';
-  } else if (window.currentZw) {
-    linkPan = { ziwei: window.currentZw };
-    linkSrc = '紫微';
-  } else if (window.currentLy) {
-    linkPan = { liuyao: window.currentLy };
-    linkSrc = '六爻';
-  } else if (window.currentQm) {
-    linkPan = { qimen: window.currentQm };
-    linkSrc = '奇门';
-  }
+  // Tier 2 联动: pickLinkPan() 遍历全局命盘,返回命盘对象 + 来源标签
+  const link = pickLinkPan();
+  const linkPan = link ? link.pan : null;
+  const linkSrc = link ? link.src : '';
   var linkHint = '';
   if (linkPan) {
     linkHint = `\n\n【已联动】本次手相解读结合用户最新一次${linkSrc}排盘做交叉印证。`;
@@ -401,7 +400,7 @@ async function doShouxiang() {
   if (sxCacheKey) {
     const cached = Cache.get('shouxiang', cacheParams);
     if (cached) {
-      resultEl.innerHTML = '<div style="white-space:pre-wrap;">[缓存命中 · ' + imageUrls.length + ' 张图]\n\n' + escapeHtml(cached) + '</div>';
+      renderSx('缓存命中', cached);
       finalizeShouxiang(resultEl, cached);
       return;
     }
@@ -458,7 +457,7 @@ async function doShouxiang() {
               const delta = j.choices?.[0]?.delta?.content || '';
               if (delta) {
                 fullText += delta;
-                resultEl.innerHTML = '<div style="white-space:pre-wrap;">[' + label + ' · ' + imageUrls.length + ' 张图 · 流式]\n\n' + escapeHtml(fullText) + '</div>';
+                renderSx(label + ' · ' + imageUrls.length + ' 张图 · 流式', fullText);
               }
             } catch (jsonErr) { /* skip non-JSON keepalive */ }
           }
@@ -580,7 +579,7 @@ async function doShouxiang() {
     return;
   }
 
-  resultEl.innerHTML = '<div style="white-space:pre-wrap;">[' + usedSource + ' · ' + imageUrls.length + ' 张图]\n\n' + escapeHtml(fullText) + '</div>';
+  renderSx(usedSource, fullText);
 
   // 写缓存
   if (sxCacheKey && fullText) {
