@@ -483,34 +483,20 @@ async function doShouxiang() {
         ? await Core.AI.getLocalModelName()
         : (localStorage.getItem('local_model_name') || 'local'));
 
-      // 一张一张发:把4张图拆成4次独立请求,避免一次4张图导致服务器并发问题
-      // (诊断: 之前4张图一起发会卡,2张图没问题)
-      const imagesToSend = [];
-      [['left','palm'],['left','back'],['right','palm'],['right','back']].forEach(function(p) {
-        const d = sxGet(p[0], p[1]);
-        if (d) imagesToSend.push({ hand: p[0], side: p[1], data: d });
-      });
-
-      let allResults = '';
-      for (let i = 0; i < imagesToSend.length; i++) {
-        const img = imagesToSend[i];
-        resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在分析第 ${i+1}/${imagesToSend.length} 张图 (${img.hand}·${img.side === 'palm' ? '掌心' : '手背'})...<br><small>当前模型: ${localModelName} | endpoint: ${getLocalServerUrl()}</small></div>`;
-        // 只发这一张图
-        const thisVisionPrompt = visionPrompt.replace(/\d+张图/g, '1张图');
-        const messages = [
-          { role: 'system', content: system || '' },
-          { role: 'user', content: [{ type: 'text', text: thisVisionPrompt + '\n\n【当前分析】第 ' + (i+1) + '/' + imagesToSend.length + ' 张图: ' + img.hand + '·' + (img.side === 'palm' ? '掌心' : '手背') }, { type: 'image_url', image_url: { url: img.data } }] }
-        ];
-        const chunk = await callMultimodalVision(
-          `${getLocalServerUrl()}/v1/chat/completions`,
-          { 'Content-Type': 'application/json' },
-          { model: localModelName, messages, temperature: 0.15, max_tokens: 2048, stream: true },
-          usedSource,
-          600000
-        );
-        allResults += '\n【' + img.hand + '·' + (img.side === 'palm' ? '掌心' : '手背') + '】\n' + (chunk || '(无内容)') + '\n\n';
-      }
-      fullText = allResults;
+      // 一次发4张图 + 流式: 正确的手相解读方式
+      // 之前拆4张独立请求导致每张只能看1张图,模型没全局观
+      // 改回4张一起发,但用 SSE 流式输出逐步显示
+      resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在分析${imageUrls.length}张图片...<br><small>当前模型: ${localModelName} | endpoint: ${getLocalServerUrl()}</small></div>`;
+      const localModelName = (typeof Core.AI === 'object' && typeof Core.AI.getLocalModelName === 'function'
+        ? await Core.AI.getLocalModelName()
+        : (localStorage.getItem('local_model_name') || 'local'));
+      fullText = await callMultimodalVision(
+        `${getLocalServerUrl()}/v1/chat/completions`,
+        { 'Content-Type': 'application/json' },
+        { model: localModelName, messages, temperature: 0.15, max_tokens: 4096, stream: true },
+        usedSource,
+        600000
+      );
     } catch (e) {
       const isTimeoutAbort = e?.name === 'AbortError' && (
         e.message?.includes('timeout') ||
