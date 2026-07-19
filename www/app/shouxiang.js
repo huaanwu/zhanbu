@@ -414,33 +414,65 @@ async function doShouxiang() {
   // 不再需要 _setAbort 闭包胶水 — callMultimodalVision 内部一个 try/finally 直接接 Core.AI.
 
   async function callMultimodalVision(endpoint, headers, body, label, timeoutMs) {
-    console.log("[sx] callMultimodalVision 入口, endpoint:", endpoint, "body大小:", JSON.stringify(body).length);
-    const ctrl = new AbortController();
-    Core.AI.setCurrentStreamAbort(ctrl);
-    const timer = setTimeout(() => {
-      try { ctrl.abort('sx-timeout'); } catch (_) {}
-    }, timeoutMs);
-    Core.Stream.showStreamIndicator();
-    try {
-      const nonStreamBody = Object.assign({}, body, { stream: false });
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(nonStreamBody),
-        signal: ctrl.signal,
-      });
-      if (!res.ok) {
-        let errMsg = 'HTTP ' + res.status;
-        try { const j = await res.json(); errMsg = j.error?.message || errMsg; } catch (jsonErr) { console.warn('[sx] parse api error body fail:', jsonErr.message); }
-        throw new Error(`${label} HTTP ${res.status}: ${errMsg}`);
+    const bodyJson = JSON.stringify(Object.assign({}, body, { stream: false }));
+    console.log("[sx] callMultimodalVision endpoint:", endpoint, "body大小:", bodyJson.length, "bytes");
+    // 用 XMLHttpRequest 代替 fetch,Android 老版 WebView 对大 body 的 fetch 有兼容问题
+    // 改用 XHR 后只发一次请求,完全可预测
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      var settled = false;
+      var finish = function (ok, payload, errMsg) {
+        if (settled) return;
+        settled = true;
+        try { xhr.abort(); } catch (_) {}
+        if (ok) { try { resolve(payload); } catch (e) { reject(e); } }
+        else { try { reject(new Error(errMsg || 'XHR fail')); } catch (e) { reject(e); } }
+      };
+      var timer = setTimeout(function () {
+        finish(false, null, label + ' timeout ' + timeoutMs + 'ms');
+      }, timeoutMs || 600000);
+      xhr.open('POST', endpoint, true);
+      try {
+        xhr.responseType = 'text';
+        xhr.timeout = timeoutMs || 600000;
+      } catch (_) {}
+      if (headers) {
+        for (var k in headers) {
+          try { xhr.setRequestHeader(k, headers[k]); } catch (_) {}
+        }
       }
-      const data = await res.json();
-      return (data.choices?.[0]?.message?.content?.trim() || '');
-    } finally {
-      clearTimeout(timer);
-      Core.AI.clearCurrentStreamAbort();
-      Core.Stream.hideStreamIndicator();
-    }
+      xhr.onload = function () {
+        clearTimeout(timer);
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            var data = JSON.parse(xhr.responseText);
+            var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+            console.log("[sx] XHR OK content长度:", text.length);
+            finish(true, (text || '').trim() || '');
+          } catch (e) {
+            finish(false, null, label + ' JSON parse fail: ' + e.message);
+          }
+        } else {
+          finish(false, null, label + ' HTTP ' + xhr.status + ': ' + (xhr.responseText || '').slice(0, 200));
+        }
+      };
+      xhr.onerror = function () {
+        clearTimeout(timer);
+        finish(false, null, label + ' network error');
+      };
+      xhr.ontimeout = function () {
+        clearTimeout(timer);
+        finish(false, null, label + ' XHR timeout');
+      };
+      xhr.onabort = function () {
+        clearTimeout(timer);
+        finish(false, null, label + ' aborted');
+      };
+      try { xhr.send(bodyJson); } catch (e) {
+        clearTimeout(timer);
+        finish(false, null, label + ' send fail: ' + e.message);
+      }
+    });
   }
   // 检测本地模型 (Core.AI.pingLocalModel 已在 core/ai-service.js export)
   async function checkLocalModel(port) { return await Core.AI.pingLocalModel(port); }
