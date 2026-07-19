@@ -671,6 +671,9 @@ body {
   color: var(--text-primary);
   white-space: pre-wrap;
   word-break: break-word;
+  /* 长内容限制: 避免超出视口撑爆布局;留 240px 给顶部 header + 底部 nav */
+  max-height: calc(100vh - 240px);
+  overflow-y: auto;
   /* 打字机光标效果(流式输出时用) */
   caret-color: var(--accent-gold);
 }
