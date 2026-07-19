@@ -135,10 +135,14 @@ window.getActiveABConfig = getActiveABConfig;
 
 // DOMContentLoaded 兜底绑定导航已搬到 core/theme.js (setupNavFallback)
 // 手相拖拽初始化 (setupSxDragDrop 定义在 app/shouxiang.js)
+// 注意:v3.0.5 手相改 4 张图(先天/后天 × 掌心/手背),ID 已拆成 LeftPalm/LeftBack/RightPalm/RightBack
+// setupSxDragDrop 现在的签名是 (areaId, inputId, hand, side),缺 side 会让 onSxFileSelect 拿到 undefined
 function _initOnDOMReady() {
   if (typeof setupSxDragDrop === 'function') {
-    setupSxDragDrop('sxUploadAreaLeft', 'sxFileInputLeft', 'left');
-    setupSxDragDrop('sxUploadAreaRight', 'sxFileInputRight', 'right');
+    setupSxDragDrop('sxUploadAreaLeftPalm',  'sxFileInputLeftPalm',  'left',  'palm');
+    setupSxDragDrop('sxUploadAreaLeftBack',  'sxFileInputLeftBack',  'left',  'back');
+    setupSxDragDrop('sxUploadAreaRightPalm', 'sxFileInputRightPalm', 'right', 'palm');
+    setupSxDragDrop('sxUploadAreaRightBack', 'sxFileInputRightBack', 'right', 'back');
   }
 }
 if (document.readyState === 'loading') {

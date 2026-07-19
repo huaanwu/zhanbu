@@ -99,6 +99,10 @@ const KB_GROUPS = {
   qimen: ['qimen', 'qimen_ext', 'qimen_geju', 'qimen_xingmen', 'qimen_zhanji', 'qimen_paipan', 'qimen_yongshen', 'wannianli'],
   fengshui: ['fengshui_ext', 'fengshui_base', 'fengshui_luopan', 'zeri_ext', 'zeri_jixiong', 'meihua_ext', 'meihua_lei_xiang', 'mianxiang_ext', 'mianxiang_qise', 'mianxiang_qise2'],
   xingshi: ['xingshi', 'xingshi_ext', 'xingshi_cases'],
+  // v3.0.5 修回归 (finding P0-4): shouxiang 之前漏写在 KB_GROUPS,导致 loadKBGroup('shouxiang') early-return,
+  // KB 数据只在 _bundleCache 里出现、从未进入 prompt。KB_TIERS.primary.shouxiang 早就声明了 ['shouxiang','guxiang'],
+  // KB_TIERS.extended.shouxiang 声明了 ['shengxiang','qise','shouxiang_wenli'],这里把这些一起包进来
+  shouxiang: ['shouxiang', 'guxiang', 'shengxiang', 'qise', 'shouxiang_wenli'],
   daofobuddhism: ['daoism_fuzhou', 'daoism_zhoushu', 'daoism_shoujue', 'daoism_zhaijiao', 'buddhism_mantra', 'buddhism_divine', 'daoism_jiuhuo']
 };
 

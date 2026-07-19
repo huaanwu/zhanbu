@@ -62,9 +62,26 @@ const Cache = {
         parts.push(params.address);
         break;
       case 'shouxiang':
-        // 手相用图片 base64 的前 100 个字符作为指纹
-        parts.push(params.leftBase64?.slice(0, 100) || 'no-left');
-        parts.push(params.rightBase64?.slice(0, 100) || 'no-right');
+        // v3.0.5: 4 张图 + Tier-3 关键点 + 跨域 linkPan 全计入 cache key
+        // 之前用旧 2 图 (leftBase64/rightBase64),会导致不同照片解读串号 (finding #9)
+        parts.push(params.images?.leftPalm?.slice(0, 80) || 'no-left-palm');
+        parts.push(params.images?.leftBack?.slice(0, 80) || 'no-left-back');
+        parts.push(params.images?.rightPalm?.slice(0, 80) || 'no-right-palm');
+        parts.push(params.images?.rightBack?.slice(0, 80) || 'no-right-back');
+        parts.push('kp:' + (params.keypoints ? 'yes' : 'no'));
+        // linkPan 指纹:把命盘关键干支/卦名拼起来,确保不同命盘不同 key
+        if (params.linkPan) {
+          var lp = params.linkPan;
+          if (lp.bazi?.gz?.day) parts.push('bazi-day:' + lp.bazi.gz.day);
+          else if (lp.bazi) parts.push('bazi');
+          if (lp.ziwei?.mingGong?.ganzhi) parts.push('zw:' + lp.ziwei.mingGong.ganzhi);
+          else if (lp.ziwei) parts.push('zw');
+          if (lp.liuyao?.gua?.name) parts.push('ly:' + lp.liuyao.gua.name);
+          else if (lp.liuyao) parts.push('ly');
+          if (lp.qimen?.jushu_text) parts.push('qm:' + lp.qimen.jushu_text);
+          else if (lp.qimen) parts.push('qm');
+        }
+        parts.push('sx-v3.0.5-fix'); // 防止旧 2 图缓存串到新用户
         break;
       case 'cross':
         // 三术同参包含六爻，同样不能复用旧六爻算法缓存。

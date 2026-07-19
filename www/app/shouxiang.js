@@ -75,29 +75,39 @@ async function onSxFileSelect(e, hand, side) {
       document.getElementById('sxActionArea').style.display = 'block';
     }
 
-    // Tier 3: 如果 MediaPipe 已启用, 上传时自动检测关键点
-    if (sxMPEnabled && window.ShouXiangMP?.isReady?.()) {
-      try {
-        const imgEl = document.getElementById(previewId);
-        // 等图片加载完
-        if (!imgEl.complete) await new Promise(r => imgEl.onload = r);
-        const detection = window.ShouXiangMP.detectHand(imgEl);
-        if (detection) {
-          const quant = window.ShouXiangMP.quantifyHand(detection);
-          sxKeypoints[hand][side] = quant;
-          // 在原图上叠加关键点骨架 (临时画到 preview img 上层)
-          drawKeypointsOverlay(imgEl, detection);
-          updateSxMPStatus();
-          showToast(`✓ ${hand === 'left' ? '左' : '右'}手·${side === 'palm' ? '掌心' : '手背'} 21 关键点检测完成`, 'success');
-        } else {
-          sxKeypoints[hand][side] = null;
-          updateSxMPStatus();
-          showToast('⚠️ ' + (hand === 'left' ? '左' : '右') + '手·' + side + ' 未检测到手,请重新拍照(手指展开、掌心清晰)', 'warning');
-        }
-      } catch (err) {
-        console.warn('[sx] MediaPipe detect fail:', err.message);
+  // Tier 3 关键点:等图加载完成,同时挂 onerror 处理,防止 corrupt 图让 await 永远 hang
+  // (finding C6: img.onerror 永远不 reject)
+  // 注意:detectHand 现在是 async,必须 await;并发的同元素 onload 不要互相覆盖
+  const imgEl = document.getElementById(previewId);
+  if (sxMPEnabled && window.ShouXiangMP?.isReady?.()) {
+    try {
+      if (!imgEl.complete || imgEl.naturalWidth === 0) {
+        await new Promise((resolve, reject) => {
+          const onDone = () => { imgEl.onload = null; imgEl.onerror = null; resolve(); };
+          imgEl.onload = onDone;
+          imgEl.onerror = () => { imgEl.onload = null; imgEl.onerror = null; reject(new Error('image decode fail')); };
+          // 30s 兜底超时,避免 corrupt 大图占住 UI
+          setTimeout(() => { if (imgEl.onload) onDone(); }, 30000);
+        });
       }
+      const detection = await window.ShouXiangMP.detectHand(imgEl);
+      if (detection) {
+        const quant = window.ShouXiangMP.quantifyHand(detection);
+        sxKeypoints[hand][side] = quant;
+        // 在原图上叠加关键点骨架
+        drawKeypointsOverlay(imgEl, detection);
+        updateSxMPStatus();
+        showToast(`✓ ${hand === 'left' ? '左' : '右'}手·${side === 'palm' ? '掌心' : '手背'} 21 关键点检测完成`, 'success');
+      } else {
+        sxKeypoints[hand][side] = null;
+        updateSxMPStatus();
+        showToast('⚠️ ' + (hand === 'left' ? '左' : '右') + '手·' + side + ' 未检测到手,请重新拍照(手指展开、掌心清晰)', 'warning');
+      }
+    } catch (err) {
+      console.warn('[sx] keypoint detect fail:', err.message);
+      sxKeypoints[hand][side] = null;
     }
+  }
   };
   reader.readAsDataURL(file);
 }
@@ -105,20 +115,25 @@ async function onSxFileSelect(e, hand, side) {
 // 在 img 上叠加 canvas 显示关键点骨架
 function drawKeypointsOverlay(imgEl, detection) {
   if (!window.ShouXiangMP?.drawKeypoints) return;
-  // 创建一个覆盖在 img 上方的 canvas
   let canvas = imgEl.nextElementSibling;
-  if (!canvas || !canvas.classList.contains('sx-kp-overlay')) {
-    canvas = document.createElement('canvas');
-    canvas.className = 'sx-kp-overlay';
-    canvas.style.position = 'absolute';
-    canvas.style.top = imgEl.offsetTop + 'px';
-    canvas.style.left = imgEl.offsetLeft + 'px';
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    canvas.style.pointerEvents = 'none';
-    imgEl.parentElement.style.position = 'relative';
-    imgEl.parentElement.appendChild(canvas);
+  // 每次新上传都把旧 canvas 删了重建,避免 offsetTop/offsetLeft 漂移
+  // 修复 finding #5:旧实现 cache 了第一次的 offset,后续重绘还在老位置
+  if (canvas && canvas.classList?.contains('sx-kp-overlay')) {
+    canvas.remove();
+    canvas = null;
   }
+  canvas = document.createElement('canvas');
+  canvas.className = 'sx-kp-overlay';
+  canvas.style.position = 'absolute';
+  canvas.style.top = '0';
+  canvas.style.left = '0';
+  canvas.style.width = '100%';
+  canvas.style.height = '100%';
+  canvas.style.pointerEvents = 'none';
+  if (getComputedStyle(imgEl.parentElement).position === 'static') {
+    imgEl.parentElement.style.position = 'relative';
+  }
+  imgEl.parentElement.appendChild(canvas);
   window.ShouXiangMP.drawKeypoints(canvas, detection);
 }
 window.onSxFileSelect = onSxFileSelect;
@@ -138,6 +153,13 @@ function clearShouxiang() {
     if (wrap) wrap.style.display = 'none';
     var upload = document.getElementById('sxUploadArea' + cap + sCap);
     if (upload) upload.style.display = 'block';
+    // 同时把上一个 drawKeypointsOverlay 留下的 .sx-kp-overlay canvas 也清掉
+    // 修复 finding #5:clearShouxiang 之前只 display:none wrap,canvas 残留在 DOM 里
+    var preview = document.getElementById('sxPreview' + cap + sCap);
+    if (preview) {
+      var next = preview.nextElementSibling;
+      if (next && next.classList?.contains('sx-kp-overlay')) next.remove();
+    }
   });
   document.getElementById('sxActionArea').style.display = 'none';
   document.getElementById('sxResult').style.display = 'none';
@@ -172,15 +194,18 @@ function updateSxMPStatus() {
 
 async function sxToggleMediaPipe() {
   if (sxMPEnabled && window.ShouXiangMP?.isReady?.()) {
-    // 关闭
+    // 关闭:卸载模型释放 GPU 张量 (finding #13) + 清掉用户数据
     sxMPEnabled = false;
     sxKeypoints.left = { palm: null, back: null };
     sxKeypoints.right = { palm: null, back: null };
+    // 把 .sx-kp-overlay 残 canvas 也清掉
+    document.querySelectorAll('.sx-kp-overlay').forEach(n => n.remove());
+    try { await window.ShouXiangMP.disposeHandpose?.(); } catch (e) { console.warn('[sx] handpose dispose warn:', e.message); }
     updateSxMPStatus();
     showToast('已关闭 AI 关键点检测', 'info');
     return;
   }
-  // 启用: 加载 MediaPipe
+  // 启用:加载 TF.js handpose
   sxMPEnabled = true;
   updateSxMPStatus();
   try {
@@ -190,6 +215,8 @@ async function sxToggleMediaPipe() {
     showToast('MediaPipe 加载完成,上传图时自动检测', 'success');
   } catch (e) {
     sxMPEnabled = false;
+    // 加载失败也要 dispose 掉半加载的 model (finding #2 risk)
+    try { await window.ShouXiangMP.disposeHandpose?.(); } catch (_) {}
     updateSxMPStatus();
     showToast('MediaPipe 加载失败,降级为纯 AI 解读: ' + e.message, 'error');
   }
@@ -210,9 +237,19 @@ function sxFlipImage(hand, side) {
     ctx.drawImage(img, 0, 0);
     var flipped = canvas.toDataURL('image/jpeg', 0.9);
     sxImages[hand][side] = flipped;
+    // 翻转后关键点坐标是镜像前的,必须清掉避免把 stale keypoints 发给 AI
+    // 修复 finding #2:sxFlipImage 不清 sxKeypoints
+    sxKeypoints[hand][side] = null;
+    updateSxMPStatus();
     var cap = hand.charAt(0).toUpperCase() + hand.slice(1);
     var sCap = side.charAt(0).toUpperCase() + side.slice(1);
-    document.getElementById('sxPreview' + cap + sCap).src = flipped;
+    var preview = document.getElementById('sxPreview' + cap + sCap);
+    if (preview) {
+      preview.src = flipped;
+      // 同一张图残 canvas 也清掉
+      var next = preview.nextElementSibling;
+      if (next && next.classList?.contains('sx-kp-overlay')) next.remove();
+    }
   };
   img.src = base64;
 }
@@ -277,35 +314,53 @@ async function doShouxiang() {
   const 后天Side = isMale ? 'right' : 'left';
 
   // Tier 3: MediaPipe 量化事实 (如果有)
+  // 去掉之前的 3 行 truncated back-of-hand 截断 —— 要么全输出要么不输出
+  // (finding #2:formatQuantifiedForPrompt(back).slice(0,3) 是信息损失的 hack)
   var quantFacts = '';
   [[先天Side, 先天Hand], [后天Side, 后天Hand]].forEach(function(p) {
     var sideKey = p[0], handName = p[1];
     var palm = sxKeypoints[sideKey].palm, back = sxKeypoints[sideKey].back;
     if (palm || back) {
-      quantFacts += '\n【' + handName + '·MediaPipe 量化】\n';
+      quantFacts += '\n【' + handName + '·Tier-3 量化】\n';
       if (palm) quantFacts += window.ShouXiangMP.formatQuantifiedForPrompt(palm) + '\n';
-      if (back) quantFacts += '(手背图: ' + window.ShouXiangMP.formatQuantifiedForPrompt(back).split('\n').slice(0, 3).join(' / ') + ')\n';
+      if (back) quantFacts += window.ShouXiangMP.formatQuantifiedForPrompt(back) + '\n';
     }
   });
-  if (quantFacts) quantFacts = '\n\n【量化锚点·100%准确】\n' + quantFacts;
+  if (quantFacts) quantFacts = '\n\n【量化锚点 (TF.js Handpose 21 关键点 · 相对量,占原图宽 %)】\n' + quantFacts;
 
+  // visionPrompt 是 user-side 的内容,绝不进 system (避免双发 / 同时丢)
+  // 之前 quantFacts 既塞 extraSystem 又塞 user,这条 PR 已经合并
   var visionPrompt = buildShouxiangPrompt(先天Hand, 后天Hand, isMale) + quantFacts;
 
   // 构造图片数组 (按提示词对应顺序: 先天掌心→先天手背→后天掌心→后天手背)
   const imageUrls = [];
+  const missingSlots = [];
+  // 同时构造 cache key 用的 images 字典 (修复 Cache.makeKey 4图字段)
+  const imagesForCache = {};
   [[先天Side, 先天Hand], [后天Side, 后天Hand]].forEach(function(p) {
-    var sideKey = p[0];
+    var sideKey = p[0], handName = p[1];
     ['palm', 'back'].forEach(function(side) {
       var data = sxGet(sideKey, side);
-      if (data) imageUrls.push({ type: 'image_url', image_url: { url: data } });
+      const isLeft = sideKey === 'left';
+      const cacheKey4 = isLeft ? (side === 'palm' ? 'leftPalm' : 'leftBack')
+                                : (side === 'palm' ? 'rightPalm' : 'rightBack');
+      if (data) {
+        imagesForCache[cacheKey4] = data;
+        imageUrls.push({ type: 'image_url', image_url: { url: data } });
+      } else {
+        missingSlots.push(`${handName}·${side === 'palm' ? '掌心' : '手背'}`);
+      }
     });
   });
+  if (missingSlots.length) {
+    visionPrompt += `\n\n【缺失照片】以下位置用户未上传,解读时不要瞎编:${missingSlots.join('、')}`;
+  }
 
   // Tier 2 联动: 把八字/紫微/三术同参最近一次排盘注入 system prompt
-  // 从 currentBazi/currentZw/currentCross/currentLy/currentQm 中按优先级取一个
+  // 修复 crossLink chain: 三术同参时如果有 liuyao/qimen 也纳入 linkPan,不再只接受 bazi/ziwei 字段
   var linkPan = null;
   var linkSrc = '';
-  if (window.currentCross && (window.currentCross.bazi || window.currentCross.ziwei)) {
+  if (window.currentCross && (window.currentCross.bazi || window.currentCross.ziwei || window.currentCross.liuyao || window.currentCross.qimen)) {
     linkPan = window.currentCross;
     linkSrc = '三术同参';
   } else if (window.currentBazi) {
@@ -314,6 +369,12 @@ async function doShouxiang() {
   } else if (window.currentZw) {
     linkPan = { ziwei: window.currentZw };
     linkSrc = '紫微';
+  } else if (window.currentLy) {
+    linkPan = { liuyao: window.currentLy };
+    linkSrc = '六爻';
+  } else if (window.currentQm) {
+    linkPan = { qimen: window.currentQm };
+    linkSrc = '奇门';
   }
   var linkHint = '';
   if (linkPan) {
@@ -323,8 +384,100 @@ async function doShouxiang() {
     domain: 'shouxiang',
     pan: linkPan,
     question: '',
-    extraSystem: (visionPrompt || '') + linkHint
+    extraSystem: linkHint
   });
+
+  // v3.0.6:Cache 命中先返回 (避免重复付费 + 重复等待)
+  const Cache = window.Cache;
+  const hasAnyKPs = sxKeypoints.left.palm || sxKeypoints.left.back || sxKeypoints.right.palm || sxKeypoints.right.back;
+  const cacheParams = {
+    ...linkPan,
+    images: imagesForCache,
+    keypoints: hasAnyKPs ? 1 : 0,
+    question: '',
+  };
+  const sxCacheKey = Cache ? Cache.makeKey('shouxiang', cacheParams) : null;
+  if (sxCacheKey) {
+    const cached = Cache.get('shouxiang', cacheParams);
+    if (cached) {
+      resultEl.innerHTML = '<div style="white-space:pre-wrap;">[缓存命中 · ' + imageUrls.length + ' 张图]\n\n' + escapeHtml(cached) + '</div>';
+      finalizeShouxiang(resultEl, cached);
+      return;
+    }
+  }
+
+  // ========== 通用 VL 调用封装 (本地→云端 fallback + 流式 + abort) ==========
+  // interpret() 不支持 multimodal,所以这里手写一个 multimodal 版,但复用
+  // Core.Stream 的 indicator + Core.AI 的 abort 管理,保持 v3.0.5 全局状态一致
+  let multimodalAbort = null;
+  function _setAbort(c) {
+    multimodalAbort = c;
+    if (c) Core.AI.setCurrentStreamAbort(c);
+    else Core.AI.clearCurrentStreamAbort();
+  }
+
+  async function callMultimodalVision(endpoint, headers, body, label, timeoutMs) {
+    let fullText = '';
+    try {
+      Core.Stream.showStreamIndicator();
+      const ctrl = new AbortController();
+      _setAbort(ctrl);
+      const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+        if (!res.ok) {
+          let errMsg = 'HTTP ' + res.status;
+          try { const j = await res.json(); errMsg = j.error?.message || errMsg; } catch (_) {}
+          throw new Error(`${label} HTTP ${res.status}: ${errMsg}`);
+        }
+        // 支持 SSE 流式:若响应是 ndjson/chunked,逐 token 累加
+        if (res.body && res.headers.get('content-type')?.includes('text/event-stream')) {
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buf = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            const lines = buf.split('\n');
+            buf = lines.pop() || '';
+            for (const line of lines) {
+              const t = line.trim();
+              if (!t || !t.startsWith('data:')) continue;
+              const payload = t.slice(5).trim();
+              if (payload === '[DONE]') continue;
+              try {
+                const j = JSON.parse(payload);
+                const delta = j.choices?.[0]?.delta?.content || j.choices?.[0]?.message?.content || '';
+                if (delta) {
+                  fullText += delta;
+                  resultEl.innerHTML = '<div style="white-space:pre-wrap;">[' + label + ' · ' + imageUrls.length + ' 张图 · 流式]\n\n' + escapeHtml(fullText) + '</div>';
+                }
+              } catch (_) { /* skip non-JSON keepalive */ }
+            }
+          }
+        } else {
+          const data = await res.json();
+          fullText = data.choices?.[0]?.message?.content?.trim() || '';
+        }
+      } finally {
+        clearTimeout(timer);
+        _setAbort(null);
+        Core.Stream.hideStreamIndicator();
+      }
+      return fullText;
+    } catch (e) {
+      Core.Stream.hideStreamIndicator();
+      _setAbort(null);
+      throw e;
+    }
+  }
 
   // 检测本地模型
   async function checkLocalModel(port) {
@@ -334,72 +487,97 @@ async function doShouxiang() {
       const res = await fetch(`http://${getLocalServerIp()}:${port}/v1/models`, { method: 'GET', signal: ctrl.signal });
       clearTimeout(t);
       return res.ok;
-    } catch (e) { return false; }
+    } catch (e) {
+      // CLAUDE.md:catch 内必须有日志 (finding #12:port 探测失败被静默)
+      console.warn('[sx] local LLM probe fail on', port + ':', e.message);
+      return false;
+    }
   }
 
-  const localPort = getLocalServerPort();
-  const hasVL = await checkLocalModel(localPort);
+  // messages 构造:system → role=system message;user → 文本 + image_url 内容块列表
+  // (修复 finding P1-5:OpenAI/DashScope 不认顶层 system 字段,会被静默丢弃)
+  // (修复 finding P1-7:visionPrompt 只发 user 一份,不再双发)
+  const messages = [
+    { role: 'system', content: system || '' },
+    { role: 'user', content: [{ type: 'text', text: visionPrompt }].concat(imageUrls) }
+  ];
 
-  // 统一调用: 本地 VL 优先, 失败则降级到云端
-  // system 由 Core.AI.buildSystemPrompt 统一组装(含跨域命盘事实 + KB + 反馈)
-  // user 内容 = visionPrompt + 4 张图
-  const messages = [{
-    role: 'user',
-    content: [{ type: 'text', text: visionPrompt + '\n\n【语言约束】所有输出必须使用纯中文,禁止英文/思考过程/分析步骤。' }].concat(imageUrls)
-  }];
+  const localPort = getLocalServerPort();
+  let fullText = '';
+  let usedSource = '';
 
   // ========== 本地 VL 一把搞定 ==========
-  if (hasVL) {
+  if (await checkLocalModel(localPort)) {
+    usedSource = `本地 VL (${localPort})`;
+    resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在深度思考(最长8分钟)...</div>`;
     try {
-      resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在深度思考(最长8分钟)...</div>`;
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 600000);
-      const res = await fetch(`${getLocalServerUrl()}/v1/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'local', system, messages, temperature: 0.15, max_tokens: 4096 }),
-        signal: ctrl.signal
-      });
-      clearTimeout(timer);
-      if (!res.ok) throw new Error('VL HTTP ' + res.status);
-      const data = await res.json();
-      const text = data.choices?.[0]?.message?.content?.trim() || '未返回内容';
-      const cleanText = stripThinking(text);
-      resultEl.innerHTML = '<div style="white-space:pre-wrap;">[本地 VL 模型 · ' + imageUrls.length + ' 张图]\n\n' + escapeHtml(cleanText) + '</div>';
-      return;
+      const localModelName = localStorage.getItem('local_model_name') || 'local';
+      fullText = await callMultimodalVision(
+        `${getLocalServerUrl()}/v1/chat/completions`,
+        { 'Content-Type': 'application/json' },
+        { model: localModelName, messages, temperature: 0.15, max_tokens: 4096, stream: true },
+        usedSource,
+        600000
+      );
     } catch (e) {
-      console.log('本地 VL 失败:', e.message);
-      resultEl.innerHTML = `<div class="loading">本地模型(${localPort})失败: ` + escapeHtml(e.message) + '，准备切换云端...</div>';
+      console.warn('[sx] 本地 VL 失败,降级云端:', e.message);
+      resultEl.innerHTML = `<div class="loading">本地模型失败: ${escapeHtml(e.message)} — 切云端...</div>`;
+      fullText = '';
     }
   }
 
   // ========== 云端 VL fallback ==========
-  const vKey = localStorage.getItem('vision_api_key') || '';
-  if (!vKey) {
-    resultEl.innerHTML = `<div class="error">本地识图服务未启动(${localPort})，且未配置识图 API Key。<br>请在设置页填写阿里云百炼 API Key，或启动本地 VL 模型。</div>`;
+  if (!fullText) {
+    const vKey = localStorage.getItem('vision_api_key') || '';
+    if (!vKey) {
+      resultEl.innerHTML = `<div class="error">本地识图服务未启动(${localPort})，且未配置识图 API Key。<br>请在设置页填写阿里云百炼 API Key，或启动本地 VL 模型。</div>`;
+      return;
+    }
+    usedSource = '云端 VL (DashScope)';
+    resultEl.innerHTML = '<div class="loading">调用云端识图(' + imageUrls.length + ' 张图分析)...</div>';
+    try {
+      const model = localStorage.getItem('vision_model') || 'qwen-vl-plus';
+      fullText = await callMultimodalVision(
+        'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+        { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + vKey },
+        { model, messages, temperature: 0.6, max_tokens: 4096, stream: true },
+        usedSource,
+        120000
+      );
+    } catch (e) {
+      resultEl.innerHTML = `<div class="error"><strong>分析失败</strong><br>本地模型无法连接，云端模型也未配置或不可用。<br><br><strong>解决步骤：</strong><br>1. 确认手机和电脑在同一WiFi下<br>2. 检查本地模型是否已启动（${localPort}端口）<br>3. 或在设置页配置阿里云百炼API Key<br><br>错误详情: ` + escapeHtml(e.message) + '</div>';
+      return;
+    }
+  }
+
+  fullText = Core.AI.stripThinking(fullText || '');
+  if (!fullText) {
+    resultEl.innerHTML = '<div class="error">模型返回空内容,请重试</div>';
     return;
   }
 
-  resultEl.innerHTML = '<div class="loading">调用云端识图(' + imageUrls.length + ' 张图分析)...</div>';
-  try {
-    const model = localStorage.getItem('vision_model') || 'qwen-vl-plus';
-    const ctrl3 = new AbortController();
-    const t3 = setTimeout(() => ctrl3.abort(), 120000);
-    const res = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + vKey },
-      body: JSON.stringify({ model, system, messages, temperature: 0.6, max_tokens: 4096 }),
-      signal: ctrl3.signal
-    });
-    clearTimeout(t3);
-    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || 'HTTP ' + res.status); }
-    const data = await res.json();
-    const text = data.choices?.[0]?.message?.content?.trim() || '未返回内容';
-    const cleanText = stripThinking(text);
-    resultEl.innerHTML = '<div style="white-space:pre-wrap;">[云端模型 · ' + imageUrls.length + ' 张图]\n\n' + escapeHtml(cleanText) + '</div>';
-  } catch (e) {
-    resultEl.innerHTML = `<div class="error"><strong>分析失败</strong><br>本地模型无法连接，云端模型也未配置或不可用。<br><br><strong>解决步骤：</strong><br>1. 确认手机和电脑在同一WiFi下<br>2. 检查本地模型是否已启动（${localPort}端口）<br>3. 或在设置页配置阿里云百炼API Key<br><br>错误详情: ` + escapeHtml(e.message) + '</div>';
+  resultEl.innerHTML = '<div style="white-space:pre-wrap;">[' + usedSource + ' · ' + imageUrls.length + ' 张图]\n\n' + escapeHtml(fullText) + '</div>';
+
+  // 写缓存
+  if (sxCacheKey && fullText) {
+    try { Cache.set('shouxiang', cacheParams, fullText); }
+    catch (e) { console.warn('[sx] cache set fail:', e); }
   }
+
+  // v3.0.6 v3.0.5 收尾:历史 + 反馈 + 工具栏 + 事件派发
+  finalizeShouxiang(resultEl, fullText);
+}
+
+// 把手相解读结果"完整收尾"——保存历史、加反馈 UI、显示工具栏、派发 AI_COMPLETE 事件
+// 抽出来让 cache-hit 与正常完成路径共用
+function finalizeShouxiang(resultEl, fullText) {
+  try { window.saveHistory?.('shouxiang', 'shouxiang-' + Date.now(), '手相解读', fullText); } catch (e) { console.warn('[sx] saveHistory:', e); }
+  try { window.addFeedbackUI?.('shouxiang', resultEl, fullText, '', ''); } catch (e) { console.warn('[sx] addFeedbackUI:', e); }
+  try { window.showResultActions?.('sxResult', 'sxResultActions'); } catch (e) { console.warn('[sx] showResultActions:', e); }
+  try {
+    const bus = window.EventBus; const evName = window.CoreEvents?.AI_COMPLETE;
+    if (bus && evName) bus.dispatchEvent(new CustomEvent(evName, { detail: { domain: 'shouxiang', outputText: fullText, contentEl: resultEl } }));
+  } catch (e) { console.warn('[sx] AI_COMPLETE dispatch:', e); }
 }
 window.doShouxiang = doShouxiang;
 

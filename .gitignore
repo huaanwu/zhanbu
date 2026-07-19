@@ -48,3 +48,18 @@ yarn-error.log*
 
 # 本地测试服务器日志
 tmp_server*.log
+
+# LLM / 本地模型相关临时文件(不入仓)
+*.log
+fast_download.py
+test-ctx.js
+test-llm-quick.js
+test-local-llm.js
+test-handread.js
+test-speed.js
+start-llama*.bat
+window_dump.xml
+# 模拟器/调试截图
+screen_*.png
+# 项目内临时预览页(真要保留挪 www/tmp/ 再 commit)
+/www/preview_*.html
