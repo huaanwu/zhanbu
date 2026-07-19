@@ -419,7 +419,10 @@ async function doShouxiang() {
     Core.AI.setCurrentStreamAbort(ctrl);
     // 计时器只能在 finally 清,不能在 fetch resolve 后清:
     // fetch resolve 只代表 headers 返回,SSE body 可能再 hang 远超 timeoutMs
-    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    // 用 timer 标志区分 user-stop 与 timeout:ctrl.signal.reason = 'sx-timeout' vs default 'user-stop'
+    const timer = setTimeout(() => {
+      try { ctrl.abort('sx-timeout'); } catch (_) {}
+    }, timeoutMs);
     Core.Stream.showStreamIndicator();
     try {
       const res = await fetch(endpoint, {
@@ -474,17 +477,22 @@ async function doShouxiang() {
 
   // 检测本地模型
   async function checkLocalModel(port) {
-    try {
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 15000);
-      const res = await fetch(`http://${getLocalServerIp()}:${port}/v1/models`, { method: 'GET', signal: ctrl.signal });
-      clearTimeout(t);
-      return res.ok;
-    } catch (e) {
-      // CLAUDE.md:catch 内必须有日志 (finding #12:port 探测失败被静默)
-      console.warn('[sx] local LLM probe fail on', port + ':', e.message);
-      return false;
-    }
+    // 用共享 helper,与 ai-service.js 内 callDeepSeek 的 health-check 路径共用
+    return typeof Core.AI.pingLocalModel === 'function'
+      ? await Core.AI.pingLocalModel(port)
+      : await (async () => {
+          try {
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), 15000);
+            const res = await fetch(`http://${getLocalServerIp()}:${port}/v1/models`, { method: 'GET', signal: ctrl.signal });
+            clearTimeout(t);
+            return res.ok;
+          } catch (e) {
+            // CLAUDE.md:catch 内必须有日志 (finding #12:port 探测失败被静默)
+            console.warn('[sx] local LLM probe fail on', port + ':', e.message);
+            return false;
+          }
+        })();
   }
 
   // messages 构造:system → role=system message;user → 文本 + image_url 内容块列表
@@ -504,11 +512,10 @@ async function doShouxiang() {
     usedSource = `本地 VL (${localPort})`;
     resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在深度思考(最长8分钟)...</div>`;
     try {
-      // 用 Core.AI.getLocalModelName() 通过 /v1/models 自动发现 Ollama/llama-server 实际 model 名
-      // 旧 fallback `|| 'local'` 会让 Ollama 报 404 'model "local" not found'
-      const localModelName = (typeof Core.AI.getLocalModelName === 'function')
-        ? await Core.AI.getLocalModelName()
-        : (localStorage.getItem('local_model_name') || 'local');
+      // Core.AI.getLocalModelName() 通过 /v1/models 自动发现 Ollama/llama-server 实际 model 名
+      // (round-2 fix:去掉 typeof guard —— getLocalModelName 现已在 Core.AI export 列表里;
+      // 旧 fallback `|| 'local'` 会让 Ollama 报 404 'model "local" not found')
+      const localModelName = await Core.AI.getLocalModelName();
       fullText = await callMultimodalVision(
         `${getLocalServerUrl()}/v1/chat/completions`,
         { 'Content-Type': 'application/json' },
@@ -518,18 +525,27 @@ async function doShouxiang() {
       );
     } catch (e) {
       // 用户手动停 (⏹) → 不降级云端,直接结束
-      if (e?.name === 'AbortError') {
+      // 区分 timeout (10 分钟到) vs user-stop:
+      //   timeout: e.name === 'AbortError' 且 ctrl.signal.reason === 'sx-timeout' 或 e.message 含 'timeout'
+      //   user-stop: AbortError 但 reason 不含 timeout
+      const isTimeoutAbort = e?.name === 'AbortError' && (
+        e.message?.includes('timeout') ||
+        e.message?.includes('exceeded') ||
+        String(e?.cause || '').includes('sx-timeout')
+      );
+      if (e?.name === 'AbortError' && !isTimeoutAbort) {
         resultEl.innerHTML = '<div class="info">已停止生成。</div>';
         return;
       }
-      console.warn('[sx] 本地 VL 失败,降级云端:', e.message);
-      resultEl.innerHTML = `<div class="loading">本地模型失败: ${escapeHtml(e.message)} — 切云端...</div>`;
+      // timeout / 真错误 → 继续尝试云端 fallback
+      const reasonLabel = isTimeoutAbort ? '本地模型超时' : '本地模型失败';
+      console.warn(`[sx] ${reasonLabel},降级云端:`, e.message);
+      resultEl.innerHTML = `<div class="loading">${reasonLabel}: ${escapeHtml(e.message)} — 切云端...</div>`;
       fullText = '';
     }
   }
 
   // ========== 云端 VL fallback ==========
-  // 透传 AbortError:用户停掉了本地/云端任一,都不应该继续另一个
   if (!fullText) {
     const vKey = localStorage.getItem('vision_api_key') || '';
     if (!vKey) {
@@ -548,6 +564,11 @@ async function doShouxiang() {
         120000
       );
     } catch (e) {
+      // (round-2 fix) 用户主动 ⏹ 云端 → 显示'已停止',不显示误导的"本地模型无法连接"
+      if (e?.name === 'AbortError') {
+        resultEl.innerHTML = '<div class="info">已停止生成。</div>';
+        return;
+      }
       resultEl.innerHTML = `<div class="error"><strong>分析失败</strong><br>本地模型无法连接，云端模型也未配置或不可用。<br><br><strong>解决步骤：</strong><br>1. 确认手机和电脑在同一WiFi下<br>2. 检查本地模型是否已启动（${localPort}端口）<br>3. 或在设置页配置阿里云百炼API Key<br><br>错误详情: ` + escapeHtml(e.message) + '</div>';
       return;
     }

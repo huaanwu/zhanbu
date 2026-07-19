@@ -187,6 +187,18 @@
     return 'default';
   }
 
+  // v3.0.5 + fix(suicidal-review round-2): 加 pingLocalModel helper 给 shouxiang.js
+  // checkLocalModel 复用 (探测阶段做 health check, 不需要 model 名称)
+  async function pingLocalModel(port, timeoutMs = 15000) {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), timeoutMs);
+      const res = await fetch(`http://${getLocalServerIp()}:${port}/v1/models`, { method: 'GET', signal: ctrl.signal });
+      clearTimeout(t);
+      return res.ok;
+    } catch (e) { console.warn('[AI] local LLM ping fail on', port + ':', e.message); return false; }
+  }
+
   let _currentStreamAbort = null;
 
   async function callDeepSeek(prompt, system, onChunk, opts = {}) {
@@ -567,8 +579,8 @@
         + '6. 用神一致时结论更可靠，用神不一致时需分别说明各术视角\n\n';
     }
 
-    // 6.5) 手相特殊: 跨域联动 (八字/紫微)
-    // 如果 pan 含 bazi/ziwei, 自动注入对应命盘的关键事实,
+    // 6.5) 手相特殊: 跨域联动 (八字/紫微/六爻/奇门)
+    // 如果 pan 含 bazi/ziwei/liuyao/qimen, 自动注入对应命盘的关键事实,
     // 让手相 AI 同时引用掌纹 + 命盘综合判断, 大幅提升准确度
     var shouxiangLink = '';
     if (cfg.crossLink && pan) {
@@ -579,6 +591,12 @@
         }
         if (cfg.crossLink.ziwei && pan.ziwei && window.Expert?.ziwei) {
           linkParts.push('【紫微事实·用于交叉印证手相】\n' + window.Expert.ziwei(pan.ziwei));
+        }
+        if (cfg.crossLink.liuyao && pan.liuyao && window.Expert?.liuyao) {
+          linkParts.push('【六爻事实·用于交叉印证手相】\n' + window.Expert.liuyao(pan.liuyao));
+        }
+        if (cfg.crossLink.qimen && pan.qimen && window.Expert?.qimen) {
+          linkParts.push('【奇门事实·用于交叉印证手相】\n' + window.Expert.qimen(pan.qimen));
         }
         if (linkParts.length > 0) {
           shouxiangLink = '【跨域联动】\n'
@@ -615,6 +633,10 @@
     getLocalServerUrl,
     getLocalServerIp,
     getLocalServerPort,
+    // v3.0.5 + fix(suicidal-review round-2): 加 export —— shouxiang.js / 其他
+    // multimodal 用例需要在 body 里发准确的 model 名, 不能 fallback 'local' 触发 Ollama 404
+    getLocalModelName,
+    pingLocalModel,
     getCurrentStreamAbort,
     setCurrentStreamAbort,
     clearCurrentStreamAbort,

@@ -62,8 +62,10 @@ function loadScript(url) {
     // 会拿到一个尚未初始化的全局 (ReferenceError: tf is not defined)
     const existing = document.querySelector(`script[data-src="${url}"]`);
     if (existing && existing.dataset.loaded === '1') return resolve();
+    // dataset.error='1' 表示上次加载失败(超时或网络错) — 删了 tag 重新走完整路径
+    // round-2 fix: 之前 dataset.error='1' 写了不读,导致 timeout 后永远卡死
+    if (existing && existing.dataset.error === '1') existing.remove();
     if (existing && existing.dataset.loading === '1') {
-      // 等同实例的 onload/onerror 触发
       existing.addEventListener('load', () => resolve(), { once: true });
       existing.addEventListener('error', () => reject(new Error(`CDN load fail: ${url}`)), { once: true });
       return;
@@ -73,18 +75,15 @@ function loadScript(url) {
     script.dataset.src = url;
     script.dataset.loading = '1';
     const timer = setTimeout(() => {
-      // 超时时主动 abort:dataset.loading 清掉,error 事件触发(派发 reject),
-      // 并删除 stale <script> 避免下一次复用半加载的 tag
+      // 超时:dataset.loading 清掉,标记 dataset.error,删 stale <script> 让下一次复用从干净开始
       script.dataset.loading = '';
       script.dataset.error = '1';
-      const reason = `CDN timeout after ${LOAD_SCRIPT_TIMEOUT_MS}ms: ${url}`;
-      script.dispatchEvent(new Event('error'));
-      // script.remove() 不要做 — 浏览器可能正在下载;tag 留着但 error=1 防止下一次触发 reuse
-      reject(new Error(reason));
+      script.remove();
+      reject(new Error(`CDN timeout after ${LOAD_SCRIPT_TIMEOUT_MS}ms: ${url}`));
     }, LOAD_SCRIPT_TIMEOUT_MS);
     script.onload = () => { clearTimeout(timer); script.dataset.loaded = '1'; script.dataset.loading = ''; resolve(); };
-    script.onerror = () => { clearTimeout(timer); script.dataset.loading = ''; script.dataset.error = '1'; reject(new Error(`CDN load fail: ${url}`)); };
-    if (!existing) document.head.appendChild(script);
+    script.onerror = () => { clearTimeout(timer); script.dataset.loading = ''; script.dataset.error = '1'; script.remove(); reject(new Error(`CDN load fail: ${url}`)); };
+    if (!existing || !existing.parentNode) document.head.appendChild(script);
   });
 }
 
@@ -92,21 +91,20 @@ function loadScript(url) {
  * 检测单张图片中的手部 21 关键点
  * 注意:handpose@0.1.0 的 estimateHands 返回 Promise<Array>,必须 await
  * @param {HTMLImageElement} imgEl
- * @param {string} [sxGender] - 'male' | 'female' | 'unknown',让返回的 handedness 不再是 'Unknown'
+ * @param {string} [sxGender] - 'male' | 'female' | 'unknown'
  */
 async function detectHand(imgEl, sxGender) {
   if (!handposeModel) return null;
-  // estimateHands 是 async,需要 await — 否则 result 是 Promise,.length === undefined,后面会崩
   const predictions = await handposeModel.estimateHands(imgEl);
   if (!predictions || predictions.length === 0) return null;
   const hand = predictions[0];
-  const inferred = sxGender === 'male' ? 'Right_or_Left'
-                   : sxGender === 'female' ? 'Left_or_Right'
-                   : 'unknown';
+  // (round-2 fix) 'Right_or_Left' 是 gibberish AI 解析不了,改用 KB 约定有信息量的 token:
+  // 男性左手=先天;女性右手=先天。空值兜底 'unknown'
+  let inferred = 'unknown';
+  if (sxGender === 'male') inferred = 'Male_hand_inferred';
+  else if (sxGender === 'female') inferred = 'Female_hand_inferred';
   return {
     landmarks: hand.landmarks.map(l => ({ x: l[0], y: l[1], z: l[2] || 0 })),
-    // handpose@0.1.0 不暴露 handedness,用 sxGender 反推;原本说 'unknown 兜底'但
-    // 还把 inner 输出写成 '手 (sxGender 兜底): unknown',fix suicidal review 后真正传 sxGender 进来
     handedness: inferred,
     width: imgEl.naturalWidth || imgEl.width,
     height: imgEl.naturalHeight || imgEl.height,

@@ -32,6 +32,12 @@ const Cache = {
     this._accessOrder = JSON.parse(localStorage.getItem(this.CONFIG.ACCESS_ORDER_KEY)) || [];
   },
 
+  // ===== 工具函数 =====
+  // (round-2 fix) 抽到 object 上做 sibling method,避免 case 内 function declaration 的 hoisting / strict-mode 风险
+  _imgFingerprint(s) {
+    return s ? s.slice(0, 96) + '|' + s.slice(s.length >> 1, (s.length >> 1) + 80) + '|' + s.slice(-80) : '∅';
+  },
+
   // ===== 生成缓存 Key =====
   makeKey(domain, params) {
     // params 是各模块的特征对象
@@ -61,18 +67,15 @@ const Cache = {
       case 'fengshui':
         parts.push(params.address);
         break;
-      case 'shouxiang':
-        // v3.0.5 + fix(suicidal-review): 4 张图 base64 算稳定指纹要够长才不撞库
-        // 旧版 slice(0,80) 在压缩 JPEG 时仍可能碰撞(同一 JFIF 头 + quant table)
-        // 改用 256 字符指纹 = head + mid + tail,既能区分真实不同图,又不太影响性能
-        function fp(s) { return s ? s.slice(0, 96) + '|' + s.slice(Math.floor(s.length/2), Math.floor(s.length/2)+80) + '|' + s.slice(-80) : '∅'; }
+      case 'shouxiang': {
+        // (round-2 fix) _imgFingerprint 抽到 module-scope
         // sxGender 决定先天/后天手左右映射 (男性 左先天 / 女性 右先天)
-        // 不进 key 会导致男/女切换复用同一份解读(链接已指出)
-        parts.push(params.sxGender || 'unknown');
-        parts.push(fp(params.images?.leftPalm));
-        parts.push(fp(params.images?.leftBack));
-        parts.push(fp(params.images?.rightPalm));
-        parts.push(fp(params.images?.rightBack));
+        // 不进 key 会导致男/女切换复用同一份解读
+        if (params.sxGender) parts.push('gender:' + params.sxGender);
+        parts.push(this._imgFingerprint(params.images?.leftPalm));
+        parts.push(this._imgFingerprint(params.images?.leftBack));
+        parts.push(this._imgFingerprint(params.images?.rightPalm));
+        parts.push(this._imgFingerprint(params.images?.rightBack));
         parts.push('kp:' + (params.keypoints ? 'yes' : 'no'));
         // linkPan 指纹:把命盘关键干支/卦名拼起来,确保不同命盘不同 key
         // (key=linkPan 是 wrapper,见 doShouxiang cacheParams)
@@ -89,6 +92,7 @@ const Cache = {
         }
         parts.push('sx-v3.0.5-fix'); // 防止旧 2 图缓存串到新用户
         break;
+      }
       case 'cross':
         // 三术同参包含六爻，同样不能复用旧六爻算法缓存。
         parts.push('jingfang-v2');
