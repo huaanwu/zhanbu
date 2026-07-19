@@ -9,8 +9,8 @@
 <title>AI占卜大师</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
-
-  <script type="module" crossorigin src="/assets/index-DwDmJkXA.js"></script>
+
+  <script type="module" crossorigin src="/assets/index-C8kFlKtn.js"></script>
   <link rel="stylesheet" crossorigin href="/styles.css">
 </head>
 <body>
@@ -451,6 +451,21 @@
         <button class="divine-btn" onclick="doShouxiang()">AI 解读手相（双手对比）</button>
         <button class="divine-btn" style="background:var(--bg-secondary);color:var(--text-secondary);margin-left:0.5rem;" onclick="clearShouxiang()">重新上传</button>
       </div>
+      <!-- 诊断:永远显示当前本地服务器配置,方便排查endpoint问题 -->
+      <div id="sxLocalDebug" style="text-align:center;font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem;"></div>
+      <script>
+        (function(){
+          function paintSxDebug(){
+            var el = document.getElementById('sxLocalDebug');
+            if (!el) return;
+            var ip = (localStorage.getItem('local_server_ip') || '127.0.0.1');
+            var port = (localStorage.getItem('local_server_port') || '8082');
+            el.textContent = '本地服务器: ' + ip + ':' + port + ' | 模型: ' + (localStorage.getItem('local_model_name') || '(未设置)');
+          }
+          paintSxDebug();
+          setInterval(paintSxDebug, 2000);
+        })();
+      </script>
       <div id="sxResult" class="result-card" style="display:none;margin-top:1rem;"></div>
     </div>
   </div>
