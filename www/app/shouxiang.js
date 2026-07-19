@@ -76,28 +76,17 @@ async function onSxFileSelect(e, hand, side) {
     }
 
   // Tier 3 关键点:检测关键点 + 在原图上叠加骨架
-  // 修复(任务 #43):之前用 setTimeout(30s) 等 onload,导致手相AI解读极慢
-  // 实际:compressImage 已经把图片渲染到 canvas,再 toDataURL 给 <img> 的 src
-  // 浏览器解析 base64 几乎是同步的,imgEl.complete 应该立即 true
-  // 但为了兼容旧图片,加一个 200ms 的等待 + 30s兜底
+  // 修复(任务 #43):4张图依次跑,每张图等图片loaded=浪费30s
+  // 改: 不等,直接调 detectHand,handpose内部会处理
   const imgEl = document.getElementById(previewId);
   if (sxMPEnabled && window.ShouXiangMP?.isReady?.()) {
     try {
-      // 如果图片还没加载完,等它
-      if (imgEl.complete && imgEl.naturalWidth === 0) {
-        await new Promise((resolve) => {
-          var done = false;
-          var finish = function () { if (!done) { done = true; resolve(); } };
-          imgEl.onload = finish;
-          imgEl.onerror = finish;
-          // 30s 兜底(图片已损坏等)
-          setTimeout(finish, 30000);
-        });
-      } else if (!imgEl.complete) {
-        // complete=false 但图片正在加载,等 200ms 通常足够
-        await new Promise((resolve) => setTimeout(resolve, 200));
-      }
-      const detection = await window.ShouXiangMP.detectHand(imgEl, sxGender);
+      // 不等待 imgEl.onload,直接把 detectHand 加上 5秒超时
+      // handpose 自己会处理图片加载,失败就 catch
+      const detection = await Promise.race([
+        window.ShouXiangMP.detectHand(imgEl, sxGender),
+        new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 5000); })
+      ]);
       if (detection) {
         const quant = window.ShouXiangMP.quantifyHand(detection);
         sxKeypoints[hand][side] = quant;
