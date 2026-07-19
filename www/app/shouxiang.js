@@ -76,9 +76,8 @@ async function onSxFileSelect(e, hand, side) {
         document.getElementById('sxActionArea').style.display = 'block';
       }
 
-      // Tier 3 关键点: 临时屏蔽 (任务 #43 诊断)
-      // 用户要求先验证手相 AI 解读主流程,关掉 detectHand 排除干扰
-      /*
+      // Tier 3 关键点: fire-and-forget (后台跑,不阻塞上传流程)
+      // 之前临时屏蔽验证主流程通过,现在恢复
       if (sxMPEnabled && window.ShouXiangMP?.isReady?.()) {
         const imgEl = document.getElementById(previewId);
         Promise.race([
@@ -101,7 +100,6 @@ async function onSxFileSelect(e, hand, side) {
           sxKeypoints[hand][side] = null;
         });
       }
-      */
     })();
   };
   reader.readAsDataURL(file);
@@ -409,36 +407,49 @@ async function doShouxiang() {
   // 不再需要 _setAbort 闭包胶水 — callMultimodalVision 内部一个 try/finally 直接接 Core.AI.
 
   async function callMultimodalVision(endpoint, headers, body, label, timeoutMs) {
-    const nonStreamBody = Object.assign({}, body, { stream: false });
-    const bodyJson = JSON.stringify(nonStreamBody);
+    const bodyJson = JSON.stringify(Object.assign({}, body, { stream: true }));
     console.log("[sx] callMultimodalVision endpoint:", endpoint, "body大小:", bodyJson.length, "bytes");
-    // WebView 内部 fetch + signal 在某些 Android 版本会 signal is aborted without reason
-    // 不要 signal,只用 setTimeout 实现超时
+    // 恢复流式: 本地模型返回 ReadableStream (SSE), 边收边显示
+    // 之前 signal is aborted 是因为 fetch+signal 在 WebView 里挂,现在不用 signal
     const timeoutMsFinal = timeoutMs || 60000;
     const startTime = Date.now();
-    let timedOut = false;
-    const timer = setTimeout(() => { timedOut = true; }, timeoutMsFinal);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => { try { ctrl.abort('sx-timeout'); } catch (_) {} }, timeoutMsFinal);
+    Core.Stream.showStreamIndicator();
     try {
       const res = await fetch(endpoint, {
         method: 'POST',
         headers,
         body: bodyJson,
       });
-      clearTimeout(timer);
-      if (timedOut) throw new Error(`${label} timeout after ${timeoutMsFinal}ms`);
       if (!res.ok) {
         let errMsg = 'HTTP ' + res.status;
         try { const j = await res.json(); errMsg = j.error?.message || errMsg; } catch (jsonErr) { console.warn('[sx] parse api error body fail:', jsonErr.message); }
         throw new Error(`${label} HTTP ${res.status}: ${errMsg}`);
       }
-      const data = await res.json();
-      const elapsed = Date.now() - startTime;
-      console.log("[sx] OK, elapsed:", elapsed, "ms, content length:", (data.choices?.[0]?.message?.content || '').length);
-      return (data.choices?.[0]?.message?.content?.trim() || '');
+      // 流式解析: res.body 是 ReadableStream (SSE), 用 Core.AI.readSSE 读
+      if (res.body && typeof res.body.getReader === 'function' && res.headers.get('content-type')?.includes('text/event-stream')) {
+        const fullText = await Core.AI.readSSE(res.body, function (_delta, content) {
+          var el = document.getElementById('sxResult');
+          if (el) {
+            if (!el._sxResultInited) {
+              el.innerHTML = '';
+              el._sxResultInited = true;
+            }
+            el.textContent = '[' + label + ' · 1 张图 · 流式]\n\n' + content;
+          }
+        });
+        return fullText;
+      } else {
+        // 兼容非流式(如果服务器不支持 SSE)
+        const data = await res.json();
+        return (data.choices?.[0]?.message?.content?.trim() || '');
+      }
     } catch (e) {
       clearTimeout(timer);
       throw e;
     } finally {
+      clearTimeout(timer);
       Core.Stream.hideStreamIndicator();
     }
   }
