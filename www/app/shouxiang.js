@@ -473,7 +473,7 @@ async function doShouxiang() {
   // ========== 本地 VL 一把搞定 ==========
   if (await checkLocalModel(localPort)) {
     usedSource = `本地 VL (${localPort})`;
-    resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在深度思考(最长10分钟)...<br><small>模型需处理4张图片+分析手相,请耐心等待</small></div>`;
+    resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在分析${imageUrls.length}张图片...<br><small>当前模型: ${localModelName}</small></div>`;
     try {
       // Core.AI.getLocalModelName() 通过 /v1/models 自动发现 Ollama/llama-server 实际 model 名
       const localModelName = await Core.AI.getLocalModelName();
