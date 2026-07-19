@@ -176,7 +176,11 @@
     const saved = localStorage.getItem('local_model_name');
     if (saved && saved !== 'default') return saved;
     try {
-      const res = await fetch(`${getLocalServerUrl()}/v1/models`, { signal: AbortSignal.timeout(3000) });
+      // AbortSignal.timeout 在旧版 Android WebView 里不支持,改用 setTimeout + AbortController
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 3000);
+      const res = await fetch(`${getLocalServerUrl()}/v1/models`, { signal: ctrl.signal });
+      clearTimeout(timer);
       if (!res.ok) return 'default';
       const data = await res.json();
       const first = data.data?.[0]?.id || data.models?.[0]?.id || data.data?.[0]?.model || data.models?.[0]?.model;
