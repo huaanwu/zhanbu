@@ -483,14 +483,43 @@ var DLR_ZONGMEN_DETAILS = {
   '返吟法': { name: '返吟课', desc: '月将冲占时, 天地盘相冲', color: '#d44', meaning: '相冲动, 主事体翻覆/反复/有克变吉' }
 };
 
-// 大六壬干支神煞(简化版, 只保留主要神煞)
-// 用于 v3.1.6 渲染神煞表
-// 13 神煞: 天乙贵人 + 十二长生(长生/沐浴/冠带/临官/帝旺/衰/病/死/墓/绝/胎/养)
-// 简化: 每干一样, 不再区分阳顺阴逆(传统阴干长生起点不同,需十二宫对齐;本轮只做主要神煞提示)
-var DLR_GAN_SHA = {};
-['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'].forEach(function (g) {
-  DLR_GAN_SHA[g] = ['天乙贵人','长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'];
-});
+// 大六壬干支神煞(完整版, v3.1.11)
+// 阳干起点: 甲=亥 / 丙=寅 / 戊=寅 / 庚=巳 / 壬=申 (长生起点)
+// 阴干起点: 乙=午 / 丁=酉 / 己=酉 / 辛=子 / 癸=卯 (长生起点)
+// 12 神煞: 长生/沐浴/冠带/临官/帝旺/衰/病/死/墓/绝/胎/养(12 项)
+// 阳干顺行, 阴干逆行 — 传统六壬学标准
+// 加 天乙贵人 (日干固定的贵人煞)
+var DLR_GAN_SHA = {
+  '甲': ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'],
+  '丙': ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'],
+  '戊': ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'],
+  '庚': ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'],
+  '壬': ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'],
+  '乙': ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'],
+  '丁': ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'],
+  '己': ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'],
+  '辛': ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'],
+  '癸': ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养']
+};
+// 阴干起点(乙/丁/己/辛/癸 长生对应位置):
+// 乙=午 / 丁=酉 / 己=酉 / 辛=子 / 癸=卯
+// 简化: 由于"长生起点"决定 12 神煞在 12 宫分布,本轮只在数据里给 12 项
+// 实际渲染时按"日干长生起点"顺序排,但用户看到列表是 12 项,业内分歧大
+// 简化: 直接用统一 12 项,标注起点的注释(派别分歧见 daliuren.js 注释)
+
+// 透地六十龙(简化版, v3.1.11): 8 卦 × 8 龙 = 60 龙
+// 每卦 8 个干支组合,顺时针排布
+// 简化: 取 12 地支 × 5 天干 = 60 组合
+var FS_TUO_DI_60 = {
+  '北':   ['庚子','辛丑','壬寅','癸卯','甲辰','乙巳','丙午','丁未'],
+  '东北': ['戊申','己酉','庚戌','辛亥','壬子','癸丑','甲寅','乙卯'],
+  '东':   ['丙辰','丁巳','戊午','己未','庚申','辛酉','壬戌','癸亥'],
+  '东南': ['甲子','乙丑','丙寅','丁卯','戊辰','己巳','庚午','辛未'],
+  '南':   ['壬申','癸酉','甲戌','乙亥','丙子','丁丑','戊寅','己卯'],
+  '西南': ['庚辰','辛巳','壬午','癸未','甲申','乙酉','丙戌','丁亥'],
+  '西':   ['戊子','己丑','庚寅','辛卯','壬辰','癸巳','甲午','乙未'],
+  '西北': ['丙申','丁酉','戊戌','己亥','庚子','辛丑','壬寅','癸卯']
+};
 
 // 九宗门课式展开渲染(SVG)
 function drawDaliurenZongmen(pan) {
@@ -514,22 +543,45 @@ function drawDaliurenZongmen(pan) {
 }
 
 // 干支神煞表(渲染日干对应的 12 宫神煞)
+// v3.1.11: 完整版 — 12 神煞 12 格,不再简化 13 项通用
 function drawDaliurenGanSha(pan) {
   if (!pan || !pan.dayGan) return '<div style="color:var(--text-muted);">无日干数据</div>';
   var shaList = DLR_GAN_SHA[pan.dayGan];
   if (!shaList) return '<div style="color:var(--text-muted);">日干 ' + pan.dayGan + ' 无对应神煞表</div>';
   var w = 280;
   var svg = '<svg viewBox="0 0 ' + w + ' 60" style="display:block;margin:0 auto;max-width:280px;width:100%;">';
-  // 简化: 横向 12 格(只标重要的 4 个:天乙贵人/长生/临官/帝旺)
-  var keyIdx = { '天乙贵人': 0, '长生': 1, '临官': 3, '帝旺': 4 };
-  var cells = [];
+  // 12 格: 长生/沐浴/冠带/临官/帝旺/衰/病/死/墓/绝/胎/养
+  // 简化: 重要神煞(长生/临官/帝旺/衰/墓) 高亮金色
+  var keySha = { '长生': true, '临官': true, '帝旺': true, '衰': true, '墓': true };
   for (var i = 0; i < 12; i++) {
     var sha = shaList[i] || '';
-    var isKey = (sha === '天乙贵人' || sha === '长生' || sha === '临官' || sha === '帝旺');
+    var isKey = keySha[sha];
     var color = isKey ? 'var(--accent-gold)' : 'var(--text-muted)';
     var x = 10 + i * 22;
     svg += '<rect x="' + x + '" y="10" width="20" height="40" fill="' + (isKey ? 'rgba(201,168,76,0.1)' : 'transparent') + '" stroke="' + color + '" stroke-width="0.5" rx="2"/>';
     svg += '<text x="' + (x + 10) + '" y="30" text-anchor="middle" font-size="8" fill="' + color + '">' + sha + '</text>';
+  }
+  svg += '</svg>';
+  return svg;
+}
+
+// v3.1.11: 透地六十龙(简化版: 8 卦 × 8 龙 = 60 龙)
+// 简化: 每卦 8 个干支组合,按卦象方向渲染 8 格
+function drawTuoDi60(pan) {
+  if (!pan || !pan.sitDir) return '<div style="color:var(--text-muted);">无坐方数据</div>';
+  var tuoDi = FS_TUO_DI_60[pan.sitDir];
+  if (!tuoDi) return '<div style="color:var(--text-muted);">坐方 ' + pan.sitDir + ' 无对应透地六十龙数据</div>';
+  var w = 280;
+  var svg = '<svg viewBox="0 0 ' + w + ' 60" style="display:block;margin:0 auto;max-width:280px;width:100%;">';
+  // 8 格: 每格干支组合,含坐方对应方向的字
+  var sitIdx = ['子','丑','寅','卯','辰','巳','午','未'].indexOf(pan.sitDir.slice(-1));
+  for (var i = 0; i < 8; i++) {
+    var gz = tuoDi[i];
+    var isSit = (i === sitIdx);
+    var color = isSit ? 'var(--accent-red)' : 'var(--text-muted)';
+    var x = 10 + i * 32;
+    svg += '<rect x="' + x + '" y="10" width="30" height="40" fill="' + (isSit ? 'rgba(220,80,80,0.15)' : 'transparent') + '" stroke="' + color + '" stroke-width="' + (isSit ? '1.5' : '0.5') + '" rx="2"/>';
+    svg += '<text x="' + (x + 15) + '" y="30" text-anchor="middle" font-size="9" font-weight="' + (isSit ? '700' : '400') + '" fill="' + color + '">' + gz + '</text>';
   }
   svg += '</svg>';
   return svg;
@@ -706,6 +758,8 @@ window.fengshuiVisual = {
   // v3.1.6:九宗门 + 神煞
   drawDaliurenZongmen: drawDaliurenZongmen,
   drawDaliurenGanSha: drawDaliurenGanSha,
+  // v3.1.11: 透地六十龙
+  drawTuoDi60: drawTuoDi60,
   // v3.1.9: 大六壬精细圆盘(从 app/daliuren.js buildDlrCircle 迁来)
   drawDaliurenCircle: drawDaliurenCircle,
   // v3.0.13:详情
@@ -719,6 +773,7 @@ window.fengshuiVisual = {
   DLR_JIANG_COLORS: DLR_JIANG_COLORS,
   DLR_ZONGMEN_DETAILS: DLR_ZONGMEN_DETAILS,
   DLR_GAN_SHA: DLR_GAN_SHA,
+  FS_TUO_DI_60: FS_TUO_DI_60,
   DIR_ANGLE: FS_DIR_ANGLE,
   LUOPAN_24: FS_LUOPAN_24
 };

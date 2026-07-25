@@ -539,18 +539,22 @@ check('DLR_ZONGMEN_DETAILS 含 9 宗门口诀', () => {
   });
 });
 
-check('DLR_GAN_SHA 10 天干各含主要神煞(天乙贵人/长生/临官/帝旺/衰/胎/养)', () => {
+check('DLR_GAN_SHA 11 天干各 12 神煞(长生/沐浴/.../胎/养)', () => {
   var gans = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
   gans.forEach(function (g) {
     var shaList = vis.DLR_GAN_SHA[g];
     assert.ok(Array.isArray(shaList), g + ' 神煞表存在');
-    // v3.1.6 简化: 每干一样 13 项(简化,不区分阴长生起点)
-    assert.strictEqual(shaList.length, 13, g + ' 神煞 13 个');
-    assert.ok(shaList.indexOf('天乙贵人') >= 0, g + ' 含 天乙贵人');
+    // v3.1.11 完整版: 12 项(长生/沐浴/冠带/临官/帝旺/衰/病/死/墓/绝/胎/养)
+    assert.strictEqual(shaList.length, 12, g + ' 神煞 12 个');
     assert.ok(shaList.indexOf('长生') >= 0, g + ' 含 长生');
+    assert.ok(shaList.indexOf('沐浴') >= 0, g + ' 含 沐浴');
     assert.ok(shaList.indexOf('临官') >= 0, g + ' 含 临官');
     assert.ok(shaList.indexOf('帝旺') >= 0, g + ' 含 帝旺');
     assert.ok(shaList.indexOf('衰') >= 0, g + ' 含 衰');
+    assert.ok(shaList.indexOf('病') >= 0, g + ' 含 病');
+    assert.ok(shaList.indexOf('死') >= 0, g + ' 含 死');
+    assert.ok(shaList.indexOf('墓') >= 0, g + ' 含 墓');
+    assert.ok(shaList.indexOf('绝') >= 0, g + ' 含 绝');
     assert.ok(shaList.indexOf('胎') >= 0, g + ' 含 胎');
     assert.ok(shaList.indexOf('养') >= 0, g + ' 含 养');
   });
@@ -576,10 +580,30 @@ check('drawDaliurenGanSha 渲染日干神煞表(含主要神煞)', () => {
   var pan = { dayGan: '甲' };
   var svg = vis.drawDaliurenGanSha(pan);
   assert.ok(svg.indexOf('<svg') >= 0);
-  assert.ok(svg.indexOf('天乙贵人') > 0, '含 天乙贵人');
+  // v3.1.11: 不再用天乙贵人开头, 直接 12 神煞
   assert.ok(svg.indexOf('长生') > 0, '含 长生');
   assert.ok(svg.indexOf('临官') > 0, '含 临官');
   assert.ok(svg.indexOf('帝旺') > 0, '含 帝旺');
+  assert.ok(svg.indexOf('衰') > 0, '含 衰');
+  assert.ok(svg.indexOf('墓') > 0, '含 墓');
+});
+
+// ============ v3.1.11 透地六十龙 ============
+check('window.fengshuiVisual 暴露 drawTuoDi60 + FS_TUO_DI_60', () => {
+  assert.strictEqual(typeof vis.drawTuoDi60, 'function');
+  assert.ok(vis.FS_TUO_DI_60, 'FS_TUO_DI_60 暴露');
+});
+
+check('FS_TUO_DI_60 8 卦各 8 干支(60 龙)', () => {
+  var dirs = ['北','东北','东','东南','南','西南','西','西北'];
+  dirs.forEach(function (d) {
+    var arr = vis.FS_TUO_DI_60[d];
+    assert.ok(Array.isArray(arr), d + ' 透地六十龙存在');
+    assert.strictEqual(arr.length, 8, d + ' 共 8 干支');
+    arr.forEach(function (gz) {
+      assert.ok(gz.length === 2, '干支 ' + gz + ' 两字长度');
+    });
+  });
 });
 
 console.log(`\n========================================`);
