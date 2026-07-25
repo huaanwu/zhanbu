@@ -26,7 +26,31 @@ function check(name, fn) {
 }
 
 // Stub + 加载算盘层 + 视觉层
+// 文档环境 stub(供 openFengshuiModal / showShanDetail 调用)
 globalThis.window = {};
+globalThis.document = {
+  getElementById: function (id) {
+    return globalThis.window[id] || null;
+  },
+  createElement: function (tag) {
+    var el = {
+      tagName: tag.toUpperCase(),
+      id: '',
+      style: { cssText: '' },
+      innerHTML: '',
+      children: [],
+      addEventListener: function () {},
+      setAttribute: function (k, v) { this[k] = v; },
+      getAttribute: function (k) { return this[k]; }
+    };
+    Object.defineProperty(el, 'style', {
+      set: function (css) { this._cssText = css; },
+      get: function () { return { cssText: this._cssText || '', display: '' }; }
+    });
+    return el;
+  },
+  body: { appendChild: function (el) {} }
+};
 eval(fs.readFileSync('fengshui.js', 'utf-8'));
 eval(fs.readFileSync('xuankong.js', 'utf-8'));
 eval(fs.readFileSync('fengshui-visual.js', 'utf-8'));
@@ -159,6 +183,94 @@ check('window.fengshuiVisual 暴露 3 个函数', () => {
   assert.ok(typeof vis.drawLuopan24 === 'function');
   assert.ok(typeof vis.drawHouseLayout === 'function');
   assert.ok(typeof vis.drawJiugong === 'function');
+});
+
+// ============ v3.0.13: 24 山 / 9 星 详情数据 + click 处理 ============
+check('SHAN_DETAILS 含 24 山完整数据', () => {
+  var shanList = ['壬','子','癸','丑','艮','寅','甲','卯','乙','辰','巽','巳','丙','午','丁','未','坤','申','庚','酉','辛','戌','乾','亥'];
+  shanList.forEach(function (s) {
+    var d = vis.SHAN_DETAILS[s];
+    assert.ok(d, 'SHAN_DETAILS[' + s + '] 存在');
+    assert.ok(d.wuxing, '五行');
+    assert.ok(d.jiXiong, '阴阳/属性');
+    assert.ok(d.desc, '描述');
+    assert.ok(d.use, '应用');
+  });
+});
+
+check('STAR_DETAILS 含 1-9 星完整数据(五黄/二黑有化解)', () => {
+  for (var i = 1; i <= 9; i++) {
+    var d = vis.STAR_DETAILS[i];
+    assert.ok(d, 'STAR_DETAILS[' + i + '] 存在');
+    assert.ok(d.name, '名字');
+    assert.ok(d.wuxing, '五行');
+    assert.ok(d.jiXiong, '吉凶');
+    assert.ok(d.apply, '应用');
+    // 五黄/二黑必须有化解
+    if (i === 5 || i === 2) {
+      assert.ok(d.huaJie, i + ' 号星(凶星)有化解方案');
+    }
+  }
+});
+
+check('showShanDetail/showStarDetail 是函数,open/closeFengshuiModal 是函数', () => {
+  assert.strictEqual(typeof vis.showShanDetail, 'function');
+  assert.strictEqual(typeof vis.showStarDetail, 'function');
+  assert.strictEqual(typeof vis.openFengshuiModal, 'function');
+  assert.strictEqual(typeof vis.closeFengshuiModal, 'function');
+});
+
+check('showShanDetail 接受合法山字不抛错', () => {
+  // 不实际弹 modal,只验函数本身
+  try {
+    vis.showShanDetail('子');
+    vis.showShanDetail('乾');
+    vis.showShanDetail('不存在之山');  // 应 fallback 而不抛错
+  } catch (e) {
+    throw new Error('showShanDetail 不应抛错: ' + e.message);
+  }
+  // 关闭 modal(避免污染 DOM)
+  vis.closeFengshuiModal();
+});
+
+check('showStarDetail 接受 1-9 不抛错,非法值 fallback', () => {
+  try {
+    for (var i = 1; i <= 9; i++) vis.showStarDetail(i);
+    vis.showStarDetail(99);  // fallback
+  } catch (e) {
+    throw new Error('showStarDetail 不应抛错: ' + e.message);
+  }
+  vis.closeFengshuiModal();
+});
+
+check('drawLuopan24 含可点击元素(onclick + data-shan)', () => {
+  var svg = vis.drawLuopan24('南');
+  // 至少 24 个 data-shan 属性 + onclick
+  var matches = svg.match(/data-shan=/g);
+  assert.ok(matches && matches.length >= 24, '至少 24 个 data-shan,实际 ' + (matches ? matches.length : 0));
+  assert.ok(/onclick="window\.fengshuiVisual\.showShanDetail/.test(svg), '含 onclick 绑定');
+});
+
+check('drawJiugong 含可点击宫位(onclick 调 showStarDetail)', () => {
+  var yp = globalThis.window.xuankong.yunPan(2026);
+  var svg = vis.drawJiugong(yp.panByGong, yp.yunName);
+  var matches = svg.match(/showStarDetail\(/g);
+  assert.ok(matches && matches.length >= 9, '至少 9 个 showStarDetail 调用');
+});
+
+check('openFengshuiModal 创建 #fengshuiModal 容器', () => {
+  // 先注册 stub 容器
+  var stubModal = { id: 'fengshuiModal', style: {}, innerHTML: '' };
+  globalThis.window.fengshuiModal = stubModal;
+  globalThis.document.getElementById = function (id) {
+    return id === 'fengshuiModal' ? stubModal : null;
+  };
+  vis.openFengshuiModal('<div>test</div>');
+  var modal = globalThis.document.getElementById('fengshuiModal');
+  assert.ok(modal, '#fengshuiModal 创建');
+  assert.ok(modal.style.display === 'flex', 'display=flex');
+  vis.closeFengshuiModal();
+  assert.strictEqual(modal.style.display, 'none', 'close 后 display=none');
 });
 
 console.log(`\n========================================`);

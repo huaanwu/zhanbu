@@ -65,7 +65,11 @@ function drawLuopan24(doorDir) {
       var isDoor = (dir === doorDir);
       var fill = isDoor ? 'var(--accent-red)' : 'var(--accent-gold)';
       var weight = isDoor ? '700' : '500';
-      svg += '<text x="' + p.x.toFixed(1) + '" y="' + p.y.toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="' + weight + '" fill="' + fill + '">' + shans[s] + '</text>';
+      // v3.0.13: 每山可点击,弹出详情 modal
+      var cursorStyle = 'cursor:pointer;';
+      svg += '<text x="' + p.x.toFixed(1) + '" y="' + p.y.toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="' + weight + '" fill="' + fill + '" style="' + cursorStyle + '" onclick="window.fengshuiVisual.showShanDetail(\'' + shans[s] + '\')">' + shans[s] + '</text>';
+      // 可点击命中区(透明矩形, 放大点击区域)
+      svg += '<rect x="' + (p.x - 8).toFixed(1) + '" y="' + (p.y - 8).toFixed(1) + '" width="16" height="16" fill="transparent" style="cursor:pointer;" onclick="window.fengshuiVisual.showShanDetail(\'' + shans[s] + '\')" data-shan="' + shans[s] + '"/>';
     }
     // 8 卦方向大标(外圈)
     var pDir = pos(baseAngle, R_OUT + 14);
@@ -200,9 +204,12 @@ function drawJiugong(panByGong, yunName) {
     var isEr = star === 2;
     var color = isWu ? 'var(--accent-red)' : (isEr ? 'var(--accent-red)' : (isJi ? 'var(--accent-green)' : 'var(--text-primary)'));
     var bg = isWu ? 'rgba(220,80,80,0.2)' : (isEr ? 'rgba(220,80,80,0.08)' : (isJi ? 'rgba(120,180,120,0.1)' : 'var(--bg-inner)'));
-    var html = '<rect x="' + x + '" y="' + y + '" width="' + cellW + '" height="' + cellH + '" fill="' + bg + '" stroke="var(--border)" stroke-width="0.5"/>';
+    // v3.0.13: 整格可点击,onclick 调用 showStarDetail
+    var html = '<g style="cursor:pointer;" onclick="window.fengshuiVisual.showStarDetail(' + star + ')">';
+    html += '<rect x="' + x + '" y="' + y + '" width="' + cellW + '" height="' + cellH + '" fill="' + bg + '" stroke="var(--border)" stroke-width="0.5"/>';
     html += '<text x="' + (x + 6) + '" y="' + (y + 12) + '" font-size="9" fill="var(--text-muted)">' + g + '宫</text>';
     html += '<text x="' + (x + cellW / 2) + '" y="' + (y + cellH / 2 + 6) + '" text-anchor="middle" font-size="22" font-weight="700" fill="' + color + '">' + star + '</text>';
+    html += '</g>';
     return html;
   }
 
@@ -230,12 +237,131 @@ function drawJiugong(panByGong, yunName) {
   return svg;
 }
 
-// 暴露
+// ============ v3.0.13: 24 山简表 + 9 星简表 + 详情 modal ============
+
+// 24 山简表(地盘正针): 五行/纳音/简述/吉凶
+// 来源: 传统罗盘基础 + KB fengshui_base_kb + fengshui_luopan_kb 综合
+var FS_SHAN_DETAILS = {
+  '壬': { wuxing: '水', nayin: '癸山', jiXiong: '阳水', desc: '壬山为天干阳水,五行属水,主智谋、流动性。', use: '宜水景/动位/通道' },
+  '子': { wuxing: '水', nayin: '壬山', jiXiong: '阳水', desc: '子山为地支阳水,正北方,主暗动、潜伏。', use: '宜静不宜动,可放鱼缸/水种' },
+  '癸': { wuxing: '水', nayin: '辛山', jiXiong: '阴水', desc: '癸山为天干阴水,主收敛、内向。', use: '宜暗色/封闭空间' },
+  '丑': { wuxing: '土', nayin: '丁山', jiXiong: '阴土', desc: '丑山为地支阴土,东北偏北,主厚重、收藏。', use: '宜储藏室/杂物间' },
+  '艮': { wuxing: '土', nayin: '丙山', jiXiong: '阳土', desc: '艮山为八卦阳土,主止、稳、青少年。', use: '宜书房/子女房' },
+  '寅': { wuxing: '木', nayin: '庚山', jiXiong: '阳木', desc: '寅山为地支阳木,东北偏东,主生发、动。', use: '宜运动/早起步' },
+  '甲': { wuxing: '木', nayin: '丁山', jiXiong: '阳木', desc: '甲山为天干阳木,正东,主高大、首领。', use: '宜主梁/主柱/书桌向' },
+  '卯': { wuxing: '木', nayin: '乙山', jiXiong: '阴木', desc: '卯山为地支阴木,正东偏南,主柔美、文昌。', use: '宜文昌位/学业' },
+  '乙': { wuxing: '木', nayin: '癸山', jiXiong: '阴木', desc: '乙山为天干阴木,主花草、柔顺。', use: '宜花草/玄关' },
+  '辰': { wuxing: '土', nayin: '壬山', jiXiong: '阳土', desc: '辰山为地支阳土,东南偏东,主水库、聚财。', use: '宜鱼缸/水景' },
+  '巽': { wuxing: '木', nayin: '辛山', jiXiong: '阴木', desc: '巽山为八卦阴木,主文曲、长女、利学业。', use: '宜文昌位/书房' },
+  '巳': { wuxing: '火', nayin: '庚山', jiXiong: '阴火', desc: '巳山为地支阴火,东南偏南,主文明、礼仪。', use: '宜厅堂/待客' },
+  '丙': { wuxing: '火', nayin: '己山', jiXiong: '阳火', desc: '丙山为天干阳火,正南,主文明、礼仪、名声。', use: '宜主厅/采光/灯火' },
+  '午': { wuxing: '火', nayin: '丁山', jiXiong: '阳火', desc: '午山为地支阳火,正南偏西,主大礼、礼堂。', use: '宜采光/红灯笼' },
+  '丁': { wuxing: '火', nayin: '壬山', jiXiong: '阴火', desc: '丁山为天干阴火,主文昌、礼花。', use: '宜香薰/灯火/文昌' },
+  '未': { wuxing: '土', nayin: '癸山', jiXiong: '阴土', desc: '未山为地支阴土,西南偏南,主花园、情义。', use: '宜花园/客厅' },
+  '坤': { wuxing: '土', nayin: '甲山', jiXiong: '阴土', desc: '坤山为八卦阴土,主柔、母、主妇。', use: '宜主卧(女主人)/餐厅' },
+  '申': { wuxing: '金', nayin: '乙山', jiXiong: '阳金', desc: '申山为地支阳金,西南偏西,主刀兵、肃杀。', use: '宜刀具/金属器械' },
+  '庚': { wuxing: '金', nayin: '丙山', jiXiong: '阳金', desc: '庚山为天干阳金,正西,主刚、武。', use: '宜大型金属/车房' },
+  '酉': { wuxing: '金', nayin: '丁山', jiXiong: '阴金', desc: '酉山为地支阴金,正西偏北,主珠宝、首饰。', use: '宜珠宝/首饰盒' },
+  '辛': { wuxing: '金', nayin: '戊山', jiXiong: '阴金', desc: '辛山为天干阴金,主小金属、颗粒。', use: '宜小金属饰物' },
+  '戌': { wuxing: '土', nayin: '己山', jiXiong: '阳土', desc: '戌山为地支阳土,西北偏西,主收藏、库房。', use: '宜储藏/酒窖' },
+  '乾': { wuxing: '金', nayin: '甲山', jiXiong: '阳金', desc: '乾山为八卦阳金,主天、父、首创。', use: '宜主卧(男主人)/书房' },
+  '亥': { wuxing: '水', nayin: '壬山', jiXiong: '阴水', desc: '亥山为地支阴水,西北偏北,主收藏、终结。', use: '宜静室/收尾' }
+};
+
+// 9 星简表: 五行/特性/吉凶/化解
+var FS_STAR_DETAILS = {
+  1: { name: '一白贪狼', wuxing: '水', jiXiong: '吉', desc: '桃花/智慧/官运。', apply: '利读书、考试、升职、人缘。', huaJie: '无需化解,可适度催旺(放水种/水晶)' },
+  2: { name: '二黑巨门', wuxing: '土', jiXiong: '凶', desc: '病符/孕妇/腹部疾病。', apply: '主疾病、流产、不利孕妇。', huaJie: '铜器/六帝钱/灰色地毯/避免红色黄色' },
+  3: { name: '三碧禄存', wuxing: '木', jiXiong: '凶', desc: '是非/口舌/官非。', apply: '主争执、诉讼、争吵。', huaJie: '红色物品/火土通关/避免绿色' },
+  4: { name: '四绿文曲', wuxing: '木', jiXiong: '平', desc: '文昌/学业/桃花(中性偏吉)。', apply: '利读书、考试、文艺。', huaJie: '可适度催旺(文昌塔/四支笔);不宜过度催动' },
+  5: { name: '五黄廉贞', wuxing: '土', jiXiong: '大凶', desc: '大煞/至毒/病灾。', apply: '最凶之星,所到之处宜静不宜动。', huaJie: '铜铃/铜葫芦/灰色地毯/避免动土/避免红色黄色' },
+  6: { name: '六白武曲', wuxing: '金', jiXiong: '吉', desc: '偏财/权威/武贵。', apply: '利偏财、权威、决断。', huaJie: '可适度催旺(金属/水晶球);无大碍' },
+  7: { name: '七赤破军', wuxing: '金', jiXiong: '凶', desc: '破财/口舌/桃花劫。', apply: '主破财、纠纷、桃花劫。', huaJie: '红色/火通关/避免放金属/远离炉灶' },
+  8: { name: '八白左辅', wuxing: '土', jiXiong: '吉', desc: '财帛/丁财/旺气。', apply: '利正财、人丁、家业。', huaJie: '可适度催旺(财神位/黄色物品)' },
+  9: { name: '九紫右弼', wuxing: '火', jiXiong: '吉', desc: '喜气/桃花/姻缘/文昌。', apply: '利喜事、姻缘、子女、文昌。', huaJie: '可适度催旺(红花/紫水晶/灯具);避免黑色' }
+};
+
+// 详情 modal HTML(返回后由 app/fengshui.js 注入 #fengshuiModal)
+// type: 'shan' | 'star', data: 详情对象
+function renderDetailModal(type, data) {
+  var html = '<div style="background:var(--bg-card);padding:1rem;border-radius:8px;max-width:480px;margin:0 auto;">';
+  if (type === 'shan') {
+    html += '<h3 style="color:var(--accent-gold);margin-top:0;">🧭 24 山 · ' + data.shan + ' 山</h3>';
+    html += '<div style="font-size:0.85rem;line-height:1.7;color:var(--text-secondary);">';
+    html += '<div><strong>五行：</strong>' + data.wuxing + '</div>';
+    html += '<div><strong>纳音：</strong>' + data.nayin + '</div>';
+    html += '<div><strong>阴阳：</strong>' + data.jiXiong + '</div>';
+    html += '<div style="margin-top:0.5rem;">' + data.desc + '</div>';
+    html += '<div style="margin-top:0.5rem;padding:0.4rem 0.6rem;background:var(--bg-inner);border-left:3px solid var(--accent-gold);border-radius:4px;">';
+    html += '<strong>💡 应用：</strong>' + data.use;
+    html += '</div>';
+    html += '</div>';
+  } else if (type === 'star') {
+    var color = data.jiXiong === '吉' ? 'var(--accent-green)' : (data.jiXiong === '大凶' ? 'var(--accent-red)' : 'var(--accent-gold)');
+    html += '<h3 style="color:' + color + ';margin-top:0;">⭐ 玄空九星 · ' + data.name + '</h3>';
+    html += '<div style="font-size:0.85rem;line-height:1.7;color:var(--text-secondary);">';
+    html += '<div><strong>五行：</strong>' + data.wuxing + '</div>';
+    html += '<div><strong>吉凶：</strong><span style="color:' + color + ';">' + data.jiXiong + '</span></div>';
+    html += '<div style="margin-top:0.5rem;">' + data.desc + '</div>';
+    html += '<div style="margin-top:0.5rem;padding:0.4rem 0.6rem;background:var(--bg-inner);border-left:3px solid var(--accent-gold);border-radius:4px;">';
+    html += '<strong>💡 应用：</strong>' + data.apply;
+    html += '</div>';
+    html += '<div style="margin-top:0.5rem;padding:0.4rem 0.6rem;background:rgba(220,80,80,0.08);border-left:3px solid var(--accent-red);border-radius:4px;">';
+    html += '<strong>🛡 化解：</strong>' + data.huaJie;
+    html += '</div>';
+    html += '</div>';
+  }
+  html += '<div style="text-align:center;margin-top:0.8rem;">';
+  html += '<button class="divine-btn" onclick="closeFengshuiModal()" style="background:var(--bg-secondary);color:var(--text-primary);">关闭</button>';
+  html += '</div>';
+  html += '</div>';
+  return html;
+}
+
+function showShanDetail(shan) {
+  var data = FS_SHAN_DETAILS[shan];
+  if (!data) { data = { shan: shan, wuxing: '?', nayin: '?', jiXiong: '?', desc: '该山数据待补充', use: '可参考相邻山' }; }
+  else { data = Object.assign({ shan: shan }, data); }
+  openFengshuiModal(renderDetailModal('shan', data));
+}
+function showStarDetail(star) {
+  var data = FS_STAR_DETAILS[star];
+  if (!data) { data = { name: star + '星', wuxing: '?', jiXiong: '?', desc: '数据待补充', apply: '', huaJie: '' }; }
+  openFengshuiModal(renderDetailModal('star', data));
+}
+
+function openFengshuiModal(htmlContent) {
+  var modal = document.getElementById('fengshuiModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'fengshuiModal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;';
+    modal.innerHTML = '<div style="width:100%;max-width:520px;">' + htmlContent + '</div>';
+    document.body.appendChild(modal);
+    // 背景点击关闭
+    modal.addEventListener('click', function (e) { if (e.target === modal) window.closeFengshuiModal(); });
+  } else {
+    modal.innerHTML = '<div style="width:100%;max-width:520px;">' + htmlContent + '</div>';
+    modal.style.display = 'flex';
+  }
+}
+function closeFengshuiModal() {
+  var modal = document.getElementById('fengshuiModal');
+  if (modal) modal.style.display = 'none';
+}
+
 window.fengshuiVisual = {
   drawLuopan24: drawLuopan24,
   drawHouseLayout: drawHouseLayout,
   drawJiugong: drawJiugong,
-  // helper 暴露给测试
+  // v3.0.13:详情
+  showShanDetail: showShanDetail,
+  showStarDetail: showStarDetail,
+  openFengshuiModal: openFengshuiModal,
+  closeFengshuiModal: closeFengshuiModal,
+  // 数据暴露给测试
+  SHAN_DETAILS: FS_SHAN_DETAILS,
+  STAR_DETAILS: FS_STAR_DETAILS,
   DIR_ANGLE: FS_DIR_ANGLE,
   LUOPAN_24: FS_LUOPAN_24
 };
