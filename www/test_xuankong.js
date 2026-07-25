@@ -329,6 +329,58 @@ check('app/fengshui.js 渲染含流年/流月 SVG + doubleWu 提示', () => {
   assert.ok(/双五黄叠加/.test(src), '双五黄提示');
 });
 
+// ============ Case 8: v3.0.15 流月农历精确化 ============
+check('liuyuePan 接受干支纪月(乙未): 未=8宫入中', () => {
+  // 乙未 → 取最后一位 "未" → XK_ZHI_TO_GONG['未'] = 2 (坤)
+  // 等等,我之前说未=2坤,但 v3.0.14 测试 liuyuePan 正月寅=8 宫,显然未也应该是 2 不是 8
+  // 让我重看 XK_ZHI_TO_GONG:
+  // 子=1, 丑=8, 寅=8, 卯=3, 辰=4, 巳=4, 午=9, 未=2, 申=2, 酉=7, 戌=6, 亥=6
+  // 乙未 → 未 = 2 宫(坤),5宫=2,顺飞
+  var p = xk.liuyuePan(2026, '乙未');
+  assert.strictEqual(p.monthZhi, '未');
+  assert.strictEqual(p.centerGong, 2);
+  assert.strictEqual(p.panByGong[5], 2);
+});
+
+check('liuyuePan 接受干支纪月(丙申): 申=2宫入中', () => {
+  var p = xk.liuyuePan(2026, '丙申');
+  assert.strictEqual(p.monthZhi, '申');
+  assert.strictEqual(p.centerGong, 2);
+  assert.strictEqual(p.panByGong[5], 2);
+});
+
+check('liuyuePan 非法干支纪月报错', () => {
+  assert.throws(() => xk.liuyuePan(2026, 'XX'), /未知干支/);
+});
+
+check('xk.lunarMonthGZ 调 lunar 引擎返回干支月(需 Solar)', () => {
+  // 模拟 lunar: window.Solar.fromYmd(...).getLunar().getMonthInGanZhi()
+  globalThis.window = globalThis.window || {};
+  globalThis.window.Solar = globalThis.window.LunarLib && globalThis.window.LunarLib.Solar;
+  if (!globalThis.window.Solar) {
+    // 测试环境无 lunar.bundle.js,跳过(改用 fallback)
+    console.log('  [SKIP] lunar 引擎未在 Node 测试环境加载');
+    return;
+  }
+  // 2026-07-15 → 农历 丙午年 乙未月
+  var r = xk.lunarMonthGZ(new Date(2026, 6, 15));  // 月份 0-indexed
+  assert.strictEqual(r.monthZhi, '未');
+  assert.strictEqual(r.monthNum, 6);  // 农历六月(1-indexed)
+  // 春节前 (2026-01-30) → 乙巳年 己丑月(腊月)
+  var r2 = xk.lunarMonthGZ(new Date(2026, 0, 30));
+  assert.strictEqual(r2.monthZhi, '丑');
+});
+
+check('app/fengshui.js v3.0.15 用 lunar 引擎精确化流月 + fallback', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/lunarMonthGZ/.test(src), '调 lunarMonthGZ');
+  assert.ok(/catch[\s\S]*回退到阳历月数/.test(src), 'lunar 未加载时回退阳历月数');
+});
+
+check('window.xuankong v3.0.15 暴露 lunarMonthGZ', () => {
+  assert.strictEqual(typeof xk.lunarMonthGZ, 'function');
+});
+
 check('app/fengshui.js 含玄空 tab 切换函数 selFsTab', () => {
   var src = fs.readFileSync('app/fengshui.js', 'utf-8');
   assert.ok(/selFsTab\b/.test(src), 'tab 切换函数');

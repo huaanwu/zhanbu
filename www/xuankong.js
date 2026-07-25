@@ -264,11 +264,25 @@ function xkLiunianPan(year) {
 
 // 流月飞星: 月份地支所在宫入中, 顺飞
 // month: 1-12 (农历月, 1=正月寅)
+// v3.0.15: 也支持 month='乙未' 这种干支纪月(直接取地支),或 monthGZ 参数
 function xkLiuyuePan(year, month) {
-  if (!month || month < 1 || month > 12) {
-    throw new Error('流月飞星: 月份须为 1-12: ' + month);
+  var monthZhi, monthCN, monthNum;
+  if (typeof month === 'string' && month.length >= 1) {
+    // 干支纪月(乙未/丙申...) → 取最后一位地支
+    var last = month.charAt(month.length - 1);
+    if (XK_ZHI_TO_GONG[last] === undefined) {
+      throw new Error('流月飞星: 未知干支地支: ' + month);
+    }
+    monthZhi = last;
+    monthNum = XK_MONTH_ZHI.indexOf(last) + 1;
+    monthCN = monthNum > 0 ? XK_MONTH_CN[monthNum - 1] : month;
+  } else if (typeof month === 'number' && month >= 1 && month <= 12) {
+    monthZhi = XK_MONTH_ZHI[month - 1];
+    monthNum = month;
+    monthCN = XK_MONTH_CN[month - 1];
+  } else {
+    throw new Error('流月飞星: 月份须为 1-12 或干支纪月: ' + month);
   }
-  var monthZhi = XK_MONTH_ZHI[month - 1];
   var centerGong = XK_ZHI_TO_GONG[monthZhi];
   var centerStar = centerGong;
   var panByGong = {};
@@ -279,9 +293,9 @@ function xkLiuyuePan(year, month) {
   }
   return {
     year: year,
-    month: month,
+    month: monthNum,
     monthZhi: monthZhi,
-    monthCN: XK_MONTH_CN[month - 1],
+    monthCN: monthCN,
     centerGong: centerGong,
     centerStar: centerStar,
     panByGong: panByGong,
@@ -289,6 +303,26 @@ function xkLiuyuePan(year, month) {
       var star = panByGong[gong];
       return star + '(' + XK_STARS[star - 1].slice(2) + '/' + XK_NATURE[star - 1] + ')';
     }
+  };
+}
+
+// v3.0.15: 农历月干支查询(从公历日期反推)
+// 返回 { yearGZ, monthGZ, monthZhi } — monthGZ 含天干地支(如 "乙未")
+// 需要 lunar 引擎(window.Solar / window.LunarLib.Solar)已加载
+function xkLunarMonthGZ(date) {
+  var dt = date || new Date();
+  var Solar = (typeof window !== 'undefined' && window.Solar)
+    || (typeof window !== 'undefined' && window.LunarLib && window.LunarLib.Solar);
+  if (!Solar || typeof Solar.fromYmd !== 'function') {
+    throw new Error('xkLunarMonthGZ: 需要 lunar 引擎(window.Solar)');
+  }
+  var s = Solar.fromYmd(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+  var l = s.getLunar();
+  return {
+    yearGZ: l.getYearInGanZhi(),
+    monthGZ: l.getMonthInGanZhi(),
+    monthZhi: l.getMonthInGanZhi().slice(-1),
+    monthNum: l.getMonth()  // 1-12(负数=闰月)
   };
 }
 
@@ -326,6 +360,7 @@ window.xuankong = {
   liunianPan: xkLiunianPan,
   liuyuePan: xkLiuyuePan,
   liunianAndLiuyueWuhuang: xkLiunianAndLiuyueWuhuang,
+  lunarMonthGZ: xkLunarMonthGZ,
   // 查表常量
   STARS: XK_STARS,
   NATURE: XK_NATURE,

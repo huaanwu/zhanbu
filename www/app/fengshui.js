@@ -285,15 +285,26 @@ function doXuankong() {
     var fp = window.xuankong.facePan(year, faceDir);
     var ws = window.xuankong.wangShanWangXiang(yp, mp, fp, sitDir, faceDir);
     var wh = window.xuankong.wuhuangAndErhei(yp);
-    // v3.0.14:流年/流月飞星(按当前日期自动算)
+    // v3.0.14/15:流年/流月飞星(按当前日期自动算)
     var now = new Date();
     var curYear = now.getFullYear();
-    var curMonthIdx = now.getMonth() + 1;  // 1-12(阳历月 → 需转农历,但本轮简化用阳历月数 — 月份地支按月份推算)
-    // 注: 严格玄空流月需用农历月(干支纪月),本轮用月份数 1-12 → XK_MONTH_ZHI[month-1]
     var liunian = window.xuankong.liunianPan(curYear);
-    var liuyue = window.xuankong.liuyuePan(curYear, curMonthIdx);
-    var lw = window.xuankong.liunianAndLiuyueWuhuang(curYear, curMonthIdx);
-    var curMonthCN = window.xuankong.MONTH_CN[curMonthIdx - 1] + '(' + curMonthIdx + '月)';
+    // v3.0.15: 用 lunar 引擎精确化流月(干支纪月 → 地支),不用阳历月数简化版
+    var lunarInfo = null;
+    var curMonthCN = '';
+    var liuyue = null;
+    try {
+      lunarInfo = window.xuankong.lunarMonthGZ(now);
+      curMonthCN = lunarInfo.monthGZ + '月';
+      liuyue = window.xuankong.liuyuePan(curYear, lunarInfo.monthGZ);
+    } catch (e) {
+      // lunar 引擎未加载时回退到阳历月数(向后兼容)
+      console.warn('[fengshui] lunar 引擎未加载,流月回退到阳历月数:', e.message);
+      var curMonthIdx = now.getMonth() + 1;
+      curMonthCN = window.xuankong.MONTH_CN[curMonthIdx - 1] + '(' + curMonthIdx + '月)';
+      liuyue = window.xuankong.liuyuePan(curYear, curMonthIdx);
+    }
+    var lw = window.xuankong.liunianAndLiuyueWuhuang(curYear, lunarInfo ? lunarInfo.monthNum : (now.getMonth() + 1));
 
     var result = document.getElementById('xkResult');
     result.style.display = 'block';
@@ -340,8 +351,8 @@ function doXuankong() {
           ${window.fengshuiVisual.drawJiugong(liunian.panByGong, year + '年' + liunian.yearZhi + '年')}
         </div>
         <div>
-          <div style="font-size:0.75rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【流月盘】${curMonthCN}(${liuyue.monthZhi}月)</div>
-          ${window.fengshuiVisual.drawJiugong(liuyue.panByGong, curMonthCN + liuyue.monthZhi)}
+          <div style="font-size:0.75rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【流月盘】${liuyue.monthCN}(${liuyue.monthZhi}月)${lunarInfo ? ' · 农历干支纪月' : ''}</div>
+          ${window.fengshuiVisual.drawJiugong(liuyue.panByGong, liuyue.monthCN + liuyue.monthZhi)}
         </div>
       </div>
 
