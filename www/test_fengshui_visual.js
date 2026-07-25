@@ -481,6 +481,44 @@ check('app/daliuren.js v3.1.9 调 window.fengshuiVisual.drawDaliurenCircle 替�
   assert.ok(!/function buildDlrCircle\(/.test(src), 'buildDlrCircle 副本已删除');
 });
 
+// ============ v3.1.10 120 分金 ============
+check('drawLuopan24 含 120 分金圈(R_FJ_OUT 半径)', () => {
+  var svg = vis.drawLuopan24('南');
+  // 新增 R_FJ_OUT=58 / R_FJ_IN=40 圆环(虚线)
+  assert.ok(svg.indexOf('stroke="var(--text-muted)"') > 0, '含 120 分金圈(虚线)');
+  // 中心提示 "120分金"
+  assert.ok(svg.indexOf('120分金') > 0, '含 120 分金图例');
+});
+
+check('drawLuopan24 含 120 分金字(每卦 15 格,五行金木水火土)', () => {
+  var svg = vis.drawLuopan24('南');
+  // 8 卦 × 15 分金 = 120 个 5 行字
+  // 每卦 3 个金 + 3 个木 + 3 个水 + 3 个火 + 3 个土 = 15
+  var goldCount = (svg.match(/font-size="6"[^>]*fill="#ccc"[^>]*>金</g) || []).length;
+  var woodCount = (svg.match(/font-size="6"[^>]*fill="#7f7"[^>]*>木</g) || []).length;
+  var waterCount = (svg.match(/font-size="6"[^>]*fill="#4af"[^>]*>水</g) || []).length;
+  var fireCount = (svg.match(/font-size="6"[^>]*fill="#f55"[^>]*>火</g) || []).length;
+  var earthCount = (svg.match(/font-size="6"[^>]*fill="#a90"[^>]*>土</g) || []).length;
+  assert.ok(goldCount >= 20, '金 ≥ 20(8 卦 × 3),实际 ' + goldCount);
+  assert.ok(woodCount >= 20, '木 ≥ 20,实际 ' + woodCount);
+  assert.ok(waterCount >= 20, '水 ≥ 20,实际 ' + waterCount);
+  assert.ok(fireCount >= 20, '火 ≥ 20,实际 ' + fireCount);
+  assert.ok(earthCount >= 20, '土 ≥ 20,实际 ' + earthCount);
+});
+
+check('drawLuopan24 不传 doorDir 也能渲染(120 分金仍工作)', () => {
+  var svg = vis.drawLuopan24();
+  assert.ok(svg.indexOf('<svg') >= 0);
+  // 120 分金仍出现
+  var goldCount = (svg.match(/font-size="6"[^>]*fill="#ccc"[^>]*>金</g) || []).length;
+  assert.ok(goldCount >= 20, '金 ≥ 20,实际 ' + goldCount);
+});
+
+check('drawLuopan24 120 分金圈是虚线(stroke-dasharray)', () => {
+  var svg = vis.drawLuopan24('南');
+  assert.ok(/stroke-dasharray="2,2"/.test(svg), '含虚线分金圈');
+});
+
 // ============ v3.1.6 大六壬九宗门 + 神煞 ============
 check('window.fengshuiVisual 暴露 drawDaliurenZongmen/drawDaliurenGanSha + DLR_ZONGMEN_DETAILS/DLR_GAN_SHA', () => {
   assert.strictEqual(typeof vis.drawDaliurenZongmen, 'function');

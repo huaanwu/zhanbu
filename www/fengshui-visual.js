@@ -32,6 +32,8 @@ var FS_LUOPAN_24 = [
 //   地盘 = 内层,主"立向"
 //   天盘 = 外层(左旋7.5°),主"纳水"
 //   人盘 = 中层(右旋7.5°),主"消砂"
+// v3.1.10: 加 120 分金(8 卦 × 15 分金,内圈第 4 层)
+//   每卦 15 格,顺时针分布,五行:金 木 水 火 土 各占 3 格
 function drawLuopan24(doorDir) {
   var w = 280, h = 280;
   var cx = w / 2, cy = h / 2;
@@ -40,6 +42,9 @@ function drawLuopan24(doorDir) {
   var R_TIAN_OUT = 130, R_TIAN_IN = 108;  // 外层(天盘) 左旋 7.5°
   var R_REN_OUT = 105, R_REN_IN = 84;    // 中层(人盘) 右旋 7.5°
   var R_DI_OUT = 80,  R_DI_IN = 60;       // 内层(地盘) 标准
+  // v3.1.10: 120 分金(最内圈,各 5 金/木/水/火/土 各占 3 格 = 15)
+  var R_FJ_OUT = 58, R_FJ_IN = 40;
+  var FJ_WUXING = ['金','木','水','火','土'];
 
   function pos(angleDeg, r) {
     // angle 0 = 正北(12 点钟), SVG 中需要 -90°
@@ -56,6 +61,9 @@ function drawLuopan24(doorDir) {
   svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R_REN_IN + '" fill="none" stroke="var(--accent-blue)" stroke-width="0.5"/>';
   svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R_DI_OUT + '" fill="none" stroke="var(--accent-red)" stroke-width="1.2"/>';
   svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R_DI_IN + '" fill="none" stroke="var(--accent-red)" stroke-width="0.5"/>';
+  // v3.1.10: 120 分金圈
+  svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R_FJ_OUT + '" fill="none" stroke="var(--text-muted)" stroke-width="0.5" stroke-dasharray="2,2"/>';
+  svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R_FJ_IN + '" fill="none" stroke="var(--text-muted)" stroke-width="0.5" stroke-dasharray="2,2"/>';
 
   // 8 卦方向分隔线(3 层都有)
   for (var i = 0; i < 8; i++) {
@@ -99,6 +107,16 @@ function drawLuopan24(doorDir) {
       // 透明命中矩形(只地盘点可点)
       svg += '<rect x="' + (pDi.x - 8).toFixed(1) + '" y="' + (pDi.y - 8).toFixed(1) + '" width="16" height="16" fill="transparent" style="cursor:pointer;" onclick="window.fengshuiVisual.showShanDetail(\'' + shanName + '\')" data-shan="' + shanName + '"/>';
     }
+    // v3.1.10: 15 分金(每卦 15 格,顺时针分布,五行金/木/水/火/土各占 3 格)
+    for (var fj = 0; fj < 15; fj++) {
+      var fjAngle = baseAngle + (fj - 7.5) * 3;  // 每格 3°
+      var pFj = pos(fjAngle, (R_FJ_OUT + R_FJ_IN) / 2);
+      var wuxing = FJ_WUXING[fj % 5];
+      // 五行颜色:金=白/木=绿/水=蓝/火=红/土=黄
+      var fjColor = { '金':'#ccc', '木':'#7f7', '水':'#4af', '火':'#f55', '土':'#a90' }[wuxing];
+      // 简化: 只标五行字(6px)
+      svg += '<text x="' + pFj.x.toFixed(1) + '" y="' + pFj.y.toFixed(1) + '" text-anchor="middle" font-size="6" fill="' + fjColor + '">' + wuxing + '</text>';
+    }
     // 8 卦方向大标(外圈外侧)
     var pDir = pos(baseAngle, R_TIAN_OUT + 14);
     svg += '<text x="' + pDir.x.toFixed(1) + '" y="' + pDir.y.toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="var(--text-secondary)">' + dir + '</text>';
@@ -108,6 +126,8 @@ function drawLuopan24(doorDir) {
   svg += '<text x="' + (cx - 50) + '" y="' + 14 + '" font-size="7" fill="var(--accent-gold)">天盘·纳水</text>';
   svg += '<text x="' + (cx - 10) + '" y="' + 14 + '" font-size="7" fill="var(--accent-blue)">人盘·消砂</text>';
   svg += '<text x="' + (cx + 30) + '" y="' + 14 + '" font-size="7" fill="var(--accent-red)">地盘·立向</text>';
+  // v3.1.10: 120 分金图例(最内圈)
+  svg += '<text x="' + (cx - 12) + '" y="' + (cy + 4) + '" font-size="7" fill="var(--text-muted)">120分金</text>';
 
   // 中心: 天池 + 指针
   svg += '<circle cx="' + cx + '" cy="' + cy + '" r="8" fill="var(--accent-gold)"/>';
