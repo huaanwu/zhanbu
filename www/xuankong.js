@@ -414,6 +414,93 @@ function xkTiGuaFacePan(year, faceDir) {
   };
 }
 
+// ============ v3.0.17 流日飞星 ============
+// 60 日干支(天干地支组合)→ 后天八卦宫号
+// 天干映射: 甲=1 乙=2 ...(天干无宫,只用日地支)
+// 实际上"日飞星"用的是日地支(60 甲子循环的地支部分)
+// 地支→宫号同 XK_ZHI_TO_GONG
+
+// 流日飞星: 日干支的地支入中, 顺飞
+// dayGZ: 干支纪日(如 '甲子'/'乙丑'/...)
+function xkLiuriPan(year, dayGZ) {
+  if (typeof dayGZ !== 'string' || dayGZ.length < 1) {
+    throw new Error('流日飞星: dayGZ 须为干支纪日: ' + dayGZ);
+  }
+  var last = dayGZ.charAt(dayGZ.length - 1);  // 取最后一位地支
+  if (XK_ZHI_TO_GONG[last] === undefined) {
+    throw new Error('流日飞星: 未知干支地支: ' + dayGZ);
+  }
+  var centerGong = XK_ZHI_TO_GONG[last];
+  var centerStar = centerGong;
+  var panByGong = {};
+  for (var i = 0; i < 9; i++) {
+    var gong = XK_LUO_SHU_PATH[i];
+    var star = ((centerStar - 1 + i) % 9) + 1;
+    panByGong[gong] = star;
+  }
+  return {
+    year: year,
+    dayGZ: dayGZ,
+    dayZhi: last,
+    centerGong: centerGong,
+    centerStar: centerStar,
+    panByGong: panByGong,
+    starName: function (gong) {
+      var star = panByGong[gong];
+      return star + '(' + XK_STARS[star - 1].slice(2) + '/' + XK_NATURE[star - 1] + ')';
+    }
+  };
+}
+
+// 替卦流日: 用日干支的地支找替星入中
+function xkTiGuaLiuriPan(year, dayGZ) {
+  if (typeof dayGZ !== 'string' || dayGZ.length < 1) {
+    throw new Error('替卦流日飞星: dayGZ 须为干支纪日: ' + dayGZ);
+  }
+  var last = dayGZ.charAt(dayGZ.length - 1);
+  if (XK_ZHI_TO_GONG[last] === undefined) {
+    throw new Error('替卦流日飞星: 未知干支地支: ' + dayGZ);
+  }
+  var gong = XK_ZHI_TO_GONG[last];
+  var tiStar = XK_TI_GUA[gong];
+  if (!tiStar) throw new Error('替卦流日飞星: ' + gong + '宫无替星');
+  var panByGong = {};
+  for (var i = 0; i < 9; i++) {
+    var pathGong = XK_LUO_SHU_PATH[i];
+    var star = ((tiStar - 1 + i) % 9) + 1;
+    panByGong[pathGong] = star;
+  }
+  return {
+    year: year,
+    dayGZ: dayGZ,
+    dayZhi: last,
+    tiStar: tiStar,
+    centerStar: tiStar,
+    panByGong: panByGong,
+    starName: function (g) {
+      var star = panByGong[g];
+      return star + '(' + XK_STARS[star - 1].slice(2) + '/' + XK_NATURE[star - 1] + ')';
+    }
+  };
+}
+
+// v3.0.17: 从公历日期取日干支(用 lunar 引擎)
+function xkLunarDayGZ(date) {
+  var dt = date || new Date();
+  var Solar = (typeof window !== 'undefined' && window.Solar)
+    || (typeof window !== 'undefined' && window.LunarLib && window.LunarLib.Solar);
+  if (!Solar || typeof Solar.fromYmd !== 'function') {
+    throw new Error('xkLunarDayGZ: 需要 lunar 引擎(window.Solar)');
+  }
+  var s = Solar.fromYmd(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+  var l = s.getLunar();
+  return {
+    yearGZ: l.getYearInGanZhi(),
+    monthGZ: l.getMonthInGanZhi(),
+    dayGZ: l.getDayInGanZhi()
+  };
+}
+
 window.xuankong = {
   // 算盘层
   currentYun: xkCurrentYun,
@@ -432,6 +519,10 @@ window.xuankong = {
   tiGuaMountainPan: xkTiGuaMountainPan,
   tiGuaFacePan: xkTiGuaFacePan,
   TI_GUA: XK_TI_GUA,
+  // v3.0.17:流日飞星
+  liuriPan: xkLiuriPan,
+  tiGuaLiuriPan: xkTiGuaLiuriPan,
+  lunarDayGZ: xkLunarDayGZ,
   // 查表常量
   STARS: XK_STARS,
   NATURE: XK_NATURE,

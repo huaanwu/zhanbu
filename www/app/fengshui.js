@@ -305,15 +305,21 @@ function doXuankong() {
     var liunian = window.xuankong.liunianPan(curYear);
     // v3.0.15: 用 lunar 引擎精确化流月(干支纪月 → 地支),不用阳历月数简化版
     var lunarInfo = null;
+    var dayInfo = null;  // v3.0.17
     var curMonthCN = '';
     var liuyue = null;
+    var liuri = null;  // v3.0.17
+    var tiGuaLiuri = null;
     try {
       lunarInfo = window.xuankong.lunarMonthGZ(now);
       curMonthCN = lunarInfo.monthGZ + '月';
       liuyue = window.xuankong.liuyuePan(curYear, lunarInfo.monthGZ);
+      // v3.0.17: 流日飞星(同日干支入中)
+      dayInfo = window.xuankong.lunarDayGZ(now);
+      liuri = window.xuankong.liuriPan(curYear, dayInfo.dayGZ);
+      tiGuaLiuri = window.xuankong.tiGuaLiuriPan(curYear, dayInfo.dayGZ);
     } catch (e) {
-      // lunar 引擎未加载时回退到阳历月数(向后兼容)
-      console.warn('[fengshui] lunar 引擎未加载,流月回退到阳历月数:', e.message);
+      console.warn('[fengshui] lunar 引擎未加载,流月/流日回退:', e.message);
       var curMonthIdx = now.getMonth() + 1;
       curMonthCN = window.xuankong.MONTH_CN[curMonthIdx - 1] + '(' + curMonthIdx + '月)';
       liuyue = window.xuankong.liuyuePan(curYear, curMonthIdx);
@@ -369,6 +375,17 @@ function doXuankong() {
           ${window.fengshuiVisual.drawJiugong(liuyue.panByGong, liuyue.monthCN + liuyue.monthZhi)}
         </div>
       </div>
+
+      ${liuri ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.5rem;">
+        <div>
+          <div style="font-size:0.75rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【流日盘】${liuri.dayGZ}日(子=${liuri.dayZhi}支)</div>
+          ${window.fengshuiVisual.drawJiugong(liuri.panByGong, liuri.dayGZ + '日' + liuri.dayZhi)}
+        </div>
+        <div>
+          <div style="font-size:0.75rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【替卦流日】${tiGuaLiuri.dayGZ}日(替星 ${tiGuaLiuri.tiStar})</div>
+          ${window.fengshuiVisual.drawJiugong(tiGuaLiuri.panByGong, tiGuaLiuri.dayGZ + '日替' + tiGuaLiuri.tiStar)}
+        </div>
+      </div>` : ''}
 
       <div style="margin-top:0.6rem;background:rgba(220,80,80,0.08);padding:0.6rem;border-radius:6px;border-left:3px solid var(--accent-red);font-size:0.85rem;">
         <strong>流年五黄</strong>在 <strong>${lw.liunianWuhuang}宫</strong>，<strong>流年二黑</strong>在 <strong>${lw.liunianErhei}宫</strong>;<br>

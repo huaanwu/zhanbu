@@ -374,7 +374,7 @@ check('xk.lunarMonthGZ 调 lunar 引擎返回干支月(需 Solar)', () => {
 check('app/fengshui.js v3.0.15 用 lunar 引擎精确化流月 + fallback', () => {
   var src = fs.readFileSync('app/fengshui.js', 'utf-8');
   assert.ok(/lunarMonthGZ/.test(src), '调 lunarMonthGZ');
-  assert.ok(/catch[\s\S]*回退到阳历月数/.test(src), 'lunar 未加载时回退阳历月数');
+  assert.ok(/catch[\s\S]*回退/.test(src), 'lunar 未加载时回退阳历月数');
 });
 
 check('window.xuankong v3.0.15 暴露 lunarMonthGZ', () => {
@@ -451,6 +451,79 @@ check('window.xuankong 暴露 TI_GUA + tiGua* 函数', () => {
   assert.ok(xk.TI_GUA, 'TI_GUA 暴露');
   assert.strictEqual(typeof xk.tiGuaMountainPan, 'function');
   assert.strictEqual(typeof xk.tiGuaFacePan, 'function');
+});
+
+// ============ Case 10: v3.0.17 流日飞星 ============
+check('liuriPan 甲子日(子=1宫):5宫=1', () => {
+  var p = xk.liuriPan(2026, '甲子');
+  assert.strictEqual(p.dayZhi, '子');
+  assert.strictEqual(p.centerGong, 1);
+  assert.strictEqual(p.centerStar, 1);
+  assert.strictEqual(p.panByGong[5], 1);
+});
+
+check('liuriPan 甲午日(午=9宫):5宫=9', () => {
+  var p = xk.liuriPan(2026, '甲午');
+  assert.strictEqual(p.dayZhi, '午');
+  assert.strictEqual(p.centerGong, 9);
+  assert.strictEqual(p.panByGong[5], 9);
+});
+
+check('liuriPan 60 甲子循环一周期:9 宫入星无重复', () => {
+  // 60 日干支循环: 子丑寅卯辰巳午未申酉戌亥 × 5 = 60 日
+  // 入中宫号循环 1,8,8,3,4,4,9,2,2,7,6,6 = 12 宫(地支) × 5 甲子
+  // 应 9 宫都覆盖过
+  var seen = new Set();
+  for (var d = 1; d <= 60; d++) {
+    var ganZhi = ['甲子','乙丑','丙寅','丁卯','戊辰','己巳','庚午','辛未','壬申','癸酉',
+                  '甲戌','乙亥','丙子','丁丑','戊寅','己卯','庚辰','辛巳','壬午','癸未',
+                  '甲申','乙酉','丙戌','丁亥','戊子','己丑','庚寅','辛卯','壬辰','癸巳',
+                  '甲午','乙未','丙申','丁酉','戊戌','己亥','庚子','辛丑','壬寅','癸卯',
+                  '甲辰','乙巳','丙午','丁未','戊申','己酉','庚戌','辛亥','壬子','癸丑',
+                  '甲寅','乙卯','丙辰','丁巳','戊午','己未','庚申','辛酉','壬戌','癸亥'];
+    var p = xk.liuriPan(2026, ganZhi[d - 1]);
+    for (var g = 1; g <= 9; g++) seen.add(p.panByGong[g]);
+  }
+  // 60 日里 9 宫都应出现
+  assert.ok(seen.size === 9, '9 宫全覆盖(实际 ' + seen.size + ')');
+});
+
+check('liuriPan 非法干支报错', () => {
+  assert.throws(() => xk.liuriPan(2026, 'XX'), /未知干支/);
+  assert.throws(() => xk.liuriPan(2026, ''), /dayGZ 须为/);
+});
+
+check('tiGuaLiuriPan 甲子日(子=1→替7):5宫=7', () => {
+  var p = xk.tiGuaLiuriPan(2026, '甲子');
+  assert.strictEqual(p.tiStar, 7);
+  assert.strictEqual(p.panByGong[5], 7);
+});
+
+check('tiGuaLiuriPan 甲午日(午=9→替4):5宫=4', () => {
+  var p = xk.tiGuaLiuriPan(2026, '甲午');
+  assert.strictEqual(p.tiStar, 4);
+  assert.strictEqual(p.panByGong[5], 4);
+});
+
+check('liuriPan 与 tiGuaLiuriPan 同日不同盘(替卦生效)', () => {
+  var yd = xk.liuriPan(2026, '甲子');
+  var ti = xk.tiGuaLiuriPan(2026, '甲子');
+  assert.strictEqual(yd.centerStar, 1);
+  assert.strictEqual(ti.centerStar, 7);
+  assert.notDeepStrictEqual(yd.panByGong, ti.panByGong);
+});
+
+check('app/fengshui.js 渲染含流日盘 + 替卦流日盘', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/liuri\.panByGong/.test(src), '流日盘 SVG');
+  assert.ok(/tiGuaLiuri\.panByGong/.test(src), '替卦流日盘 SVG');
+  assert.ok(/lunarDayGZ\(now\)/.test(src), 'lunarDayGZ 取日干支');
+});
+
+check('window.xuankong 暴露流日函数 + lunarDayGZ', () => {
+  assert.strictEqual(typeof xk.liuriPan, 'function');
+  assert.strictEqual(typeof xk.tiGuaLiuriPan, 'function');
+  assert.strictEqual(typeof xk.lunarDayGZ, 'function');
 });
 
 check('app/fengshui.js 含玄空 tab 切换函数 selFsTab', () => {
