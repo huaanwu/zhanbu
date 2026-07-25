@@ -9,7 +9,8 @@
   const PAGE_TO_NAV = {
     bazi: 'mingli', ziwei: 'mingli', qimen: 'mingli', chenggu: 'mingli',
     liuyao: 'zhangua', xiaoliuren: 'zhangua', meihua: 'zhangua', daliuren: 'zhangua', lingqian: 'zhangua',
-    mianxiang: 'zhangua'  // v3.0.8 面相:沿用占卦分组,nav 已满不再加项
+    // v3.0.8:手相 + 面相合并入口,nav 仍叫 'shouxiang'(人相),tab 由 #renxiangPaneHand/Face 决定内容
+    shouxiang: 'shouxiang', mianxiang: 'shouxiang'  // mianxiang 已并入 pageShouxiang,路由保留兼容
   };
 
   function switchPage(name) {

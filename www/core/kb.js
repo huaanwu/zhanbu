@@ -107,6 +107,8 @@ const KB_GROUPS = {
   // KB 数据只在 _bundleCache 里出现、从未进入 prompt。KB_TIERS.primary.shouxiang 早就声明了 ['shouxiang','guxiang'],
   // KB_TIERS.extended.shouxiang 声明了 ['shengxiang','qise','shouxiang_wenli'],这里把这些一起包进来
   shouxiang: ['shouxiang', 'guxiang', 'shengxiang', 'qise', 'shouxiang_wenli'],
+  // v3.0.8:手相 + 面相合并 nav 后,KB 仍按各自独立 group 走 cache,renxiang 复合 group 兜底
+  renxiang: ['shouxiang', 'guxiang', 'shengxiang', 'qise', 'shouxiang_wenli', 'mianxiang_ext', 'mianxiang_qise', 'mianxiang_qise2'],
   daofobuddhism: ['daoism_fuzhou', 'daoism_zhoushu', 'daoism_shoujue', 'daoism_zhaijiao', 'buddhism_mantra', 'buddhism_divine', 'daoism_jiuhuo'],
   xiaoliuren: ['xiaoliuren', 'wannianli'],
   meihua: ['meihua_ext', 'meihua_lei_xiang', 'wannianli'],
@@ -222,8 +224,7 @@ const PAGE_KB_GROUPS = {
   daliuren: ['daliuren'],
   chenggu: ['chenggu'],
   lingqian: ['lingqian'],
-  mianxiang: ['mianxiang'],  // v3.0.8 面相独立组
-  shouxiang: ['shouxiang'],
+  shouxiang: ['shouxiang', 'mianxiang'],  // v3.0.8 人相复合页同时加载两组 KB(手相+面相)
   xingshi: ['xingshi'],
   fengshui: ['fengshui'],
   daofobuddhism: ['daofobuddhism'],  // v1.2.17 化解页

@@ -10,7 +10,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 
-  <script type="module" crossorigin src="/assets/index-KIFe7S7o.js"></script>
+  <script type="module" crossorigin src="/assets/index-CmvknPl6.js"></script>
   <link rel="stylesheet" crossorigin href="/styles.css">
 </head>
 <body>
@@ -197,12 +197,6 @@
       <div class="group-card" onclick="switchPage('lingqian')">
         <span class="gc-icon">🔖</span>
         <span><div class="gc-name">灵签</div><div class="gc-desc">观音百签 · 关帝百签</div></span>
-        <span class="gc-arrow">›</span>
-      </div>
-
-      <div class="group-card" onclick="switchPage('mianxiang')">
-        <span class="gc-icon">👤</span>
-        <span><div class="gc-name">看面相</div><div class="gc-desc">三庭五官 · 十二宫吉凶 · AI 识图</div></span>
         <span class="gc-arrow">›</span>
       </div>
 
@@ -572,13 +566,22 @@
     </div>
   </div>
 
-  <!-- ============ 看手相页 ============ -->
+  <!-- ============ 看手相页(v3.0.8:手相+面相合并入口,tab 切换) ============ -->
   <div class="page" id="pageShouxiang">
     <div class="header">
-      <h1 data-seal="手">看手相</h1>
-      <div class="subtitle">上传掌纹 · AI 解读 · 双手对比</div>
+      <h1 data-seal="相">人相 · AI 识图</h1>
+      <div class="subtitle">双手掌纹 / 面部三庭五官 · 共享一套上传</div>
     </div>
-    <div class="input-section">
+
+    <!-- Tab 切换 -->
+    <div class="tab-bar" style="display:flex;gap:0.3rem;margin-bottom:1rem;">
+      <button id="renxiangTabHand" onclick="switchRenxiangTab('hand')" style="flex:1;padding:0.55rem;background:var(--bg-card);border:1px solid var(--accent-gold);color:var(--accent-gold);border-radius:6px;font-size:0.85rem;cursor:pointer;font-weight:600;">✋ 看手相</button>
+      <button id="renxiangTabFace" onclick="switchRenxiangTab('face')" style="flex:1;padding:0.55rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);border-radius:6px;font-size:0.85rem;cursor:pointer;">👤 看面相</button>
+    </div>
+
+    <!-- 手相内容 -->
+    <div id="renxiangPaneHand" class="renxiang-pane">
+      <div class="input-section">
       <!-- 性别选择 -->
       <div class="input-group" style="margin-bottom:1.2rem;">
         <label style="display:block;color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.5rem;letter-spacing:0.05em;">📌 性别（影响左右手解读方向）</label>
@@ -701,88 +704,118 @@
         })();
       </script>
       <div id="sxResult" class="result-card" style="display:none;margin-top:1rem;"></div>
+      </div>
     </div>
-  </div>
 
-  <!-- ============ 看面相页 (v3.0.8) ============ -->
-  <div class="page" id="pageMianxiang">
-    <div class="header">
-      <h1 data-seal="相">看面相</h1>
-      <div class="subtitle">三庭五官 · 十二宫吉凶 · AI 识图</div>
-    </div>
-    <div class="input-section">
-      <!-- 性别选择 -->
-      <div class="input-group" style="margin-bottom:1.2rem;">
-        <label style="display:block;color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.5rem;letter-spacing:0.05em;">📌 性别（影响十二宫吉凶判读）</label>
-        <div style="display:flex;gap:0.6rem;">
-          <button id="mxGenderMale" onclick="setMxGender('male')" style="flex:1;background:var(--bg-primary);border:2px solid var(--accent-gold);color:var(--accent-gold);padding:0.7rem;border-radius:8px;cursor:pointer;font-size:1rem;font-weight:600;">👨 男</button>
-          <button id="mxGenderFemale" onclick="setMxGender('female')" style="flex:1;background:var(--bg-primary);border:2px solid var(--border);color:var(--text-secondary);padding:0.7rem;border-radius:8px;cursor:pointer;font-size:1rem;font-weight:600;">👩 女</button>
-        </div>
-      </div>
+    <script>
+      // v3.0.8:tab 切换 '看手相 / 看面相' — 默认 hand,从 URL hash 读取初始值
+      (function () {
+        function paint(tab) {
+          var handPane = document.getElementById('renxiangPaneHand');
+          var facePane = document.getElementById('renxiangPaneFace');
+          var handTab = document.getElementById('renxiangTabHand');
+          var faceTab = document.getElementById('renxiangTabFace');
+          if (!handPane || !facePane) return;
+          var isHand = tab === 'hand';
+          handPane.style.display = isHand ? 'block' : 'none';
+          facePane.style.display = isHand ? 'none' : 'block';
+          if (handTab) {
+            handTab.style.borderColor = isHand ? 'var(--accent-gold)' : 'var(--border)';
+            handTab.style.color = isHand ? 'var(--accent-gold)' : 'var(--text-secondary)';
+            handTab.style.fontWeight = isHand ? '600' : '400';
+          }
+          if (faceTab) {
+            faceTab.style.borderColor = !isHand ? 'var(--accent-gold)' : 'var(--border)';
+            faceTab.style.color = !isHand ? 'var(--accent-gold)' : 'var(--text-secondary)';
+            faceTab.style.fontWeight = !isHand ? '600' : '400';
+          }
+        }
+        window.switchRenxiangTab = paint;
+        // 初始 paint + 监听 hash 变化(允许从别的页跳过来)
+        function init() {
+          var h = (location.hash || '').replace('#', '');
+          paint(h === 'face' ? 'face' : 'hand');
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', init);
+        } else { init(); }
+        window.addEventListener('hashchange', init);
+      })();
+    </script>
 
-      <!-- 年龄段 -->
-      <div class="input-row" style="margin-bottom:0.8rem;">
-        <div class="input-group" style="grid-column:span 2;">
-          <label>年龄段</label>
-          <select id="mxAgeBucket" onchange="mxAgeBucket=this.value" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem;border-radius:6px;font-size:0.9rem;width:100%;">
-            <option value="<18">&lt; 18（未成年）</option>
-            <option value="18-30">18-30（青年）</option>
-            <option value="30-45" selected>30-45（壮年）</option>
-            <option value="45-60">45-60（中年）</option>
-            <option value="60+">60+（中老年）</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- 3 张图上传(正面 / 左 45° / 右 45°) -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;margin-bottom:0.8rem;">
-        <!-- 正面 -->
-        <div>
-          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.3rem;text-align:center;">正面</div>
-          <div id="mxUploadAreaFront" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('mxFileInputFront').click()">
-            <div style="font-size:1.4rem;">😊</div>
-            <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
-            <input type="file" id="mxFileInputFront" accept="image/*" style="display:none;" onchange="onMxFileSelect(event, 'front')">
-          </div>
-          <div id="mxPreviewWrapFront" style="display:none;margin-top:0.3rem;text-align:center;">
-            <img id="mxPreviewFront" style="max-width:100%;max-height:120px;border-radius:6px;border:1px solid var(--border);">
-          </div>
-        </div>
-        <!-- 左 45° -->
-        <div>
-          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.3rem;text-align:center;">左 45°</div>
-          <div id="mxUploadAreaLeft45" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('mxFileInputLeft45').click()">
-            <div style="font-size:1.4rem;">👈</div>
-            <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
-            <input type="file" id="mxFileInputLeft45" accept="image/*" style="display:none;" onchange="onMxFileSelect(event, 'left45')">
-          </div>
-          <div id="mxPreviewWrapLeft45" style="display:none;margin-top:0.3rem;text-align:center;">
-            <img id="mxPreviewLeft45" style="max-width:100%;max-height:120px;border-radius:6px;border:1px solid var(--border);">
+    <!-- 面相内容(原本是独立 pageMianxiang,v3.0.8 合并进来作为 tab target) -->
+    <div id="renxiangPaneFace" class="renxiang-pane" style="display:none;">
+      <div class="input-section">
+        <!-- 性别选择 -->
+        <div class="input-group" style="margin-bottom:1.2rem;">
+          <label style="display:block;color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.5rem;letter-spacing:0.05em;">📌 性别（影响十二宫吉凶判读）</label>
+          <div style="display:flex;gap:0.6rem;">
+            <button id="mxGenderMale" onclick="setMxGender('male')" style="flex:1;background:var(--bg-primary);border:2px solid var(--accent-gold);color:var(--accent-gold);padding:0.7rem;border-radius:8px;cursor:pointer;font-size:1rem;font-weight:600;">👨 男</button>
+            <button id="mxGenderFemale" onclick="setMxGender('female')" style="flex:1;background:var(--bg-primary);border:2px solid var(--border);color:var(--text-secondary);padding:0.7rem;border-radius:8px;cursor:pointer;font-size:1rem;font-weight:600;">👩 女</button>
           </div>
         </div>
-        <!-- 右 45° -->
-        <div>
-          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.3rem;text-align:center;">右 45°</div>
-          <div id="mxUploadAreaRight45" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('mxFileInputRight45').click()">
-            <div style="font-size:1.4rem;">👉</div>
-            <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
-            <input type="file" id="mxFileInputRight45" accept="image/*" style="display:none;" onchange="onMxFileSelect(event, 'right45')">
-          </div>
-          <div id="mxPreviewWrapRight45" style="display:none;margin-top:0.3rem;text-align:center;">
-            <img id="mxPreviewRight45" style="max-width:100%;max-height:120px;border-radius:6px;border:1px solid var(--border);">
+
+        <!-- 年龄段 -->
+        <div class="input-row" style="margin-bottom:0.8rem;">
+          <div class="input-group" style="grid-column:span 2;">
+            <label>年龄段</label>
+            <select id="mxAgeBucket" onchange="mxAgeBucket=this.value" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem;border-radius:6px;font-size:0.9rem;width:100%;">
+              <option value="<18">&lt; 18（未成年）</option>
+              <option value="18-30">18-30（青年）</option>
+              <option value="30-45" selected>30-45（壮年）</option>
+              <option value="45-60">45-60（中年）</option>
+              <option value="60+">60+（中老年）</option>
+            </select>
           </div>
         </div>
-      </div>
 
-      <!-- 拍照提示 -->
-      <div style="font-size:0.75rem;color:var(--text-muted);background:var(--bg-inner);padding:0.5rem 0.8rem;border-radius:6px;margin-bottom:0.6rem;line-height:1.6;">
-        💡 <b>拍照建议</b>:正面照表情自然、光线均匀,左右 45° 侧照露出额头/鼻梁/下颌立体度。单张也能解读,但 3 张交叉验证精度更高。
-      </div>
+        <!-- 3 张图上传(正面 / 左 45° / 右 45°) -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;margin-bottom:0.8rem;">
+          <div>
+            <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.3rem;text-align:center;">正面</div>
+            <div id="mxUploadAreaFront" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('mxFileInputFront').click()">
+              <div style="font-size:1.4rem;">😊</div>
+              <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
+              <input type="file" id="mxFileInputFront" accept="image/*" style="display:none;" onchange="onMxFileSelect(event, 'front')">
+            </div>
+            <div id="mxPreviewWrapFront" style="display:none;margin-top:0.3rem;text-align:center;">
+              <img id="mxPreviewFront" style="max-width:100%;max-height:120px;border-radius:6px;border:1px solid var(--border);">
+            </div>
+          </div>
+          <div>
+            <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.3rem;text-align:center;">左 45°</div>
+            <div id="mxUploadAreaLeft45" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('mxFileInputLeft45').click()">
+              <div style="font-size:1.4rem;">👈</div>
+              <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
+              <input type="file" id="mxFileInputLeft45" accept="image/*" style="display:none;" onchange="onMxFileSelect(event, 'left45')">
+            </div>
+            <div id="mxPreviewWrapLeft45" style="display:none;margin-top:0.3rem;text-align:center;">
+              <img id="mxPreviewLeft45" style="max-width:100%;max-height:120px;border-radius:6px;border:1px solid var(--border);">
+            </div>
+          </div>
+          <div>
+            <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.3rem;text-align:center;">右 45°</div>
+            <div id="mxUploadAreaRight45" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('mxFileInputRight45').click()">
+              <div style="font-size:1.4rem;">👉</div>
+              <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
+              <input type="file" id="mxFileInputRight45" accept="image/*" style="display:none;" onchange="onMxFileSelect(event, 'right45')">
+            </div>
+            <div id="mxPreviewWrapRight45" style="display:none;margin-top:0.3rem;text-align:center;">
+              <img id="mxPreviewRight45" style="max-width:100%;max-height:120px;border-radius:6px;border:1px solid var(--border);">
+            </div>
+          </div>
+        </div>
 
-      <div id="mxActionArea" style="display:none;text-align:center;margin-bottom:0.5rem;">
-        <button class="divine-btn" onclick="doMianxiang()">AI 识图解读面相</button>
+        <!-- 拍照提示 -->
+        <div style="font-size:0.75rem;color:var(--text-muted);background:var(--bg-inner);padding:0.5rem 0.8rem;border-radius:6px;margin-bottom:0.6rem;line-height:1.6;">
+          💡 <b>拍照建议</b>:正面照表情自然、光线均匀,左右 45° 侧照露出额头/鼻梁/下颌立体度。单张也能解读,但 3 张交叉验证精度更高。
+        </div>
+
+        <div id="mxActionArea" style="display:none;text-align:center;margin-bottom:0.5rem;">
+          <button class="divine-btn" onclick="doMianxiang()">AI 识图解读面相</button>
+        </div>
+        <div id="mxResult" class="result-card" style="display:none;margin-top:1rem;"></div>
       </div>
-      <div id="mxResult" class="result-card" style="display:none;margin-top:1rem;"></div>
     </div>
   </div>
 
@@ -1040,7 +1073,7 @@
   <nav class="bottom-nav">
     <button onclick="switchPage('mingli')" id="navMingli"><span class="icon">📜</span>命理</button>
     <button onclick="switchPage('zhangua')" id="navZhangua"><span class="icon">☯</span>占卦</button>
-    <button onclick="switchPage('shouxiang')" id="navShouxiang"><span class="icon">✋</span>手相</button>
+    <button onclick="switchPage('shouxiang')" id="navShouxiang"><span class="icon">👁</span>人相</button>
     <button onclick="switchPage('xingshi')" id="navXingshi"><span class="icon">👤</span>姓名</button>
     <button onclick="switchPage('cross')" id="navCross"><span class="icon">🔀</span>三术</button>
     <button onclick="switchPage('fengshui')" id="navFengshui"><span class="icon">🧭</span>风水</button>
