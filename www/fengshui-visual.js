@@ -28,10 +28,18 @@ var FS_LUOPAN_24 = [
 
 // 罗盘 24 山向圆盘 SVG
 // 高亮当前坐向 doorDir
+// v3.0.19: 三层罗盘叠加(地盘正针 / 天盘缝针 / 人盘中针)
+//   地盘 = 内层,主"立向"
+//   天盘 = 外层(左旋7.5°),主"纳水"
+//   人盘 = 中层(右旋7.5°),主"消砂"
 function drawLuopan24(doorDir) {
   var w = 280, h = 280;
   var cx = w / 2, cy = h / 2;
   var R_OUT = 130, R_MID = 95, R_IN = 60;
+  // v3.0.19: 三层罗盘半径分配
+  var R_TIAN_OUT = 130, R_TIAN_IN = 108;  // 外层(天盘) 左旋 7.5°
+  var R_REN_OUT = 105, R_REN_IN = 84;    // 中层(人盘) 右旋 7.5°
+  var R_DI_OUT = 80,  R_DI_IN = 60;       // 内层(地盘) 标准
 
   function pos(angleDeg, r) {
     // angle 0 = 正北(12 点钟), SVG 中需要 -90°
@@ -41,51 +49,65 @@ function drawLuopan24(doorDir) {
 
   var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" style="display:block;margin:0 auto;max-width:280px;width:100%;background:var(--bg-inner);border-radius:50%;">';
 
-  // 三层圆环
-  svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R_OUT + '" fill="none" stroke="var(--accent-gold)" stroke-width="2"/>';
-  svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R_MID + '" fill="none" stroke="var(--border)" stroke-width="1"/>';
-  svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R_IN + '" fill="none" stroke="var(--border)" stroke-width="1"/>';
+  // 三层圆环(颜色区分:外层天盘金色/中层人盘蓝色/内层地盘红色)
+  svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R_TIAN_OUT + '" fill="none" stroke="var(--accent-gold)" stroke-width="1.5"/>';
+  svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R_TIAN_IN + '" fill="none" stroke="var(--accent-gold)" stroke-width="0.5"/>';
+  svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R_REN_OUT + '" fill="none" stroke="var(--accent-blue)" stroke-width="1.2"/>';
+  svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R_REN_IN + '" fill="none" stroke="var(--accent-blue)" stroke-width="0.5"/>';
+  svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R_DI_OUT + '" fill="none" stroke="var(--accent-red)" stroke-width="1.2"/>';
+  svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R_DI_IN + '" fill="none" stroke="var(--accent-red)" stroke-width="0.5"/>';
 
-  // 8 卦方向分隔线
+  // 8 卦方向分隔线(3 层都有)
   for (var i = 0; i < 8; i++) {
     var angle = i * 45;
-    var p1 = pos(angle, R_IN);
-    var p2 = pos(angle, R_OUT);
+    var p1 = pos(angle, R_DI_IN);
+    var p2 = pos(angle, R_TIAN_OUT);
     svg += '<line x1="' + p1.x.toFixed(1) + '" y1="' + p1.y.toFixed(1) + '" x2="' + p2.x.toFixed(1) + '" y2="' + p2.y.toFixed(1) + '" stroke="var(--border)" stroke-width="0.5"/>';
   }
 
-  // 24 山向字(每卦 3 字, 等分)
+  // 24 山向字(每卦 3 字, 地盘标准排布)
   for (var d = 0; d < 8; d++) {
     var dir = FS_LUOPAN_24[d].dir;
+    var shans = FS_LUOPAN_24[d].dir;  // 简化
     var shans = FS_LUOPAN_24[d].shan;
     var baseAngle = d * 45;
     for (var s = 0; s < 3; s++) {
       var subAngle = baseAngle + (s - 1) * 15;  // 5° 偏移
-      var p = pos(subAngle, R_MID + (R_OUT - R_MID) / 2);
+      // 地盘正针: 内层, 标准角度
+      var pDi = pos(subAngle, (R_DI_OUT + R_DI_IN) / 2);
       var isDoor = (dir === doorDir);
       var fill = isDoor ? 'var(--accent-red)' : 'var(--accent-gold)';
       var weight = isDoor ? '700' : '500';
-      // v3.0.13: 每山可点击,弹出详情 modal
-      var cursorStyle = 'cursor:pointer;';
-      svg += '<text x="' + p.x.toFixed(1) + '" y="' + p.y.toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="' + weight + '" fill="' + fill + '" style="' + cursorStyle + '" onclick="window.fengshuiVisual.showShanDetail(\'' + shans[s] + '\')">' + shans[s] + '</text>';
-      // 可点击命中区(透明矩形, 放大点击区域)
-      svg += '<rect x="' + (p.x - 8).toFixed(1) + '" y="' + (p.y - 8).toFixed(1) + '" width="16" height="16" fill="transparent" style="cursor:pointer;" onclick="window.fengshuiVisual.showShanDetail(\'' + shans[s] + '\')" data-shan="' + shans[s] + '"/>';
+      svg += '<text x="' + pDi.x.toFixed(1) + '" y="' + pDi.y.toFixed(1) + '" text-anchor="middle" font-size="10" font-weight="' + weight + '" fill="' + fill + '" style="cursor:pointer;" onclick="window.fengshuiVisual.showShanDetail(\'' + shans[s] + '\')">' + shans[s] + '</text>';
+
+      // v3.0.19: 天盘缝针 - 左旋 7.5°(纳水)
+      var pTian = pos(subAngle - 7.5, (R_TIAN_OUT + R_TIAN_IN) / 2);
+      svg += '<text x="' + pTian.x.toFixed(1) + '" y="' + pTian.y.toFixed(1) + '" text-anchor="middle" font-size="7" fill="var(--accent-gold)" opacity="0.7">' + shans[s] + '</text>';
+
+      // v3.0.19: 人盘中针 - 右旋 7.5°(消砂)
+      var pRen = pos(subAngle + 7.5, (R_REN_OUT + R_REN_IN) / 2);
+      svg += '<text x="' + pRen.x.toFixed(1) + '" y="' + pRen.y.toFixed(1) + '" text-anchor="middle" font-size="7" fill="var(--accent-blue)" opacity="0.7">' + shans[s] + '</text>';
+
+      // 透明命中矩形(只地盘点可点,避免天/人盘重复触发)
+      svg += '<rect x="' + (pDi.x - 8).toFixed(1) + '" y="' + (pDi.y - 8).toFixed(1) + '" width="16" height="16" fill="transparent" style="cursor:pointer;" onclick="window.fengshuiVisual.showShanDetail(\'' + shans[s] + '\')" data-shan="' + shans[s] + '"/>';
     }
-    // 8 卦方向大标(外圈)
-    var pDir = pos(baseAngle, R_OUT + 14);
+    // 8 卦方向大标(外圈外侧)
+    var pDir = pos(baseAngle, R_TIAN_OUT + 14);
     svg += '<text x="' + pDir.x.toFixed(1) + '" y="' + pDir.y.toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="var(--text-secondary)">' + dir + '</text>';
   }
+
+  // 三层标签(图例, 在 SVG 顶部)
+  svg += '<text x="' + (cx - 50) + '" y="' + 14 + '" font-size="7" fill="var(--accent-gold)">天盘·纳水</text>';
+  svg += '<text x="' + (cx - 10) + '" y="' + 14 + '" font-size="7" fill="var(--accent-blue)">人盘·消砂</text>';
+  svg += '<text x="' + (cx + 30) + '" y="' + 14 + '" font-size="7" fill="var(--accent-red)">地盘·立向</text>';
 
   // 中心: 天池 + 指针
   svg += '<circle cx="' + cx + '" cy="' + cy + '" r="8" fill="var(--accent-gold)"/>';
   svg += '<text x="' + cx + '" y="' + (cy + 4) + '" text-anchor="middle" font-size="8" fill="#1a1612">☰</text>';
 
-  // 24 山向总环注
-  svg += '<text x="' + cx + '" y="' + (h - 6) + '" text-anchor="middle" font-size="9" fill="var(--text-muted)">24 山向圆盘 · 地盘正针</text>';
-
   // 大门方向指示
   if (doorDir && FS_DIR_ANGLE[doorDir] !== undefined) {
-    var pDoor = pos(FS_DIR_ANGLE[doorDir], R_OUT + 26);
+    var pDoor = pos(FS_DIR_ANGLE[doorDir], R_TIAN_OUT + 26);
     svg += '<text x="' + pDoor.x.toFixed(1) + '" y="' + pDoor.y.toFixed(1) + '" text-anchor="middle" font-size="10" font-weight="700" fill="var(--accent-red)">🚪 大门</text>';
   }
 

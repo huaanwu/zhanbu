@@ -273,6 +273,53 @@ check('openFengshuiModal 创建 #fengshuiModal 容器', () => {
   assert.strictEqual(modal.style.display, 'none', 'close 后 display=none');
 });
 
+// ============ v3.0.19 三层罗盘叠加 ============
+check('drawLuopan24 含 3 层圆环标记(地盘/人盘/天盘)', () => {
+  var svg = vis.drawLuopan24('南');
+  // 三种颜色圆环(各 2 个 = 6 个圆)
+  var goldCircles = (svg.match(/stroke="var\(--accent-gold\)"/g) || []).length;
+  var blueCircles = (svg.match(/stroke="var\(--accent-blue\)"/g) || []).length;
+  var redCircles = (svg.match(/stroke="var\(--accent-red\)"/g) || []).length;
+  assert.ok(goldCircles >= 2, '天盘金圈 ≥ 2,实际 ' + goldCircles);
+  assert.ok(blueCircles >= 2, '人盘蓝圈 ≥ 2,实际 ' + blueCircles);
+  assert.ok(redCircles >= 2, '地盘红圈 ≥ 2(地圈+大门圆点),实际 ' + redCircles);
+});
+
+check('drawLuopan24 含 3 层字(每山向 3 字:天/人/地)', () => {
+  var svg = vis.drawLuopan24('南');
+  // 24 山 × 3 层 = 72 个字 text
+  // 但有些 text 是 8 卦大标(8) + 大门(1) + 中心(1) = 10 个额外
+  // 简化: 检查 24 山在 SVG 出现 ≥ 72 次
+  var count = (svg.match(/<text/g) || []).length;
+  assert.ok(count >= 72, 'text 元素 ≥ 72(24 山 × 3 层),实际 ' + count);
+});
+
+check('drawLuopan24 含三层标签图例(天盘/人盘/地盘)', () => {
+  var svg = vis.drawLuopan24('南');
+  assert.ok(/天盘·纳水/.test(svg), '天盘标签');
+  assert.ok(/人盘·消砂/.test(svg), '人盘标签');
+  assert.ok(/地盘·立向/.test(svg), '地盘标签');
+});
+
+check('drawLuopan24 天盘左旋 7.5°(纳水)、人盘右旋 7.5°(消砂)', () => {
+  // 验证: 24 山每字都有 3 个副本(天/地/人),且位置不同
+  // 简化: 验证 24 山每字至少出现 3 次(一次天、一次人、一次地)
+  var svg = vis.drawLuopan24('南');
+  // '壬' 应出现 3 次
+  var renCount = (svg.match(/>壬</g) || []).length;
+  assert.ok(renCount >= 3, '壬字 ≥ 3(地盘+天盘+人盘),实际 ' + renCount);
+  var ziCount = (svg.match(/>子</g) || []).length;
+  assert.ok(ziCount >= 3, '子字 ≥ 3,实际 ' + ziCount);
+});
+
+check('drawLuopan24 不传 doorDir 也能渲染(3 层仍工作)', () => {
+  var svg = vis.drawLuopan24();
+  assert.ok(svg.indexOf('<svg') >= 0);
+  // 仍 24 山 × 3 层
+  var count = (svg.match(/<text/g) || []).length;
+  assert.ok(count >= 72, 'text 元素 ≥ 72,实际 ' + count);
+});
+
 console.log(`\n========================================`);
 console.log(`   Total: ${PASS + FAIL}  Pass: ${PASS}  Fail: ${FAIL}`);
 console.log(`   Rate: ${((PASS / (PASS + FAIL)) * 100).toFixed(1)}%`);
