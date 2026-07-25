@@ -9,7 +9,7 @@
 <title>AI占卜大师</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
-
+
   <script type="module" crossorigin src="/assets/index-DymPYn27.js"></script>
   <link rel="stylesheet" crossorigin href="/styles.css">
 </head>
@@ -487,12 +487,62 @@
   <div class="page" id="pageChenggu">
     <div class="header"><h1 data-seal="骨">称骨算命</h1><div class="subtitle">袁天罡称骨 · 骨重知命</div></div>
     <div class="input-section">
+      <!-- 历法 + 性别 -->
       <div class="input-row">
-        <div class="input-group"><label>年(公历)</label><input type="number" id="cgYear" value="1990"></div>
+        <div class="input-group">
+          <label>历法</label>
+          <div class="btn-row">
+            <button class="toggle-btn active" data-cg-cal="solar" onclick="selCgCal(this)">阳历</button>
+            <button class="toggle-btn" data-cg-cal="lunar" onclick="selCgCal(this)">阴历</button>
+          </div>
+        </div>
+        <div class="input-group">
+          <label>性别（断语分男女）</label>
+          <div class="btn-row">
+            <button class="toggle-btn active" data-cg-gender="male" onclick="selCgGender(this)">男</button>
+            <button class="toggle-btn" data-cg-gender="female" onclick="selCgGender(this)">女</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 阳历路径 -->
+      <div class="input-row" id="cgSolarRow">
+        <div class="input-group"><label>年(阳历)</label><input type="number" id="cgYear" value="1990"></div>
         <div class="input-group"><label>月</label><input type="number" id="cgMonth" value="3"></div>
         <div class="input-group"><label>日</label><input type="number" id="cgDay" value="15"></div>
         <div class="input-group"><label>时</label><input type="number" id="cgHour" value="10" min="0" max="23"></div>
       </div>
+
+      <!-- 阴历路径(直接输入农历月日时,无需公转农) -->
+      <div class="input-row" id="cgLunarRow" style="display:none;">
+        <div class="input-group">
+          <label>年干支</label>
+          <select id="cgYearGZ" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem;border-radius:6px;font-size:0.9rem;">
+            <option>甲子</option><option>乙丑</option><option>丙寅</option><option>丁卯</option><option>戊辰</option>
+            <option>己巳</option><option>庚午</option><option>辛未</option><option>壬申</option><option>癸酉</option>
+            <option>甲戌</option><option>乙亥</option><option>丙子</option><option>丁丑</option><option>戊寅</option>
+            <option>己卯</option><option>庚辰</option><option>辛巳</option><option>壬午</option><option>癸未</option>
+            <option>甲申</option><option>乙酉</option><option>丙戌</option><option>丁亥</option><option>戊子</option>
+            <option>己丑</option><option>庚寅</option><option>辛卯</option><option>壬辰</option><option>癸巳</option>
+            <option>甲午</option><option>乙未</option><option>丙申</option><option>丁酉</option><option>戊戌</option>
+            <option>己亥</option><option>庚子</option><option>辛丑</option><option>壬寅</option><option>癸卯</option>
+            <option>甲辰</option><option>乙巳</option><option>丙午</option><option>丁未</option><option>戊申</option>
+            <option>己酉</option><option>庚戌</option><option>辛亥</option><option>壬子</option><option>癸丑</option>
+            <option>甲寅</option><option>乙卯</option><option>丙辰</option><option>丁巳</option><option>戊午</option>
+            <option>己未</option><option>庚申</option><option>辛酉</option><option>壬戌</option><option>癸亥</option>
+          </select>
+        </div>
+        <div class="input-group"><label>农历月</label><input type="number" id="cgLunarMonth" value="3" min="1" max="12"></div>
+        <div class="input-group"><label>农历日</label><input type="number" id="cgLunarDay" value="15" min="1" max="30"></div>
+        <div class="input-group">
+          <label>时支</label>
+          <select id="cgHourZhi" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem;border-radius:6px;font-size:0.9rem;">
+            <option>子</option><option>丑</option><option>寅</option><option>卯</option><option>辰</option><option>巳</option>
+            <option>午</option><option>未</option><option>申</option><option>酉</option><option>戌</option><option>亥</option>
+          </select>
+        </div>
+      </div>
+
       <div class="input-row">
         <div class="input-group" style="grid-column:span 2;"><label>所问之事(可选)</label><input type="text" id="cgQuestion" placeholder="例如:我一生事业运如何?"></div>
       </div>

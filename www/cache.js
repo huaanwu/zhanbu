@@ -76,6 +76,8 @@ const Cache = {
         // chenggu-v1: 称骨首版,隔离未来算法/数据表修订的旧缓存
         parts.push('chenggu-v1');
         parts.push([params.lunar?.yearGZ, params.lunar?.month, params.lunar?.day, params.lunar?.hourZhi].join('_'));
+        // v3.0.9: 性别影响断语,需独立缓存
+        if (params.gender) parts.push('gender:' + params.gender);
         break;
       case 'lingqian':
         // lingqian-v1: 灵签首版,隔离未来签文数据修订的旧缓存

@@ -12,7 +12,7 @@
     xiaoliuren: { method: 'time' },
     meihua: { method: 'time' },
     daliuren: {},
-    chenggu: {},
+    chenggu: { cal: 'solar', gender: 'male' },
     lingqian: { kind: 'guanyin' },
   };
 

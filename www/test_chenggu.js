@@ -146,4 +146,72 @@ runner.test('formatChengguPrompt 含农历/明细/总重/断语/定论声明/问
   runner.assert(text.indexOf('我一生财运如何') >= 0, '应含所问之事');
 });
 
+// ============ v3.0.9: 历法切换 + 性别切换 + cache gender ============
+runner.module('称骨 v3.0.9 历法切换/性别切换/cache gender');
+runner.test('农历路径 chengguSuanByLunar 与阳历 chengguSuan 结果一致(同一日期)', function() {
+  var solar = chenggu.chengguSuan(new Date(1990, 2, 15, 10, 0));
+  var lunar = chenggu.chengguSuanByLunar({
+    yearGZ: solar.lunar.yearGZ, month: solar.lunar.month, day: solar.lunar.day, hourZhi: solar.lunar.hourZhi
+  });
+  runner.assertEq(solar.totalQian, lunar.totalQian, '总骨重一致');
+  runner.assertEq(solar.totalText, lunar.totalText, '总骨重文本一致');
+  runner.assertEq(solar.weights.year.qian, lunar.weights.year.qian, '年重一致');
+});
+runner.test('男性断语 ≠ 女性断语(至少 50 档以上)', function() {
+  // chenggu 是在文件顶部 eval 拿到的,直接用引用,不受后续 cache.js eval 影响
+  // 注:chenggu.js 中 verdict 字段名是 m/f(短名),不是 male/female
+  var diff = 0;
+  var total = 0;
+  var verdicts = chenggu.VERDICTS;
+  var keys = Object.keys(verdicts);
+  for (var i = 0; i < keys.length; i++) {
+    var qian = parseInt(keys[i], 10);
+    if (qian < 21 || qian > 72) continue;
+    var v = verdicts[keys[i]];
+    if (!v) continue;
+    total++;
+    if (v.m !== v.f) diff++;
+  }
+  runner.assert(total >= 50, '至少 50 档有男女断语(实际 ' + total + ')');
+  runner.assert(diff >= 50, '至少 50 档男女断语不同(实际 ' + diff + ')');
+});
+runner.test('cache.js makeKey chenggu 含 gender 维度', function() {
+  var _store = new Map();
+  var ls = { getItem: function(k){return _store.has(k)?_store.get(k):null;}, setItem: function(k,v){_store.set(k,String(v));}, removeItem: function(k){_store.delete(k);} };
+  globalThis.window = { APP_VERSION: 'v3.0.9' };
+  globalThis.localStorage = ls;
+  eval(fs.readFileSync('cache.js', 'utf-8'));
+  var Cache = globalThis.window.Cache;
+  var pMale = { lunar: { yearGZ: '甲子', month: 1, day: 1, hourZhi: '子' }, gender: 'male' };
+  var pFemale = { lunar: { yearGZ: '甲子', month: 1, day: 1, hourZhi: '子' }, gender: 'female' };
+  var kMale = Cache.makeKey('chenggu', pMale);
+  var kFemale = Cache.makeKey('chenggu', pFemale);
+  runner.assert(kMale.indexOf('gender:male') >= 0, 'cache key 含 gender:male');
+  runner.assert(kFemale.indexOf('gender:female') >= 0, 'cache key 含 gender:female');
+  runner.assert(kMale !== kFemale, '男女 cache key 不同');
+});
+runner.test('app/chenggu.js 暴露 selCgCal/selCgGender/doChenggu/doAIChenggu', function() {
+  var src = fs.readFileSync('app/chenggu.js', 'utf-8');
+  runner.assert(/window\.selCgCal\s*=/.test(src), 'selCgCal 挂到 window');
+  runner.assert(/window\.selCgGender\s*=/.test(src), 'selCgGender 挂到 window');
+  runner.assert(/window\.doChenggu\s*=/.test(src), 'doChenggu 挂到 window');
+  runner.assert(/window\.doAIChenggu\s*=/.test(src), 'doAIChenggu 挂到 window');
+});
+runner.test('app/chenggu.js lunar 路径调 chengguSuanByLunar,solar 路径调 chengguSuan', function() {
+  var src = fs.readFileSync('app/chenggu.js', 'utf-8');
+  runner.assert(/cal\s*===\s*'lunar'[\s\S]*chengguSuanByLunar/.test(src), 'lunar → chengguSuanByLunar');
+  runner.assert(/cal\s*===\s*'lunar'[\s\S]*chengguSuan\b(?!ByLunar)/.test(src) || /cal\s*===\s*'solar'[\s\S]*chengguSuan\b/.test(src), 'solar → chengguSuan');
+});
+runner.test('index.html pageChenggu 含农历/性别 toggle + lunar 输入行', function() {
+  var src = fs.readFileSync('index.html', 'utf-8');
+  runner.assert(/data-cg-cal="solar"[\s\S]*?阳历[\s\S]*?data-cg-cal="lunar"[\s\S]*?阴历/.test(src), '历法 toggle 阳/阴');
+  runner.assert(/data-cg-gender="male"[\s\S]*?男[\s\S]*?data-cg-gender="female"[\s\S]*?女/.test(src), '性别 toggle 男/女');
+  runner.assert(/id="cgSolarRow"/.test(src), '阳历输入行 cgSolarRow');
+  runner.assert(/id="cgLunarRow"[\s\S]*display:none/.test(src), '农历输入行 cgLunarRow 默认隐藏');
+  runner.assert(/id="cgYearGZ"/.test(src), '农历年干支 select');
+  runner.assert(/id="cgHourZhi"/.test(src), '时支 select');
+  runner.assert(/onclick="selCgCal\(this\)"/.test(src), 'selCgCal onclick 绑定');
+  runner.assert(/onclick="selCgGender\(this\)"/.test(src), 'selCgGender onclick 绑定');
+});
+
 runner.run();
