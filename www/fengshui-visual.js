@@ -439,6 +439,82 @@ var DLR_JIANG_COLORS = {
   '太常': '#888', '玄武': '#d44', '太阴': '#2a7', '天后': '#888'
 };
 
+// ============ v3.1.6 大六壬九宗门课式数据 ============
+// 九宗门口诀(传统六壬学标准, 联网核实 2026-07):
+//   [1] 贼克法: 上神克下神取上神(元首课); 下贼上取被贼者(重审课)
+//   [2] 比用法: 多克者取与日干比和者
+//   [3] 涉害法: 从本家数至临宫计受克数, 等深取孟仲季, 复等刚柔
+//   [4] 遥克法: 四课无克号为遥, 蒿矢(神克日)/ 弹射(日克神)
+//   [5] 昴星法: 四课全备无克取阳星, 阴柔取干合上神
+//   [6] 别责法: 八课四课三课或二课, 干支前一位别立三传
+//   [7] 八专法: 干支同位(甲寅/丁未/己未/庚申/癸丑五日)
+//   [8] 伏吟法: 月将=占时, 诸神归本位
+//   [9] 返吟法: 月将冲占时, 天地盘相冲
+// 取不出三传 → 显式报错(见 www/daliuren.js 实现)
+var DLR_ZONGMEN_DETAILS = {
+  '贼克法': { name: '贼克课', desc: '上神克下神 → 元首课(吉); 下贼上 → 重审课(凶)', color: '#d44', meaning: '冲突/克制的起始,主事件爆发点' },
+  '比用法': { name: '比用课', desc: '多克者取与日干比和者(同类相聚)', color: '#2a7', meaning: '同类相聚,主事件可与人协商/合作' },
+  '涉害法': { name: '涉害课', desc: '从本家数至临宫计受克数, 等深取孟仲季, 复等刚柔', color: '#888', meaning: '审时度势, 看事件受损/受阻程度' },
+  '遥克法': { name: '遥克课', desc: '四课无克号为遥, 蒿矢(神克日)/ 弹射(日克神)', color: '#d44', meaning: '隔空相冲, 主暗中阻力/远距离变故' },
+  '昴星法': { name: '昴星课', desc: '四课全备无克取阳星, 阴柔取干合上神', color: '#a37', meaning: '无物时借力, 主意外助力/贵人' },
+  '别责法': { name: '别责课', desc: '八课四课三课或二课, 干支前一位别立三传', color: '#888', meaning: '时机未到, 主延迟/调整' },
+  '八专法': { name: '八专课', desc: '干支同位(甲寅/丁未/己未/庚申/癸丑五日)', color: '#d44', meaning: '干支合一, 主自我意识强/专断' },
+  '伏吟法': { name: '伏吟课', desc: '月将=占时, 诸神归本位', color: '#888', meaning: '静止守中, 主事体无变化/守旧' },
+  '返吟法': { name: '返吟课', desc: '月将冲占时, 天地盘相冲', color: '#d44', meaning: '相冲动, 主事体翻覆/反复/有克变吉' }
+};
+
+// 大六壬干支神煞(简化版, 只保留主要神煞)
+// 用于 v3.1.6 渲染神煞表
+// 13 神煞: 天乙贵人 + 十二长生(长生/沐浴/冠带/临官/帝旺/衰/病/死/墓/绝/胎/养)
+// 简化: 每干一样, 不再区分阳顺阴逆(传统阴干长生起点不同,需十二宫对齐;本轮只做主要神煞提示)
+var DLR_GAN_SHA = {};
+['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'].forEach(function (g) {
+  DLR_GAN_SHA[g] = ['天乙贵人','长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'];
+});
+
+// 九宗门课式展开渲染(SVG)
+function drawDaliurenZongmen(pan) {
+  if (!pan || !pan.faYong) return '<div style="color:var(--text-muted);">无发用数据</div>';
+  var zongmen = pan.faYong.zongmen;
+  var keti = pan.faYong.keti;
+  var detail = DLR_ZONGMEN_DETAILS[zongmen] || { name: zongmen, desc: '无详情', color: '#888', meaning: '数据待补充' };
+  var w = 280;
+  var svg = '<svg viewBox="0 0 ' + w + ' 110" style="display:block;margin:0 auto;max-width:280px;width:100%;">';
+  svg += '<rect x="10" y="5" width="260" height="100" fill="' + detail.color.replace('#','rgba(0,0,0,0.05)') + '" stroke="' + detail.color + '" stroke-width="1.5" rx="6"/>';
+  // 宗门名
+  svg += '<text x="' + (w/2) + '" y="30" text-anchor="middle" font-size="14" font-weight="700" fill="' + detail.color + '">' + detail.name + '(' + zongmen + ')</text>';
+  // 课体
+  svg += '<text x="' + (w/2) + '" y="50" text-anchor="middle" font-size="10" fill="var(--accent-gold)">' + keti + '</text>';
+  // 描述
+  svg += '<text x="' + (w/2) + '" y="70" text-anchor="middle" font-size="9" fill="var(--text-secondary)">' + detail.desc + '</text>';
+  // 意义
+  svg += '<text x="' + (w/2) + '" y="90" text-anchor="middle" font-size="8" fill="var(--text-muted)">💡 ' + detail.meaning + '</text>';
+  svg += '</svg>';
+  return svg;
+}
+
+// 干支神煞表(渲染日干对应的 12 宫神煞)
+function drawDaliurenGanSha(pan) {
+  if (!pan || !pan.dayGan) return '<div style="color:var(--text-muted);">无日干数据</div>';
+  var shaList = DLR_GAN_SHA[pan.dayGan];
+  if (!shaList) return '<div style="color:var(--text-muted);">日干 ' + pan.dayGan + ' 无对应神煞表</div>';
+  var w = 280;
+  var svg = '<svg viewBox="0 0 ' + w + ' 60" style="display:block;margin:0 auto;max-width:280px;width:100%;">';
+  // 简化: 横向 12 格(只标重要的 4 个:天乙贵人/长生/临官/帝旺)
+  var keyIdx = { '天乙贵人': 0, '长生': 1, '临官': 3, '帝旺': 4 };
+  var cells = [];
+  for (var i = 0; i < 12; i++) {
+    var sha = shaList[i] || '';
+    var isKey = (sha === '天乙贵人' || sha === '长生' || sha === '临官' || sha === '帝旺');
+    var color = isKey ? 'var(--accent-gold)' : 'var(--text-muted)';
+    var x = 10 + i * 22;
+    svg += '<rect x="' + x + '" y="10" width="20" height="40" fill="' + (isKey ? 'rgba(201,168,76,0.1)' : 'transparent') + '" stroke="' + color + '" stroke-width="0.5" rx="2"/>';
+    svg += '<text x="' + (x + 10) + '" y="30" text-anchor="middle" font-size="8" fill="' + color + '">' + sha + '</text>';
+  }
+  svg += '</svg>';
+  return svg;
+}
+
 // 四课 SVG: 4 列卡(第一/二/三/四课),每列上神/下神/天将
 function drawDaliurenSike(pan) {
   if (!pan || !pan.siKe) return '<div style="color:var(--text-muted);">无四课数据</div>';
@@ -535,6 +611,9 @@ window.fengshuiVisual = {
   drawDaliurenSike: drawDaliurenSike,
   drawDaliurenSanChuan: drawDaliurenSanChuan,
   drawDaliurenTianPan: drawDaliurenTianPan,
+  // v3.1.6:九宗门 + 神煞
+  drawDaliurenZongmen: drawDaliurenZongmen,
+  drawDaliurenGanSha: drawDaliurenGanSha,
   // v3.0.13:详情
   showShanDetail: showShanDetail,
   showStarDetail: showStarDetail,
@@ -544,6 +623,8 @@ window.fengshuiVisual = {
   SHAN_DETAILS: FS_SHAN_DETAILS,
   STAR_DETAILS: FS_STAR_DETAILS,
   DLR_JIANG_COLORS: DLR_JIANG_COLORS,
+  DLR_ZONGMEN_DETAILS: DLR_ZONGMEN_DETAILS,
+  DLR_GAN_SHA: DLR_GAN_SHA,
   DIR_ANGLE: FS_DIR_ANGLE,
   LUOPAN_24: FS_LUOPAN_24
 };

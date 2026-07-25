@@ -515,6 +515,77 @@ check('index.html 大六壬 AI 解读按钮 onclick="doAIDaliuren"', () => {
   assert.ok(/大六壬 AI 解读\(v3\.1\.5\)/.test(src), '按钮文案 v3.1.5');
 });
 
+// ============ v3.1.6 大六壬九宗门 + 神煞 ============
+check('window.fengshuiVisual 暴露 drawDaliurenZongmen/drawDaliurenGanSha + DLR_ZONGMEN_DETAILS/DLR_GAN_SHA', () => {
+  assert.strictEqual(typeof vis.drawDaliurenZongmen, 'function');
+  assert.strictEqual(typeof vis.drawDaliurenGanSha, 'function');
+  assert.ok(vis.DLR_ZONGMEN_DETAILS, 'DLR_ZONGMEN_DETAILS 暴露');
+  assert.ok(vis.DLR_GAN_SHA, 'DLR_GAN_SHA 暴露');
+});
+
+check('DLR_ZONGMEN_DETAILS 含 9 宗门口诀', () => {
+  var zongmenList = ['贼克法','比用法','涉害法','遥克法','昴星法','别责法','八专法','伏吟法','返吟法'];
+  zongmenList.forEach(function (z) {
+    var d = vis.DLR_ZONGMEN_DETAILS[z];
+    assert.ok(d, 'DLR_ZONGMEN_DETAILS[' + z + '] 存在');
+    assert.ok(d.name, 'name 字段');
+    assert.ok(d.desc, 'desc 字段');
+    assert.ok(d.color, 'color 字段');
+    assert.ok(d.meaning, 'meaning 字段');
+  });
+});
+
+check('DLR_GAN_SHA 10 天干各含主要神煞(天乙贵人/长生/临官/帝旺/衰/胎/养)', () => {
+  var gans = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+  gans.forEach(function (g) {
+    var shaList = vis.DLR_GAN_SHA[g];
+    assert.ok(Array.isArray(shaList), g + ' 神煞表存在');
+    // v3.1.6 简化: 每干一样 13 项(简化,不区分阴长生起点)
+    assert.strictEqual(shaList.length, 13, g + ' 神煞 13 个');
+    assert.ok(shaList.indexOf('天乙贵人') >= 0, g + ' 含 天乙贵人');
+    assert.ok(shaList.indexOf('长生') >= 0, g + ' 含 长生');
+    assert.ok(shaList.indexOf('临官') >= 0, g + ' 含 临官');
+    assert.ok(shaList.indexOf('帝旺') >= 0, g + ' 含 帝旺');
+    assert.ok(shaList.indexOf('衰') >= 0, g + ' 含 衰');
+    assert.ok(shaList.indexOf('胎') >= 0, g + ' 含 胎');
+    assert.ok(shaList.indexOf('养') >= 0, g + ' 含 养');
+  });
+});
+
+check('drawDaliurenZongmen 渲染课式 SVG(含宗门名+课体+描述+意义)', () => {
+  var pan = { faYong: { zongmen: '贼克法', keti: '元首课' } };
+  var svg = vis.drawDaliurenZongmen(pan);
+  assert.ok(svg.indexOf('<svg') >= 0);
+  assert.ok(svg.indexOf('贼克法') > 0, '含宗门名');
+  assert.ok(svg.indexOf('元首课') > 0, '含课体');
+  assert.ok(svg.indexOf('上神克下神') > 0, '含描述');
+  assert.ok(svg.indexOf('冲突/克制') > 0, '含意义');
+});
+
+check('drawDaliurenZongmen 非法宗门 fallback(显示 zongmen 原名)', () => {
+  var pan = { faYong: { zongmen: '未知宗门', keti: '未知课' } };
+  var svg = vis.drawDaliurenZongmen(pan);
+  assert.ok(svg.indexOf('未知宗门') > 0, 'fallback 显示原宗门名');
+});
+
+check('drawDaliurenGanSha 渲染日干神煞表(含主要神煞)', () => {
+  var pan = { dayGan: '甲' };
+  var svg = vis.drawDaliurenGanSha(pan);
+  assert.ok(svg.indexOf('<svg') >= 0);
+  assert.ok(svg.indexOf('天乙贵人') > 0, '含 天乙贵人');
+  assert.ok(svg.indexOf('长生') > 0, '含 长生');
+  assert.ok(svg.indexOf('临官') > 0, '含 临官');
+  assert.ok(svg.indexOf('帝旺') > 0, '含 帝旺');
+});
+
+check('app/fengshui.js doDaliurenManual + doDaliurenFromFengshui 调 drawDaliurenZongmen + drawDaliurenGanSha', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/drawDaliurenZongmen\(pan\)/.test(src), '调 drawDaliurenZongmen');
+  assert.ok(/drawDaliurenGanSha\(pan\)/.test(src), '调 drawDaliurenGanSha');
+  assert.ok(/【发用宗门/.test(src), '标题含【发用宗门】');
+  assert.ok(/【大六壬日干神煞/.test(src), '标题含【大六壬日干神煞】');
+});
+
 console.log(`\n========================================`);
 console.log(`   Total: ${PASS + FAIL}  Pass: ${PASS}  Fail: ${FAIL}`);
 console.log(`   Rate: ${((PASS / (PASS + FAIL)) * 100).toFixed(1)}%`);

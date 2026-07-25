@@ -56,6 +56,11 @@ function doDaliurenFromFengshui() {
     html += window.fengshuiVisual.drawDaliurenSike(pan);
     html += '<div style="margin-top:0.5rem;font-size:0.8rem;color:var(--accent-red);">【三传】</div>';
     html += window.fengshuiVisual.drawDaliurenSanChuan(pan);
+    // v3.1.6: 九宗门课式展开
+    html += '<div style="margin-top:0.5rem;font-size:0.8rem;color:var(--accent-gold);">【发用宗门 · 课式展开】</div>';
+    html += window.fengshuiVisual.drawDaliurenZongmen(pan);
+    html += '<div style="margin-top:0.5rem;font-size:0.8rem;color:var(--accent-blue);">【大六壬日干神煞】</div>';
+    html += window.fengshuiVisual.drawDaliurenGanSha(pan);
     html += '<div style="margin-top:0.5rem;font-size:0.8rem;color:var(--accent-blue);">【天盘 12 宫】(外圈=天盘字,内圈=地盘,周边=天将)</div>';
     html += window.fengshuiVisual.drawDaliurenTianPan(pan);
 
@@ -130,6 +135,11 @@ function doDaliurenManual() {
     html += window.fengshuiVisual.drawDaliurenSike(pan);
     html += '<div style="margin-top:0.5rem;font-size:0.8rem;color:var(--accent-red);">【三传】</div>';
     html += window.fengshuiVisual.drawDaliurenSanChuan(pan);
+    // v3.1.6: 九宗门课式展开
+    html += '<div style="margin-top:0.5rem;font-size:0.8rem;color:var(--accent-gold);">【发用宗门 · 课式展开】</div>';
+    html += window.fengshuiVisual.drawDaliurenZongmen(pan);
+    html += '<div style="margin-top:0.5rem;font-size:0.8rem;color:var(--accent-blue);">【大六壬日干神煞】</div>';
+    html += window.fengshuiVisual.drawDaliurenGanSha(pan);
     html += '<div style="margin-top:0.5rem;font-size:0.8rem;color:var(--accent-blue);">【天盘 12 宫】(外圈=天盘字,内圈=地盘,周边=天将)</div>';
     html += window.fengshuiVisual.drawDaliurenTianPan(pan);
 
