@@ -1138,74 +1138,8 @@
         </div>
         <div id="xkError" class="result-card" style="display:none;background:rgba(220,80,80,0.1);border:1px solid var(--accent-red);color:var(--accent-red);margin-top:0.8rem;font-size:0.85rem;"></div>
         <button class="divine-btn" onclick="doXuankong()" style="margin-top:0.8rem;">玄空飞星排盘</button>
-        <button class="divine-btn" onclick="doDaliurenFromFengshui()" style="margin-top:0.5rem;background:var(--bg-secondary);color:var(--text-primary);">🐉 大六壬起课(v3.1.2)</button>
-
-        <!-- v3.1.4:大六壬手动输入 -->
-        <div class="input-section" style="margin-top:0.8rem;border-top:1px solid var(--border);padding-top:0.6rem;">
-          <div style="font-size:0.8rem;color:var(--accent-gold);margin-bottom:0.4rem;">🐉 大六壬手动输入(v3.1.4)</div>
-          <div class="input-row">
-            <div class="input-group">
-              <label>起课方式</label>
-              <select id="dlrMethod" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem;border-radius:6px;font-size:0.9rem;width:100%;">
-                <option value="time" selected>按当前时间</option>
-                <option value="manual">手动指定</option>
-              </select>
-            </div>
-            <div class="input-group">
-              <label>排盘年份(公历)</label>
-              <input type="number" id="dlrYear" value="2026" min="1864" max="2099">
-            </div>
-            <div class="input-group">
-              <label>月(1-12)</label>
-              <input type="number" id="dlrMonth" value="7" min="1" max="12">
-            </div>
-            <div class="input-group">
-              <label>日(1-31)</label>
-              <input type="number" id="dlrDay" value="25" min="1" max="31">
-            </div>
-            <div class="input-group">
-              <label>时(0-23)</label>
-              <input type="number" id="dlrHour" value="14" min="0" max="23">
-            </div>
-          </div>
-          <div class="input-row" id="dlrManualRow" style="display:none;">
-            <div class="input-group">
-              <label>日干支(60甲子)</label>
-              <select id="dlrDayGZ" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem;border-radius:6px;font-size:0.9rem;">
-                <option>甲子</option><option>乙丑</option><option>丙寅</option><option>丁卯</option><option>戊辰</option>
-                <option>己巳</option><option>庚午</option><option>辛未</option><option>壬申</option><option>癸酉</option>
-                <option>甲戌</option><option>乙亥</option><option>丙子</option><option>丁丑</option><option>戊寅</option>
-                <option>己卯</option><option>庚辰</option><option>辛巳</option><option>壬午</option><option>癸未</option>
-                <option>甲申</option><option>乙酉</option><option>丙戌</option><option>丁亥</option><option>戊子</option>
-                <option>己丑</option><option>庚寅</option><option>辛卯</option><option>壬辰</option><option>癸巳</option>
-                <option>甲午</option><option>乙未</option><option>丙申</option><option>丁酉</option><option>戊戌</option>
-                <option>己亥</option><option>庚子</option><option>辛丑</option><option>壬寅</option><option>癸卯</option>
-                <option>甲辰</option><option>乙巳</option><option>丙午</option><option>丁未</option><option>戊申</option>
-                <option>己酉</option><option>庚戌</option><option>辛亥</option><option>壬子</option><option>癸丑</option>
-                <option>甲寅</option><option>乙卯</option><option>丙辰</option><option>丁巳</option><option>戊午</option>
-                <option>己未</option><option>庚申</option><option>辛酉</option><option>壬戌</option><option>癸亥</option>
-              </select>
-            </div>
-            <div class="input-group">
-              <label>月将</label>
-              <select id="dlrYueJiang" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem;border-radius:6px;font-size:0.9rem;">
-                <option value="亥">亥·登明</option><option value="戌">戌·河魁</option><option value="酉">酉·从魁</option>
-                <option value="申">申·传送</option><option value="未">未·小吉</option><option value="午">午·胜光</option>
-                <option value="巳">巳·太乙</option><option value="辰">辰·天罡</option><option value="卯">卯·太冲</option>
-                <option value="寅">寅·功曹</option><option value="丑">丑·大吉</option><option value="子">子·神后</option>
-              </select>
-            </div>
-            <div class="input-group">
-              <label>占时</label>
-              <select id="dlrHourZhi" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem;border-radius:6px;font-size:0.9rem;">
-                <option>子</option><option>丑</option><option>寅</option><option>卯</option><option>辰</option><option>巳</option>
-                <option>午</option><option>未</option><option>申</option><option>酉</option><option>戌</option><option>亥</option>
-              </select>
-            </div>
-          </div>
-          <button class="divine-btn" onclick="doDaliurenManual()" style="margin-top:0.5rem;background:var(--bg-secondary);color:var(--text-primary);">🐉 大六壬手动排盘</button>
-          <button class="divine-btn" onclick="doAIDaliuren()" style="margin-top:0.3rem;background:var(--accent-gold);color:#1a1612;">🤖 大六壬 AI 解读(v3.1.5)</button>
-        </div>
+        <!-- v3.1.7: 大六壬功能已移到独立 pageDaliuren(v3.0.7 接入), 此处引导跳转 -->
+        <button class="divine-btn" onclick="switchPage('daliuren')" style="margin-top:0.5rem;background:var(--bg-secondary);color:var(--accent-gold);">🐉 → 大六壬排盘(独立页)</button>
       </div>
       <div class="result-card" id="xkResult" style="display:none;"></div>
       <div class="result-card" id="xkAI" style="display:none;">

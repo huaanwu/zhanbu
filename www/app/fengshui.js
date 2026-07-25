@@ -3,6 +3,8 @@
 // 本文件只负责 UI 绑定 + 渲染 + AI 解读调用
 
 // v3.1.2/3:大六壬排盘(完整版 — SVG 四课/三传/天盘)
+// [v3.1.7 DEPRECATED]: 大六壬功能已迁到独立 pageDaliuren(v3.0.7 接入,见 www/app/daliuren.js)
+// 玄空 pane 不再调用此函数,保留以兼容测试 + 后续版本清理
 function doDaliurenFromFengshui() {
   if (!window.daliuren) {
     showToast('大六壬库未加载', 'error');

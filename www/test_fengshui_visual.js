@@ -366,20 +366,31 @@ check('app/fengshui.js 调 window.daliuren.paiKe + 暴露 doDaliurenFromFengshui
   assert.ok(/window\.doDaliurenFromFengshui\s*=/.test(src), 'doDaliurenFromFengshui 挂到 window');
 });
 
-check('index.html 大六壬按钮 onclick="doDaliurenFromFengshui"', () => {
-  var src = fs.readFileSync('index.html', 'utf-8');
-  assert.ok(/onclick="doDaliurenFromFengshui\(\)"/.test(src), '大六壬按钮 onclick 绑定');
-  assert.ok(/大六壬起课\(v3\.1\.2\)/.test(src), '按钮文案带 v3.1.2');
-});
-
-check('doDaliurenFromFengshui 函数签名', () => {
+// ============ v3.1.4 大六壬手动输入 ============
+// v3.1.7 之后: 玄空 pane 里大六壬手动输入已迁到独立 pageDaliuren(v3.0.7 接入)
+// 这些 case 检查 app/fengshui.js 里的函数签名(不重写);UI 检查移到 v3.1.7 块
+check('app/fengshui.js 暴露 doDaliurenManual + manual/time 双路径', () => {
   var src = fs.readFileSync('app/fengshui.js', 'utf-8');
-  assert.ok(/function doDaliurenFromFengshui\(\)/.test(src), '函数定义');
-  assert.ok(/showToast\(/.test(src), '用 showToast 提示');
-  assert.ok(/paiKe\('time'/.test(src), '用 time 模式起课');
+  assert.ok(/window\.doDaliurenManual\s*=/.test(src), 'doDaliurenManual 挂到 window');
+  assert.ok(/paiKe\('manual'/.test(src), '支持 manual 模式');
+  assert.ok(/paiKe\('time'/.test(src), '支持 time 模式(用户指定)');
 });
 
-// ============ v3.1.3 大六壬完整 UI ============
+check('app/fengshui.js manual 模式读 dlrDayGZ/dlrYueJiang/dlrHourZhi 字段', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/getElementById\('dlrDayGZ'\)/.test(src), '读 dlrDayGZ');
+  assert.ok(/getElementById\('dlrYueJiang'\)/.test(src), '读 dlrYueJiang');
+  assert.ok(/getElementById\('dlrHourZhi'\)/.test(src), '读 dlrHourZhi');
+  assert.ok(/getElementById\('dlrMethod'\)/.test(src), '读 dlrMethod 起课方式');
+});
+
+check('app/fengshui.js doDaliurenManual 调 drawDaliurenSike/SanChuan/TianPan + 创建 #dlrRenderArea', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/drawDaliurenSike\(pan\)/.test(src), '调 drawDaliurenSike');
+  assert.ok(/drawDaliurenSanChuan\(pan\)/.test(src), '调 drawDaliurenSanChuan');
+  assert.ok(/drawDaliurenTianPan\(pan\)/.test(src), '调 drawDaliurenTianPan');
+  assert.ok(/dlrRenderArea/.test(src), '创建 #dlrRenderArea');
+});
 check('window.fengshuiVisual 暴露 3 个大六壬 SVG 渲染函数', () => {
   assert.strictEqual(typeof vis.drawDaliurenSike, 'function');
   assert.strictEqual(typeof vis.drawDaliurenSanChuan, 'function');
@@ -444,75 +455,43 @@ check('app/fengshui.js doDaliurenFromFengshui 调 3 个 SVG 渲染 + 创建 #dlr
   assert.ok(/大六壬起课\(v3\.1\.3 SVG/.test(src), '标题含 v3.1.3 SVG');
 });
 
-// ============ v3.1.4 大六壬手动输入 ============
-check('app/fengshui.js 暴露 doDaliurenManual + manual/time 双路径', () => {
-  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
-  assert.ok(/window\.doDaliurenManual\s*=/.test(src), 'doDaliurenManual 挂到 window');
-  assert.ok(/paiKe\('manual'/.test(src), '支持 manual 模式');
-  assert.ok(/paiKe\('time'/.test(src), '支持 time 模式(用户指定)');
-});
-
-check('app/fengshui.js manual 模式读 dlrDayGZ/dlrYueJiang/dlrHourZhi 字段', () => {
-  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
-  assert.ok(/getElementById\('dlrDayGZ'\)/.test(src), '读 dlrDayGZ');
-  assert.ok(/getElementById\('dlrYueJiang'\)/.test(src), '读 dlrYueJiang');
-  assert.ok(/getElementById\('dlrHourZhi'\)/.test(src), '读 dlrHourZhi');
-  assert.ok(/getElementById\('dlrMethod'\)/.test(src), '读 dlrMethod 起课方式');
-});
-
-check('index.html 大六壬手动输入字段(dlrMethod/dlrDayGZ/dlrYueJiang/dlrHourZhi/dlrYear/dlrMonth/dlrDay/dlrHour)', () => {
-  var src = fs.readFileSync('index.html', 'utf-8');
-  assert.ok(/id="dlrMethod"/.test(src), '起课方式 select');
-  assert.ok(/id="dlrDayGZ"/.test(src), '日干支 select');
-  assert.ok(/id="dlrYueJiang"/.test(src), '月将 select');
-  assert.ok(/id="dlrHourZhi"/.test(src), '占时 select');
-  assert.ok(/id="dlrYear"/.test(src), '年份输入');
-  assert.ok(/id="dlrMonth"/.test(src), '月份输入');
-  assert.ok(/id="dlrDay"/.test(src), '日输入');
-  assert.ok(/id="dlrHour"/.test(src), '时输入');
-  assert.ok(/onclick="doDaliurenManual\(\)"/.test(src), 'doDaliurenManual onclick');
-  assert.ok(/大六壬手动排盘/.test(src), '按钮文案');
-});
-
-check('index.html 大六壬手动字段默认隐藏(dlrManualRow style="display:none")', () => {
-  var src = fs.readFileSync('index.html', 'utf-8');
-  assert.ok(/id="dlrManualRow"[\s\S]*display:none/.test(src), '手动字段默认隐藏');
-});
-
-check('app/fengshui.js doDaliurenManual 调 drawDaliurenSike/SanChuan/TianPan + 创建 #dlrRenderArea', () => {
-  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
-  assert.ok(/drawDaliurenSike\(pan\)/.test(src), '调 drawDaliurenSike');
-  assert.ok(/drawDaliurenSanChuan\(pan\)/.test(src), '调 drawDaliurenSanChuan');
-  assert.ok(/drawDaliurenTianPan\(pan\)/.test(src), '调 drawDaliurenTianPan');
-  assert.ok(/dlrRenderArea/.test(src), '创建 #dlrRenderArea');
-});
-
 // ============ v3.1.5 大六壬 AI 解读 ============
-check('app/fengshui.js 暴露 doAIDaliuren + saveDlrForAI 函数', () => {
-  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
-  assert.ok(/window\.doAIDaliuren\s*=/.test(src), 'doAIDaliuren 挂到 window');
-  assert.ok(/function saveDlrForAI\(pan\)/.test(src), 'saveDlrForAI 函数');
-  assert.ok(/window\.currentDlrPan\s*=/.test(src), 'currentDlrPan 写入 window');
-  assert.ok(/window\.currentDlrPrompt\s*=/.test(src), 'currentDlrPrompt 写入 window');
-});
-
-check('app/fengshui.js doAIDaliuren 调 Core.AI.interpret', () => {
-  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
-  assert.ok(/await Core\.AI\.interpret\(/.test(src), '调 Core.AI.interpret');
-  assert.ok(/domain:\s*'fengshui_xuankong'/.test(src), 'domain=fengshui_xuankong');
-  assert.ok(/saveHistory\('fengshui_xuankong'/.test(src), 'saveHistory 用 fengshui_xuankong');
-});
-
-check('app/fengshui.js doDaliurenManual + doDaliurenFromFengshui 都调 saveDlrForAI', () => {
-  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
-  var matches = src.match(/saveDlrForAI\(pan\)/g);
-  assert.ok(matches && matches.length >= 2, 'saveDlrForAI 至少调 2 次(daliurenManual + daliurenFromFengshui)');
-});
-
-check('index.html 大六壬 AI 解读按钮 onclick="doAIDaliuren"', () => {
+// v3.1.7 之后: 玄空 pane 里大六壬手动输入/AI 解读已迁到独立 pageDaliuren
+// (v3.0.7 接入, www/app/daliuren.js)
+// 这些 case 检查 玄空 pane 没有大六壬重复 DOM + 大六壬页本身完好
+check('index.html 玄空 pane 不再有大六壬手动输入 DOM', () => {
   var src = fs.readFileSync('index.html', 'utf-8');
-  assert.ok(/onclick="doAIDaliuren\(\)"/.test(src), 'doAIDaliuren onclick');
-  assert.ok(/大六壬 AI 解读\(v3\.1\.5\)/.test(src), '按钮文案 v3.1.5');
+  // 玄空 pane(fsPaneXuankong) 里不应该再有 大六壬手动输入 DOM
+  var xkStart = src.indexOf('fsPaneXuankong');
+  var xkEnd = src.indexOf('pageDaofobuddhism', xkStart);
+  var xkBlock = src.slice(xkStart, xkEnd);
+  assert.ok(!/id="dlrMethod"/.test(xkBlock), '玄空 pane 无 dlrMethod');
+  assert.ok(!/id="dlrDayGZ"/.test(xkBlock), '玄空 pane 无 dlrDayGZ');
+  assert.ok(!/id="dlrYueJiang"/.test(xkBlock), '玄空 pane 无 dlrYueJiang');
+  assert.ok(!/id="dlrHourZhi"/.test(xkBlock), '玄空 pane 无 dlrHourZhi');
+  assert.ok(!/onclick="doDaliurenFromFengshui/.test(xkBlock), '玄空 pane 无 doDaliurenFromFengshui onclick');
+  assert.ok(!/onclick="doAIDaliuren/.test(xkBlock), '玄空 pane 无 doAIDaliuren onclick');
+  // 但应有大六壬跳转按钮
+  assert.ok(/switchPage\('daliuren'\)/.test(xkBlock), '玄空 pane 含大六壬跳转');
+});
+
+check('index.html 大六壬独立页(pageDaliuren)完整存在', () => {
+  var src = fs.readFileSync('index.html', 'utf-8');
+  assert.ok(/id="pageDaliuren"/.test(src), 'pageDaliuren 存在');
+  assert.ok(/id="dlrYear"/.test(src), 'dlrYear 输入');
+  assert.ok(/id="dlrBtn"[\s\S]*onclick="doDaliuren\(\)"/.test(src), 'doDaliuren onclick');
+  assert.ok(/id="dlrAIBtn"[\s\S]*onclick="doAIDaliuren\(\)"/.test(src), 'doAIDaliuren onclick');
+});
+
+check('app/fengshui.js 中 v3.1.2/4/5 函数已标 deprecated', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/v3\.1\.7\s+DEPRECATED/.test(src), 'v3.1.7 注释标 deprecated');
+});
+
+check('app/daliuren.js 含 doDaliuren + doAIDaliuren(v3.0.7 接入)', () => {
+  var src = fs.readFileSync('app/daliuren.js', 'utf-8');
+  assert.ok(/window\.doDaliuren\s*=/.test(src), 'doDaliuren 挂到 window');
+  assert.ok(/window\.doAIDaliuren\s*=/.test(src), 'doAIDaliuren 挂到 window');
 });
 
 // ============ v3.1.6 大六壬九宗门 + 神煞 ============
