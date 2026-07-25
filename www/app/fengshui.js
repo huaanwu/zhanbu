@@ -1,6 +1,18 @@
-// ========== 风水罗盘（八宅 + 主卧朝向）v3.0.10 ==========
-// 算盘层: window.fengshui.mingGua/eightZhai/zhaiMingHe/mainRoomAssess(新增)
+// ========== 风水罗盘(八宅 + 玄空飞星)v3.0.11 ==========
+// 算盘层: window.fengshui.mingGua/eightZhai/zhaiMingHe/mainRoomAssess + window.xuankong.*
 // 本文件只负责 UI 绑定 + 渲染 + AI 解读调用
+
+// v3.0.11:八宅/玄空 tab 切换
+function selFsTab(btn) {
+  document.querySelectorAll('#pageFengshui [data-fs-tab]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  var tab = btn.dataset.fsTab;
+  var p8 = document.getElementById('fsPane8zhai');
+  var pxk = document.getElementById('fsPaneXuankong');
+  if (p8) p8.style.display = (tab === '8zhai') ? 'block' : 'none';
+  if (pxk) pxk.style.display = (tab === 'xuankong') ? 'block' : 'none';
+}
+window.selFsTab = selFsTab;
 
 function selFsHouse(btn) {
   document.querySelectorAll('#pageFengshui [data-house]').forEach(b => b.classList.remove('active'));
@@ -230,6 +242,180 @@ async function doAIFengshui() {
   }
 }
 window.doAIFengshui = doAIFengshui;
+
+// ============ v3.0.11 玄空飞星 ============
+function selXkSit(btn) {
+  document.querySelectorAll('#pageFengshui [data-xk-sit]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.xuankong.sitDir = btn.dataset.xkSit;
+}
+window.selXkSit = selXkSit;
+
+function selXkFace(btn) {
+  document.querySelectorAll('#pageFengshui [data-xk-face]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.xuankong.faceDir = btn.dataset.xkFace;
+}
+window.selXkFace = selXkFace;
+
+function doXuankong() {
+  var errEl = document.getElementById('xkError');
+  if (errEl) errEl.style.display = 'none';
+  try {
+    var year = +document.getElementById('xkYear').value;
+    if (!year || year < 1864 || year > 2099) {
+      throw new Error('玄空飞星仅支持 1864-2099 年,当前: ' + year);
+    }
+    var sitDir = (state.xuankong && state.xuankong.sitDir) || '南';
+    var faceDir = (state.xuankong && state.xuankong.faceDir) || '北';
+
+    var yun = window.xuankong.currentYun(year);
+    var yp = window.xuankong.yunPan(year);
+    var mp = window.xuankong.mountainPan(year, sitDir);
+    var fp = window.xuankong.facePan(year, faceDir);
+    var ws = window.xuankong.wangShanWangXiang(yp, mp, fp, sitDir, faceDir);
+    var wh = window.xuankong.wuhuangAndErhei(yp);
+
+    var result = document.getElementById('xkResult');
+    result.style.display = 'block';
+
+    // 9 宫表渲染函数
+    function renderPan(pan, title) {
+      var html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.4rem;font-size:0.8rem;text-align:center;">';
+      var order = [7, 8, 9, 4, 5, 6, 1, 2, 3];  // 洛书方位:左下=1坎,正中=5,右上=9离
+      for (var i = 0; i < 9; i++) {
+        var g = order[i];
+        var star = pan.panByGong[g];
+        var isJi = star === 1 || star === 6 || star === 8 || star === 9;
+        var isWu = star === 5;
+        var color = isWu ? 'var(--accent-red)' : (isJi ? 'var(--accent-green)' : 'var(--text-primary)');
+        var bg = isWu ? 'rgba(220,80,80,0.15)' : (isJi ? 'rgba(120,180,120,0.1)' : 'var(--bg-inner)');
+        html += '<div style="background:' + bg + ';padding:0.4rem;border-radius:6px;border:1px solid ' + color + ';">';
+        html += '<div style="font-size:0.65rem;color:var(--text-muted);">' + g + '宫</div>';
+        html += '<div style="font-weight:700;color:' + color + ';">' + star + '</div>';
+        html += '<div style="font-size:0.6rem;color:var(--text-muted);">' + window.xuankong.STARS[star-1].slice(2) + '</div>';
+        html += '</div>';
+      }
+      html += '</div>';
+      return html;
+    }
+
+    var html = `
+      <h3 style="color:var(--accent-gold);">🌌 玄空飞星排盘</h3>
+      <div style="background:var(--bg-inner);padding:0.8rem;border-radius:8px;margin-top:0.5rem;">
+        <div style="font-size:0.95rem;">年份：<strong>${year}年</strong>(本运：<strong style="color:var(--accent-gold);">${yun.yun}运 ${yun.yunName}</strong>,${yun.period},${yun.startYear}-${yun.endYear},已过 ${yun.yearsFromStart + 1} 年)</div>
+        <div style="font-size:0.95rem;margin-top:0.3rem;">坐方：<strong style="color:var(--accent-gold);">${sitDir}</strong>　向方：<strong style="color:var(--accent-gold);">${faceDir}</strong></div>
+        <div style="font-size:0.95rem;margin-top:0.4rem;padding:0.4rem 0.6rem;background:rgba(201,168,76,0.1);border-left:3px solid var(--accent-gold);border-radius:4px;">
+          <strong>旺山旺向：</strong>${ws.verdict}
+        </div>
+        <div style="font-size:0.85rem;margin-top:0.3rem;color:var(--text-secondary);">
+          山星到坐 = <strong>${ws.mountainStarAtSit}</strong>(${ws.wangShan ? '旺' : '不旺'})；向星到向 = <strong>${ws.faceStarAtFace}</strong>(${ws.wangXiang ? '旺' : '不旺'})
+        </div>
+      </div>
+
+      <div style="margin-top:1rem;">
+        <div style="font-size:0.85rem;color:var(--accent-gold);margin-bottom:0.3rem;">【运盘】当运 ${yun.yunName} 入中,洛书顺飞</div>
+        ${renderPan(yp, '运盘')}
+      </div>
+
+      <div style="margin-top:0.8rem;">
+        <div style="font-size:0.85rem;color:var(--accent-gold);margin-bottom:0.3rem;">【山盘】坐 ${sitDir}(${mp.sitGong}宫) 入中,顺飞</div>
+        ${renderPan(mp, '山盘')}
+      </div>
+
+      <div style="margin-top:0.8rem;">
+        <div style="font-size:0.85rem;color:var(--accent-gold);margin-bottom:0.3rem;">【向盘】向 ${faceDir}(${fp.faceGong}宫) 入中,顺飞</div>
+        ${renderPan(fp, '向盘')}
+      </div>
+
+      <div style="margin-top:0.8rem;background:rgba(220,80,80,0.08);padding:0.6rem;border-radius:6px;border-left:3px solid var(--accent-red);font-size:0.85rem;">
+        <strong>五黄煞</strong>在 <strong>${wh.wuhuangAt}宫</strong>(最凶,宜静不宜动);<br>
+        <strong>二黑病符</strong>在 <strong>${wh.erheiAt}宫</strong>(主病,化解:铜器/灰色地毯/避免红色)
+      </div>
+
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">⚠️ 本盘为基础版(山向飞星用元旦盘起星);替卦、零神等进阶操作由 AI 在解读中说明。</div>
+    `;
+    result.innerHTML = html;
+
+    currentFs = {
+      domain: 'fengshui_xuankong',
+      year: year,
+      sitDir: sitDir,
+      faceDir: faceDir,
+      yun: yun,
+      yp: { panByGong: yp.panByGong },
+      mp: { panByGong: mp.panByGong },
+      fp: { panByGong: fp.panByGong },
+      ws: ws,
+      wh: wh,
+      question: ''
+    };
+    currentFsPrompt = window.xuankong.formatPrompt(year, sitDir, faceDir)
+      + '\n\n【玄空飞星解读要点】运盘/山盘/向盘为代码定论,不可更改。重点说明:\n'
+      + '1. 当前运(${yun.yunName})旺衰及五行(${yun.nature})与宅主/户主八字是否相合\n'
+      + '2. 旺山旺向判定: ${ws.verdict}\n'
+      + '3. 五黄(${wh.wuhuangAt}宫)/ 二黑(${wh.erheiAt}宫)化解方案(具体物品/方位/颜色)\n'
+      + '4. 山盘到坐宫、向盘到向宫的吉星(如一白/六白/八白/九紫)催旺建议\n'
+      + '5. 卧室/客厅/厨房/书房的飞星布局(参考 KB 玄空飞星条目)\n\n'
+      + '本盘为基础版(山向用元旦盘起星);若需替卦/零神等进阶操作,请用户线下咨询专业风水师。';
+
+    document.getElementById('xkAI').style.display = 'block';
+    document.getElementById('xkAIBtn').style.display = 'inline-block';
+    document.getElementById('xkAILoading').style.display = 'none';
+    document.getElementById('xkAIText').style.display = 'none';
+  } catch (e) {
+    if (errEl) {
+      errEl.textContent = '⚠️ ' + e.message;
+      errEl.style.display = 'block';
+    }
+    showToast(e.message, 'error');
+    console.error(e);
+  }
+}
+window.doXuankong = doXuankong;
+
+async function doAIXuankong() {
+  if (!currentFsPrompt) return;
+  await ensureKB();
+  await loadKBGroup('fengshui');
+  const btn = document.getElementById('xkAIBtn');
+  const loading = document.getElementById('xkAILoading');
+  const text = document.getElementById('xkAIText');
+  btn.disabled = true; btn.textContent = '解读中...';
+  loading.style.display = 'none';
+  text.style.display = 'block';
+
+  const prefix = _followUpPrefix;
+  _followUpPrefix = '';
+  const separator = prefix ? '\n\n─────────────────\n📌 追问\n─────────────────\n\n' : '';
+  if (!prefix) text.textContent = '';
+
+  try {
+    const sys = await Core.AI.buildSystemPrompt({
+      domain: 'fengshui', pan: currentFs, question: '',
+      extraSystem: '你是一位精通玄空飞星的风水大师。运盘/山盘/向盘的星位排布是代码定论事实,不可更改。当前 ${currentFs.yun.yun}运(${currentFs.yun.yunName}),${currentFs.ws.verdict}。请结合五黄(${currentFs.wh.wuhuangAt}宫)、二黑(${currentFs.wh.erheiAt}宫)位置,给出客厅/卧室/厨房/书房的飞星布局建议与化解方案。输出要求:总字数不少于 1500 字,分章节、条理清晰、actionable。'
+    });
+    await Core.AI.interpret({
+      domain: 'fengshui',
+      prompt: currentFsPrompt,
+      system: sys,
+      pan: currentFs,
+      question: '',
+      contentEl: text,
+      prefix,
+      separator,
+    });
+    showResultActions('xkAIText', 'xkAIActions');
+  } catch (e) {
+    text.innerHTML = prefix + separator + '<div class="error">解读失败: ' + escapeHtml(e.message) + '</div>';
+    text.style.display = 'block';
+    loading.style.display = 'none';
+  } finally {
+    btn.disabled = false; btn.textContent = 'AI 解读';
+    if (window.Core?.Stream?.hideStreamIndicator) window.Core.Stream.hideStreamIndicator();
+  }
+}
+window.doAIXuankong = doAIXuankong;
 
 function kbFengshui() {
   return '\n\n【知识库参考】八宅风水要点：\n'

@@ -101,6 +101,13 @@ const Cache = {
         if (params.houseType) parts.push('house:' + params.houseType);
         if (params.cal) parts.push('cal:' + params.cal);
         break;
+      case 'fengshui_xuankong':
+        // v3.0.11:玄空飞星独立 cache(避免与八宅相互污染)
+        parts.push('xk-v3.0.11');
+        parts.push('year:' + (params.year || 'na'));
+        parts.push('sit:' + (params.sitDir || 'na'));
+        parts.push('face:' + (params.faceDir || 'na'));
+        break;
       case 'shouxiang': {
         // v3.0.5 + cleanup: _imgFingerprint 与 sxGender + keypoints 组合,
         // 4 图指纹用 forEach 去掉复制粘贴,linkPan 指纹用 lookup 对象遍历

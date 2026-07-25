@@ -990,6 +990,15 @@
       <h1 data-seal="风">风水罗盘</h1>
       <div class="subtitle">八宅风水 · 玄空飞星 · 24山向</div>
     </div>
+
+    <!-- v3.0.11 八宅/玄空 tab 切换 -->
+    <div class="tab-bar" style="display:flex;gap:0.3rem;margin-bottom:1rem;">
+      <button id="fsTab8zhai" data-fs-tab="8zhai" onclick="selFsTab(this)" style="flex:1;padding:0.55rem;background:var(--bg-card);border:1px solid var(--accent-gold);color:var(--accent-gold);border-radius:6px;font-size:0.85rem;cursor:pointer;font-weight:600;">🧭 八宅风水</button>
+      <button id="fsTabXuankong" data-fs-tab="xuankong" onclick="selFsTab(this)" style="flex:1;padding:0.55rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);border-radius:6px;font-size:0.85rem;cursor:pointer;">🌌 玄空飞星</button>
+    </div>
+
+    <!-- 八宅 pane(v3.0.10 现有内容) -->
+    <div id="fsPane8zhai" class="fs-pane">
     <div class="input-section">
       <div class="input-group">
         <label>户型</label>
@@ -1082,6 +1091,61 @@
         <button onclick="saveResult('fsAIText','风水解读')">💾 保存为txt</button>
       </div>
       <button class="divine-btn" style="margin-top:0.8rem;display:none;" id="fsAIBtn" onclick="doAIFengshui()">AI 解读</button>
+    </div>
+    </div>
+
+    <!-- 玄空飞星 pane(v3.0.11 新增) -->
+    <div id="fsPaneXuankong" class="fs-pane" style="display:none;">
+      <div class="input-section">
+        <div class="input-row">
+          <div class="input-group" style="grid-column:span 2;">
+            <label>排盘年份（用于确定三元九运）</label>
+            <input type="number" id="xkYear" value="2026" min="1864" max="2099">
+          </div>
+        </div>
+        <div class="input-group" style="margin-top:0.8rem;">
+          <label>坐方（坐山朝向，从屋外看屋内）</label>
+          <div class="btn-row">
+            <button class="toggle-btn" data-xk-sit="北" onclick="selXkSit(this)">北</button>
+            <button class="toggle-btn" data-xk-sit="东北" onclick="selXkSit(this)">东北</button>
+            <button class="toggle-btn" data-xk-sit="东" onclick="selXkSit(this)">东</button>
+            <button class="toggle-btn" data-xk-sit="东南" onclick="selXkSit(this)">东南</button>
+            <button class="toggle-btn active" data-xk-sit="南" onclick="selXkSit(this)">南</button>
+            <button class="toggle-btn" data-xk-sit="西南" onclick="selXkSit(this)">西南</button>
+            <button class="toggle-btn" data-xk-sit="西" onclick="selXkSit(this)">西</button>
+            <button class="toggle-btn" data-xk-sit="西北" onclick="selXkSit(this)">西北</button>
+          </div>
+        </div>
+        <div class="input-group" style="margin-top:0.8rem;">
+          <label>向方（大门朝向，从屋内看屋外）</label>
+          <div class="btn-row">
+            <button class="toggle-btn active" data-xk-face="北" onclick="selXkFace(this)">北</button>
+            <button class="toggle-btn" data-xk-face="东北" onclick="selXkFace(this)">东北</button>
+            <button class="toggle-btn" data-xk-face="东" onclick="selXkFace(this)">东</button>
+            <button class="toggle-btn" data-xk-face="东南" onclick="selXkFace(this)">东南</button>
+            <button class="toggle-btn" data-xk-face="南" onclick="selXkFace(this)">南</button>
+            <button class="toggle-btn" data-xk-face="西南" onclick="selXkFace(this)">西南</button>
+            <button class="toggle-btn" data-xk-face="西" onclick="selXkFace(this)">西</button>
+            <button class="toggle-btn" data-xk-face="西北" onclick="selXkFace(this)">西北</button>
+          </div>
+        </div>
+        <div id="xkError" class="result-card" style="display:none;background:rgba(220,80,80,0.1);border:1px solid var(--accent-red);color:var(--accent-red);margin-top:0.8rem;font-size:0.85rem;"></div>
+        <button class="divine-btn" onclick="doXuankong()" style="margin-top:0.8rem;">玄空飞星排盘</button>
+      </div>
+      <div class="result-card" id="xkResult" style="display:none;"></div>
+      <div class="result-card" id="xkAI" style="display:none;">
+        <h3 style="color:var(--accent-gold);">🤖 AI 玄空飞星大师</h3>
+        <div class="loading" id="xkAILoading">
+          <div class="spinner"></div>
+          <p style="margin-top:0.5rem;color:var(--text-secondary)">AI 正在排盘解读...</p>
+        </div>
+        <div id="xkAIText" style="display:none;white-space:pre-wrap;line-height:1.7;"></div>
+        <div class="ai-actions" id="xkAIActions" style="margin-top:0.6rem;">
+          <button onclick="copyResult('xkAIText')">📋 复制文本</button>
+          <button onclick="saveResult('xkAIText','玄空飞星解读')">💾 保存为txt</button>
+        </div>
+        <button class="divine-btn" style="margin-top:0.8rem;display:none;" id="xkAIBtn" onclick="doAIXuankong()">AI 解读</button>
+      </div>
     </div>
   </div>
 
