@@ -9,7 +9,7 @@
 <title>AI占卜大师</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
-
+
   <script type="module" crossorigin src="/assets/index-KIFe7S7o.js"></script>
   <link rel="stylesheet" crossorigin href="/styles.css">
 </head>
@@ -121,6 +121,7 @@
             <option value="xingshi">姓名学</option>
             <option value="cross">三术同参</option>
             <option value="fengshui">风水</option>
+            <option value="mianxiang">面相</option>
           </select>
           <select id="historyFilterDays" onchange="renderHistory()" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.3rem 0.5rem;border-radius:6px;font-size:0.8rem;">
             <option value="all">全部时间</option>
@@ -196,6 +197,12 @@
       <div class="group-card" onclick="switchPage('lingqian')">
         <span class="gc-icon">🔖</span>
         <span><div class="gc-name">灵签</div><div class="gc-desc">观音百签 · 关帝百签</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+
+      <div class="group-card" onclick="switchPage('mianxiang')">
+        <span class="gc-icon">👤</span>
+        <span><div class="gc-name">看面相</div><div class="gc-desc">三庭五官 · 十二宫吉凶 · AI 识图</div></span>
         <span class="gc-arrow">›</span>
       </div>
 
@@ -319,10 +326,11 @@
     <div class="input-section">
       <div class="input-row">
         <div class="input-group"><label>起卦方式</label>
-          <div class="btn-row-grid" style="--btn-count:4;">
+          <div class="btn-row-grid" style="--btn-count:5;">
             <button class="toggle-btn active" data-method="time" onclick="selLiuyaoMethod(this)">时间</button>
             <button class="toggle-btn" data-method="number" onclick="selLiuyaoMethod(this)">数字</button>
             <button class="toggle-btn" data-method="coin" onclick="selLiuyaoMethod(this)">🪙 铜钱</button>
+            <button class="toggle-btn" data-method="yarrow" onclick="selLiuyaoMethod(this)">🌿 大衍</button>
             <button class="toggle-btn" data-method="random" onclick="selLiuyaoMethod(this)">随机</button>
           </div>
         </div>
@@ -696,6 +704,88 @@
     </div>
   </div>
 
+  <!-- ============ 看面相页 (v3.0.8) ============ -->
+  <div class="page" id="pageMianxiang">
+    <div class="header">
+      <h1 data-seal="相">看面相</h1>
+      <div class="subtitle">三庭五官 · 十二宫吉凶 · AI 识图</div>
+    </div>
+    <div class="input-section">
+      <!-- 性别选择 -->
+      <div class="input-group" style="margin-bottom:1.2rem;">
+        <label style="display:block;color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.5rem;letter-spacing:0.05em;">📌 性别（影响十二宫吉凶判读）</label>
+        <div style="display:flex;gap:0.6rem;">
+          <button id="mxGenderMale" onclick="setMxGender('male')" style="flex:1;background:var(--bg-primary);border:2px solid var(--accent-gold);color:var(--accent-gold);padding:0.7rem;border-radius:8px;cursor:pointer;font-size:1rem;font-weight:600;">👨 男</button>
+          <button id="mxGenderFemale" onclick="setMxGender('female')" style="flex:1;background:var(--bg-primary);border:2px solid var(--border);color:var(--text-secondary);padding:0.7rem;border-radius:8px;cursor:pointer;font-size:1rem;font-weight:600;">👩 女</button>
+        </div>
+      </div>
+
+      <!-- 年龄段 -->
+      <div class="input-row" style="margin-bottom:0.8rem;">
+        <div class="input-group" style="grid-column:span 2;">
+          <label>年龄段</label>
+          <select id="mxAgeBucket" onchange="mxAgeBucket=this.value" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem;border-radius:6px;font-size:0.9rem;width:100%;">
+            <option value="<18">&lt; 18（未成年）</option>
+            <option value="18-30">18-30（青年）</option>
+            <option value="30-45" selected>30-45（壮年）</option>
+            <option value="45-60">45-60（中年）</option>
+            <option value="60+">60+（中老年）</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 3 张图上传(正面 / 左 45° / 右 45°) -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;margin-bottom:0.8rem;">
+        <!-- 正面 -->
+        <div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.3rem;text-align:center;">正面</div>
+          <div id="mxUploadAreaFront" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('mxFileInputFront').click()">
+            <div style="font-size:1.4rem;">😊</div>
+            <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
+            <input type="file" id="mxFileInputFront" accept="image/*" style="display:none;" onchange="onMxFileSelect(event, 'front')">
+          </div>
+          <div id="mxPreviewWrapFront" style="display:none;margin-top:0.3rem;text-align:center;">
+            <img id="mxPreviewFront" style="max-width:100%;max-height:120px;border-radius:6px;border:1px solid var(--border);">
+          </div>
+        </div>
+        <!-- 左 45° -->
+        <div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.3rem;text-align:center;">左 45°</div>
+          <div id="mxUploadAreaLeft45" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('mxFileInputLeft45').click()">
+            <div style="font-size:1.4rem;">👈</div>
+            <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
+            <input type="file" id="mxFileInputLeft45" accept="image/*" style="display:none;" onchange="onMxFileSelect(event, 'left45')">
+          </div>
+          <div id="mxPreviewWrapLeft45" style="display:none;margin-top:0.3rem;text-align:center;">
+            <img id="mxPreviewLeft45" style="max-width:100%;max-height:120px;border-radius:6px;border:1px solid var(--border);">
+          </div>
+        </div>
+        <!-- 右 45° -->
+        <div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.3rem;text-align:center;">右 45°</div>
+          <div id="mxUploadAreaRight45" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('mxFileInputRight45').click()">
+            <div style="font-size:1.4rem;">👉</div>
+            <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
+            <input type="file" id="mxFileInputRight45" accept="image/*" style="display:none;" onchange="onMxFileSelect(event, 'right45')">
+          </div>
+          <div id="mxPreviewWrapRight45" style="display:none;margin-top:0.3rem;text-align:center;">
+            <img id="mxPreviewRight45" style="max-width:100%;max-height:120px;border-radius:6px;border:1px solid var(--border);">
+          </div>
+        </div>
+      </div>
+
+      <!-- 拍照提示 -->
+      <div style="font-size:0.75rem;color:var(--text-muted);background:var(--bg-inner);padding:0.5rem 0.8rem;border-radius:6px;margin-bottom:0.6rem;line-height:1.6;">
+        💡 <b>拍照建议</b>:正面照表情自然、光线均匀,左右 45° 侧照露出额头/鼻梁/下颌立体度。单张也能解读,但 3 张交叉验证精度更高。
+      </div>
+
+      <div id="mxActionArea" style="display:none;text-align:center;margin-bottom:0.5rem;">
+        <button class="divine-btn" onclick="doMianxiang()">AI 识图解读面相</button>
+      </div>
+      <div id="mxResult" class="result-card" style="display:none;margin-top:1rem;"></div>
+    </div>
+  </div>
+
   <!-- ============ 姓名学页 ============ -->
   <div class="page" id="pageXingshi">
     <div class="header">
@@ -1049,6 +1139,7 @@
 <script src="app/shouxiang-mp.js?v=311"></script>
 <!-- MediaPipe Hands (ES Module, 跳过 vite HMR, 直接走 CDN) -->
 
+<script src="app/mianxiang.js?v=311"></script>
 <script src="app/xingshi.js?v=310"></script>
 <script src="app/cross.js?v=310"></script>
 <script src="app/fengshui.js?v=310"></script>

@@ -376,6 +376,65 @@
   function clearCurrentStreamAbort() { _currentStreamAbort = null; }
 
   /**
+   * 多模态视觉调用封装(v3.0.8 从 app/shouxiang.js 提到 core)
+   * 复用 Core.Stream indicator + Core.AI.readSSE,内部一个 try/finally 直接接 Core.AI
+   * 调用方传 endpoint/headers/body/label/timeoutMs,走 SSE 流式实时写 targetEl
+   *
+   * @param {string} endpoint    - 完整 URL(如 http://1.2.3.4:8082/v1/chat/completions)
+   * @param {object} headers     - HTTP 头
+   * @param {object} body        - 请求体,函数会自己加 stream:true
+   * @param {string} label       - 显示标签(写入 resultEl 文本前缀,方便调试看到走本地/云端)
+   * @param {number} timeoutMs   - 超时(默认 60000,本地模型传 600000,云端传 120000)
+   * @param {HTMLElement} [opts.targetEl] - 流式写入的目标元素(默认 #sxResult,面相可传 #mxResult)
+   * @returns {Promise<string>}  - 完整文本(已 strip thinking)
+   */
+  async function callMultimodalVision(endpoint, headers, body, label, timeoutMs, opts) {
+    const bodyJson = JSON.stringify(Object.assign({}, body, { stream: true }));
+    console.log("[Core.AI] callMultimodalVision endpoint:", endpoint, "body大小:", bodyJson.length, "bytes");
+    const timeoutMsFinal = timeoutMs || 60000;
+    const startTime = Date.now();
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => { try { ctrl.abort('mx-timeout'); } catch (_) {} }, timeoutMsFinal);
+    Core.Stream.showStreamIndicator();
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: bodyJson,
+      });
+      if (!res.ok) {
+        let errMsg = 'HTTP ' + res.status;
+        try { const j = await res.json(); errMsg = j.error?.message || errMsg; } catch (jsonErr) { console.warn('[Core.AI] parse api error body fail:', jsonErr.message); }
+        throw new Error(`${label} HTTP ${res.status}: ${errMsg}`);
+      }
+      // 流式解析: res.body 是 ReadableStream (SSE), 用 Core.AI.readSSE 读
+      const targetEl = opts?.targetEl || (typeof document !== 'undefined' ? document.getElementById('sxResult') : null);
+      if (res.body && typeof res.body.getReader === 'function' && res.headers.get('content-type')?.includes('text/event-stream')) {
+        const fullText = await Core.AI.readSSE(res.body, function (_delta, content) {
+          if (targetEl) {
+            if (!targetEl._mxStreamInited) {
+              targetEl.innerHTML = '';
+              targetEl._mxStreamInited = true;
+            }
+            const imageCount = (body.messages?.[1]?.content || []).filter(c => c.type === 'image_url').length;
+            targetEl.textContent = '[' + label + (imageCount ? ' · ' + imageCount + ' 张图' : '') + ' · 流式]\n\n' + content;
+          }
+        });
+        return fullText;
+      } else {
+        const data = await res.json();
+        return (data.choices?.[0]?.message?.content?.trim() || '');
+      }
+    } catch (e) {
+      clearTimeout(timer);
+      throw e;
+    } finally {
+      clearTimeout(timer);
+      Core.Stream.hideStreamIndicator();
+    }
+  }
+
+  /**
    * 统一 AI 解读入口(任务 #19)
    *
    * 封装:缓存查询 + 流式输出 + 事件派发 + Stream indicator 控制 + abort 管理
@@ -503,6 +562,16 @@
         kbFlags: { daoism: false, chainOfThought: false },
         // v3.0.5 + fix(suicidal-review): 扩 liuyao/qimen,匹配 shouxiang.js linkHint 声明的 6 路联动
         crossLink: { bazi: true, ziwei: true, liuyao: true, qimen: true },
+        ragBudget: 1200
+      },
+      mianxiang: {
+        label: '面相',
+        source: '面相',
+        signalFn: function(p) { return p.mxSummary || 'mianxiang'; },
+        isCustom: true,
+        kbFlags: { daoism: false, chainOfThought: false },
+        // 面相可联动八字/紫微(命格)解读;六爻/奇门关联较弱,暂不开
+        crossLink: { bazi: true, ziwei: true, liuyao: false, qimen: false },
         ragBudget: 1200
       },
       daofobuddhism: { label: '道佛化解', isCustom: true, kbFlags: { primary: false, extended: false, daoism: false, chainOfThought: false } },
@@ -662,7 +731,9 @@
     MODEL_ROUTER,
     MODEL_PRICING,
     // 结构化输出解析(任务 #27)
-    parseConfidence
+    parseConfidence,
+    // 多模态视觉调用封装(v3.0.8 从 app/shouxiang.js 提到 core)
+    callMultimodalVision
   };
 
   // 从 AI 输出末尾提取"## 置信度: XX/100"

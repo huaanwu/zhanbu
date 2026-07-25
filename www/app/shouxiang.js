@@ -26,6 +26,8 @@ function compressImage(base64, maxWidth = 1200, quality = 0.85) {
     img.src = base64;
   });
 }
+// v3.0.8:挂到 window 供 mianxiang.js 复用
+if (typeof window.compressImage === 'undefined') window.compressImage = compressImage;
 
 function setSxGender(gender) {
   sxGender = gender;
@@ -410,59 +412,9 @@ async function doShouxiang() {
     }
   }
 
-  // ========== 通用 VL 调用封装 (本地→云端 fallback + 流式 + abort) ==========
-  // interpret() 不支持 multimodal,所以这里手写一个 multimodal 版,但复用
-  // Core.Stream 的 indicator + Core.AI 的 abort 管理,保持 v3.0.5 全局状态一致
-  // note: 下面直接调 Core.AI.setCurrentStreamAbort / clearCurrentStreamAbort,
-  // 不再需要 _setAbort 闭包胶水 — callMultimodalVision 内部一个 try/finally 直接接 Core.AI.
-
-  async function callMultimodalVision(endpoint, headers, body, label, timeoutMs) {
-    const bodyJson = JSON.stringify(Object.assign({}, body, { stream: true }));
-    console.log("[sx] callMultimodalVision endpoint:", endpoint, "body大小:", bodyJson.length, "bytes");
-    // 恢复流式: 本地模型返回 ReadableStream (SSE), 边收边显示
-    // 之前 signal is aborted 是因为 fetch+signal 在 WebView 里挂,现在不用 signal
-    const timeoutMsFinal = timeoutMs || 60000;
-    const startTime = Date.now();
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => { try { ctrl.abort('sx-timeout'); } catch (_) {} }, timeoutMsFinal);
-    Core.Stream.showStreamIndicator();
-    try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: bodyJson,
-      });
-      if (!res.ok) {
-        let errMsg = 'HTTP ' + res.status;
-        try { const j = await res.json(); errMsg = j.error?.message || errMsg; } catch (jsonErr) { console.warn('[sx] parse api error body fail:', jsonErr.message); }
-        throw new Error(`${label} HTTP ${res.status}: ${errMsg}`);
-      }
-      // 流式解析: res.body 是 ReadableStream (SSE), 用 Core.AI.readSSE 读
-      if (res.body && typeof res.body.getReader === 'function' && res.headers.get('content-type')?.includes('text/event-stream')) {
-        const fullText = await Core.AI.readSSE(res.body, function (_delta, content) {
-          var el = document.getElementById('sxResult');
-          if (el) {
-            if (!el._sxResultInited) {
-              el.innerHTML = '';
-              el._sxResultInited = true;
-            }
-            el.textContent = '[' + label + ' · 1 张图 · 流式]\n\n' + content;
-          }
-        });
-        return fullText;
-      } else {
-        // 兼容非流式(如果服务器不支持 SSE)
-        const data = await res.json();
-        return (data.choices?.[0]?.message?.content?.trim() || '');
-      }
-    } catch (e) {
-      clearTimeout(timer);
-      throw e;
-    } finally {
-      clearTimeout(timer);
-      Core.Stream.hideStreamIndicator();
-    }
-  }
+  // ========== VL 调用已迁到 Core.AI.callMultimodalVision (v3.0.8) ==========
+  // 本地→云端 fallback + 流式 + abort 的封装现在统一在 core/ai-service.js,
+  // shouxiang / mianxiang 共享同一个实现,调用方传 targetEl 即可。
   // 检测本地模型 (Core.AI.pingLocalModel 已在 core/ai-service.js export)
   async function checkLocalModel(port) { return await Core.AI.pingLocalModel(port); }
 
@@ -497,12 +449,13 @@ async function doShouxiang() {
       // 之前拆4张独立请求导致每张只能看1张图,模型没全局观
       // 改回4张一起发,但用 SSE 流式输出逐步显示
       resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在分析${imageUrls.length}张图片...<br><small>当前模型: ${localModelName} | endpoint: ${getLocalServerUrl()}</small></div>`;
-      fullText = await callMultimodalVision(
+      fullText = await Core.AI.callMultimodalVision(
         `${getLocalServerUrl()}/v1/chat/completions`,
         { 'Content-Type': 'application/json' },
         { model: localModelName, messages, temperature: 0.15, max_tokens: 4096, stream: true },
         usedSource,
-        600000
+        600000,
+        { targetEl: resultEl }
       );
     } catch (e) {
       const isTimeoutAbort = e?.name === 'AbortError' && (
@@ -536,12 +489,13 @@ async function doShouxiang() {
     try {
       // 与其他域统一:deepseek-v4-flash 走 DeepSeek, 与其他域一致(不再用 DashScope)
       const model = localStorage.getItem('vision_model') || 'deepseek-v4-flash';
-      fullText = await callMultimodalVision(
+      fullText = await Core.AI.callMultimodalVision(
         (localStorage.getItem('ds_base_url') || 'https://api.deepseek.com/v1').replace(/\/v1\/?$/, '') + '/v1/chat/completions',
         { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + vKey },
         { model, messages, temperature: 0.6, max_tokens: 4096, stream: true },
         usedSource,
-        120000
+        120000,
+        { targetEl: resultEl }
       );
     } catch (e) {
       if (e?.name === 'AbortError') {

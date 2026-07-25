@@ -2,7 +2,7 @@
 
 This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
-# AI 占卜大师 v3.0.7
+# AI 占卜大师 v3.0.8
 
 Capacitor + Vite + 原生 JS 的多流派占卜 Android / PWA 应用。覆盖八字 / 六爻 / 小六壬 / 梅花 / 奇门 / 紫微 / 面相 / 手相 / 风水 / 佛道等流派,65+ 知识库 JSON,DeepSeek/OpenAI/本地大模型 解读。
 
@@ -13,6 +13,7 @@ v3.0 主要升级:
 - v3.0.5: Core 模块拆分(event-bus/toast/ai-service/stream/util/router/state)+ 统一 AI 入口 `Core.AI.interpret()`(缓存 + 流式 + 事件派发)
 - v3.0.6: 新增小六壬/梅花易数流派、底部导航分组(命理/占卦)、奇门定局改拆补法(符头定元)
 - v3.0.7: 新增大六壬(月将加时/四课/九宗门/十二天将)、称骨算命(袁天罡称骨四表查重)
+- v3.0.8: 新增面相页(图片+AI视觉,shouxiang/mianxiang 共享 `Core.AI.callMultimodalVision`)、六爻加"大衍筮法"起卦按钮
 
 ## 常用命令
 
@@ -54,9 +55,11 @@ node scripts/send-feishu.js <file_path>                # 默认推到武华安�
 │   ├─ Core 逻辑: www/app.js (页面切换/设置/历史/流式/AI调用) │
 │   ├─ 按域脚本: www/app/{bazi,ziwei,liuyao,qimen,shouxiang,  │
 │   │            xingshi,cross,fengshui,daofobuddhism,        │
-│   │            xiaoliuren,meihua,daliuren,chenggu}.js                        │
+│   │            xiaoliuren,meihua,daliuren,chenggu,lingqian,  │
+│   │            mianxiang}.js                                  │
 │   ├─ 算盘层: liuyao.js / qimen.js / expert.js / xingshi.js  │
-│   │            / xiaoliuren.js / meihua.js / daliuren.js / chenggu.js                 │
+│   │            / xiaoliuren.js / meihua.js / daliuren.js     │
+│   │            / chenggu.js / lingqian.js                     │
 │   ├─ RAG 层: rag.js + vector-cache.js (BM25 + 向量/embedding│
 │   │            缓存,KB bundle)                              │
 │   ├─ 解读 → cache.js (LRU 50/7天) → history.js (加密)      │

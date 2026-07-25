@@ -112,7 +112,8 @@ const KB_GROUPS = {
   meihua: ['meihua_ext', 'meihua_lei_xiang', 'wannianli'],
   daliuren: ['daliuren', 'wannianli'],
   chenggu: ['chenggu', 'wannianli'],
-  lingqian: ['buddhism_divine', 'guandi_qian']
+  lingqian: ['buddhism_divine', 'guandi_qian'],
+  mianxiang: ['mianxiang_ext', 'mianxiang_qise', 'mianxiang_qise2']  // v3.0.8:面相组
 };
 
 // v1.3.0 KB 3 级权重（核心/主/扩）
@@ -134,6 +135,7 @@ const KB_TIERS = {
     daliuren: ['daliuren'],
     chenggu: ['chenggu'],
     lingqian: ['guandi_qian'],
+    mianxiang: ['mianxiang_ext', 'mianxiang_qise'],  // v3.0.8 面相 primary
     cross: ['bazi', 'ziwei', 'liuyao', 'qimen', 'nihai_xia']
   },
   extended: {
@@ -149,7 +151,8 @@ const KB_TIERS = {
     meihua: ['meihua_lei_xiang', 'wannianli'],
     daliuren: ['wannianli'],
     chenggu: ['wannianli'],
-    lingqian: ['buddhism_divine']
+    lingqian: ['buddhism_divine'],
+    mianxiang: ['mianxiang_qise2']  // v3.0.8 面相 extended
   }
 };
 
@@ -219,6 +222,7 @@ const PAGE_KB_GROUPS = {
   daliuren: ['daliuren'],
   chenggu: ['chenggu'],
   lingqian: ['lingqian'],
+  mianxiang: ['mianxiang'],  // v3.0.8 面相独立组
   shouxiang: ['shouxiang'],
   xingshi: ['xingshi'],
   fengshui: ['fengshui'],

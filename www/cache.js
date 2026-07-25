@@ -41,8 +41,8 @@ const Cache = {
   // ===== 生成缓存 Key =====
   makeKey(domain, params) {
     // params 是各模块的特征对象
-    const parts = [domain];
-    // 区分本地/云端模型结果，避免切换模型后仍返回旧缓存
+    const parts = [domain];
+    // 区分本地/云端模型结果，避免切换模型后仍返回旧缓存
     parts.push(localStorage.getItem('use_local_model') === '1' ? 'model:local' : 'model:cloud');
     switch (domain) {
       case 'bazi':
@@ -118,6 +118,24 @@ const Cache = {
           });
         }
         parts.push('sx-v3.0.5-fix');
+        break;
+      }
+      case 'mianxiang': {
+        // v3.0.8 面相首版:性别 + 3 张图(front/left45/right45)指纹 + 年龄段 + linkPan
+        if (params.mxGender) parts.push('gender:' + params.mxGender);
+        ['front', 'left45', 'right45'].forEach(function (k) {
+          parts.push(this._imgFingerprint(params.images?.[k]));
+        }, this);
+        parts.push('age:' + (params.ageBucket || 'na'));
+        if (params.linkPan) {
+          var lp = params.linkPan;
+          if (lp.bazi?.gz?.day) parts.push('bazi-day:' + lp.bazi.gz.day);
+          else if (lp.bazi) parts.push('bazi');
+          var zwGz = lp.ziwei?.mingGong?.ganzhi;
+          if (zwGz) parts.push('zw:' + zwGz);
+          else if (lp.ziwei) parts.push('zw');
+        }
+        parts.push('mx-v1');
         break;
       }
       case 'cross':

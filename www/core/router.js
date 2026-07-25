@@ -8,7 +8,8 @@
   // 分组页映射: 子页面切换时高亮所属分组的导航按钮(命理/占卦)
   const PAGE_TO_NAV = {
     bazi: 'mingli', ziwei: 'mingli', qimen: 'mingli', chenggu: 'mingli',
-    liuyao: 'zhangua', xiaoliuren: 'zhangua', meihua: 'zhangua', daliuren: 'zhangua', lingqian: 'zhangua'
+    liuyao: 'zhangua', xiaoliuren: 'zhangua', meihua: 'zhangua', daliuren: 'zhangua', lingqian: 'zhangua',
+    mianxiang: 'zhangua'  // v3.0.8 面相:沿用占卦分组,nav 已满不再加项
   };
 
   function switchPage(name) {

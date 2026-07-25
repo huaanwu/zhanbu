@@ -1,5 +1,22 @@
 # AI占卜大师 更新日志
 
+## v3.0.8 (2026-07-25)
+
+### 新功能
+- **面相页(图片 + AI 视觉)新流派**: 沿用 shouxiang 路线 — 上传正面/左 45°/右 45° 三张图 + 性别 + 年龄段,调本地 VL 或云端 DeepSeek 流式解读。AI 输出按十二宫/五官/三庭气色/痣相/面型五段式分析,支持与八字/紫微联动交叉印证
+- **六爻加 "大衍筮法" 起卦按钮**: 与时间/数字/铜钱/随机并列,走 `panGua('yarrow')` 走四十九策三变归奇法
+
+### 工程/重构
+- **`callMultimodalVision` 从 `app/shouxiang.js` 提到 `core/ai-service.js`**: shouxiang 与 mianxiang 共享同一个 VL 封装(本地→云端 fallback + SSE 流式 + abort);新增 `targetEl` 参数让面相可写 `#mxResult`
+- **shouxiang.js**: 删除 47 行私有 `callMultimodalVision` 副本,改调 `Core.AI.callMultimodalVision`;`compressImage` 挂到 window 供 mianxiang 复用
+- **Cache.makeKey 新增 `case 'mianxiang'`**: 性别 + 3 张图指纹 + 年龄段 + linkPan + `mx-v1` 版本标签
+- **Core 接线**: `kb.js` 加 `mianxiang` KB 组/primary/extended/PAGE_KB_GROUPS;`ai-service.js` CFG 加 `mianxiang` 条目(`isCustom+daoism:false+crossLink:bazi/ziwei+ragBudget:1200`);`router.js` PAGE_TO_NAV 加 `mianxiang:zhangua`
+- **index.html**: 占卦分组加 "看面相" 卡;设置页 `historyFilterDomain` 加 "面相" 选项;加载 `app/mianxiang.js?v=311`
+
+### 测试
+- 新增 `test_mianxiang.js`(8 case):Core.AI 导出 / CFG 配置 / Cache.makeKey 唯一性 / get-set 往返 / Router / KB / app 符号 / index.html 接线
+- 全套 **323/323** 通过
+
 ## v3.0.7 (2026-07-25)
 
 ### 新功能
