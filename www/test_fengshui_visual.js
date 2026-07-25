@@ -373,13 +373,75 @@ check('index.html 大六壬按钮 onclick="doDaliurenFromFengshui"', () => {
 });
 
 check('doDaliurenFromFengshui 函数签名', () => {
-  // 通过 window 验证函数挂载
-  // 注: 测试环境不加载 fengshui-visual.js 的 app/fengshui.js(那是浏览器脚本)
-  // 改为通过文件源码检查函数结构
   var src = fs.readFileSync('app/fengshui.js', 'utf-8');
   assert.ok(/function doDaliurenFromFengshui\(\)/.test(src), '函数定义');
   assert.ok(/showToast\(/.test(src), '用 showToast 提示');
   assert.ok(/paiKe\('time'/.test(src), '用 time 模式起课');
+});
+
+// ============ v3.1.3 大六壬完整 UI ============
+check('window.fengshuiVisual 暴露 3 个大六壬 SVG 渲染函数', () => {
+  assert.strictEqual(typeof vis.drawDaliurenSike, 'function');
+  assert.strictEqual(typeof vis.drawDaliurenSanChuan, 'function');
+  assert.strictEqual(typeof vis.drawDaliurenTianPan, 'function');
+});
+
+check('drawDaliurenSike 返回 4 课 SVG(含 4 个上神大字)', () => {
+  // mock pan 结构(最小化)
+  var pan = {
+    siKe: [
+      { idx: 1, shang: '未', xia: '庚', shangJiang: '天空' },
+      { idx: 2, shang: '午', xia: '未', shangJiang: '青龙' },
+      { idx: 3, shang: '巳', xia: '丙', shangJiang: '朱雀' },
+      { idx: 4, shang: '辰', xia: '巳', shangJiang: '六合' }
+    ]
+  };
+  var svg = vis.drawDaliurenSike(pan);
+  assert.ok(svg.indexOf('<svg') >= 0, 'SVG 输出');
+  assert.ok(svg.indexOf('>未<') > 0, '含第 1 课上神 "未"');
+  assert.ok(svg.indexOf('>午<') > 0, '含第 2 课上神 "午"');
+  assert.ok(svg.indexOf('天空') > 0, '含天将 "天空"');
+});
+
+check('drawDaliurenSanChuan 返回 3 传 SVG(初/中/末传)', () => {
+  var pan = {
+    sanChuan: [
+      { name: '初传', shen: '戌', jiang: '玄武', dunGan: '戊' },
+      { name: '中传', shen: '巳', jiang: '太阴', dunGan: '癸' },
+      { name: '末传', shen: '寅', jiang: '勾陈', dunGan: '甲' }
+    ]
+  };
+  var svg = vis.drawDaliurenSanChuan(pan);
+  assert.ok(svg.indexOf('<svg') >= 0);
+  assert.ok(svg.indexOf('>戌<') > 0, '含初传 "戌"');
+  assert.ok(svg.indexOf('>巳<') > 0, '含中传 "巳"');
+  assert.ok(svg.indexOf('>寅<') > 0, '含末传 "寅"');
+  assert.ok(svg.indexOf('遁戊') > 0, '含初传遁干 "戊"');
+});
+
+check('drawDaliurenTianPan 返回 12 宫 SVG(含 12 地支)', () => {
+  var pan = {
+    tianPan: { '子':'亥', '丑':'子', '寅':'丑' },  // 其余 9 个省略
+    tianJiang: { '子':'贵人', '丑':'螣蛇', '寅':'朱雀' }
+  };
+  var svg = vis.drawDaliurenTianPan(pan);
+  assert.ok(svg.indexOf('<svg') >= 0);
+  // 12 地支都出现(地盘)
+  var allZhi = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  allZhi.forEach(function (z) {
+    // 地盘大字体 font-size="20"
+    var re = new RegExp('font-size="20"[^>]*>' + z + '<');
+    assert.ok(re.test(svg) || svg.indexOf('>' + z + '<') > 0, '含地支 ' + z);
+  });
+});
+
+check('app/fengshui.js doDaliurenFromFengshui 调 3 个 SVG 渲染 + 创建 #dlrRenderArea', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/drawDaliurenSike\(pan\)/.test(src), '调 drawDaliurenSike');
+  assert.ok(/drawDaliurenSanChuan\(pan\)/.test(src), '调 drawDaliurenSanChuan');
+  assert.ok(/drawDaliurenTianPan\(pan\)/.test(src), '调 drawDaliurenTianPan');
+  assert.ok(/dlrRenderArea/.test(src), '创建 #dlrRenderArea 容器');
+  assert.ok(/大六壬起课\(v3\.1\.3 SVG/.test(src), '标题含 v3.1.3 SVG');
 });
 
 console.log(`\n========================================`);

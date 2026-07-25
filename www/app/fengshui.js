@@ -2,7 +2,7 @@
 // 算盘层: window.fengshui.mingGua/eightZhai/zhaiMingHe/mainRoomAssess + window.xuankong.* + window.daliuren.paiKe
 // 本文件只负责 UI 绑定 + 渲染 + AI 解读调用
 
-// v3.1.2:大六壬排盘(简版 — 自动用当前时间,console.log + 隐藏 div 展示)
+// v3.1.2/3:大六壬排盘(完整版 — SVG 四课/三传/天盘)
 function doDaliurenFromFengshui() {
   if (!window.daliuren) {
     showToast('大六壬库未加载', 'error');
@@ -13,17 +13,57 @@ function doDaliurenFromFengshui() {
     var prompt = window.daliuren.formatDaliurenPrompt(pan, '请分析');
     console.log('[daliuren] pan:', pan);
     console.log('[daliuren] prompt:\n' + prompt);
-    // 写入隐藏 div 供用户查看
+
+    // 隐藏输入区
     var dbg = document.getElementById('dlrDebugResult');
     if (!dbg) {
       dbg = document.createElement('div');
       dbg.id = 'dlrDebugResult';
-      dbg.style.cssText = 'background:var(--bg-card);padding:0.5rem;margin-top:0.5rem;font-size:0.75rem;white-space:pre-wrap;max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:6px;';
+      dbg.style.cssText = 'background:var(--bg-card);padding:0.6rem;margin-top:1rem;font-size:0.75rem;white-space:pre-wrap;max-height:200px;overflow:auto;border:1px solid var(--border);border-radius:6px;';
       var fsPaneXuankong = document.getElementById('fsPaneXuankong');
       if (fsPaneXuankong) fsPaneXuankong.appendChild(dbg);
     }
-    dbg.textContent = '【大六壬起课·' + (pan.siZhu ? pan.siZhu.year : '?') + '年 ' + (pan.yueJiang ? pan.yueJiang.name : '?') + '】\n' + prompt;
-    showToast('大六壬起课已生成(见下方调试框)', 'info');
+
+    // v3.1.3: SVG 渲染区(替换纯文本)
+    var renderArea = document.getElementById('dlrRenderArea');
+    if (!renderArea) {
+      renderArea = document.createElement('div');
+      renderArea.id = 'dlrRenderArea';
+      renderArea.style.cssText = 'margin-top:0.5rem;';
+      var fsPaneXuankong = document.getElementById('fsPaneXuankong');
+      if (fsPaneXuankong) fsPaneXuankong.insertBefore(renderArea, dbg);
+    }
+
+    // 标题
+    var yearGZ = pan.siZhu ? pan.siZhu.year : '?';
+    var monthGZ = pan.siZhu ? pan.siZhu.month : '?';
+    var dayGZ = pan.dayGZ || '?';
+    var hourZhi = pan.hourZhi || '?';
+    var yueJiang = pan.yueJiang ? (pan.yueJiang.zhi + '将' + pan.yueJiang.name) : '?';
+    var shenSha = (pan.flags && pan.flags.fuYin) ? '伏吟' : (pan.flags && pan.flags.fanYin) ? '返吟' : (pan.flags && pan.flags.baZhuan) ? '八专' : '正常';
+
+    var html = '<div style="background:var(--bg-inner);padding:0.6rem;border-radius:6px;margin-top:0.5rem;font-size:0.85rem;">';
+    html += '<div style="color:var(--accent-gold);font-weight:700;margin-bottom:0.4rem;">🐉 大六壬起课(v3.1.3 SVG 完整版)</div>';
+    html += '<div style="font-size:0.75rem;color:var(--text-secondary);">';
+    html += '四柱: ' + yearGZ + '年 ' + monthGZ + '月 ' + dayGZ + '日 ' + hourZhi + '时 | ';
+    html += '月将: ' + yueJiang + ' | 课式: ' + shenSha + ' | 旬空: ' + (pan.xunKong || '无') + ' | 贵人: ' + (pan.guiRen ? (pan.guiRen.zhi + ' ' + (pan.guiRen.isDay ? '昼' : '夜') + '临' + pan.guiRen.linGong + (pan.guiRen.shun ? '顺' : '逆')) : '?');
+    html += '</div>';
+    html += '<div style="margin-top:0.5rem;color:var(--text-secondary);font-size:0.7rem;">发用: ' + (pan.faYong ? (pan.faYong.zongmen + ' · ' + pan.faYong.keti) : '?') + '</div>';
+    html += '</div>';
+
+    // 四课 + 三传 + 天盘
+    html += '<div style="margin-top:0.6rem;font-size:0.8rem;color:var(--accent-gold);">【四课】</div>';
+    html += window.fengshuiVisual.drawDaliurenSike(pan);
+    html += '<div style="margin-top:0.5rem;font-size:0.8rem;color:var(--accent-red);">【三传】</div>';
+    html += window.fengshuiVisual.drawDaliurenSanChuan(pan);
+    html += '<div style="margin-top:0.5rem;font-size:0.8rem;color:var(--accent-blue);">【天盘 12 宫】(外圈=天盘字,内圈=地盘,周边=天将)</div>';
+    html += window.fengshuiVisual.drawDaliurenTianPan(pan);
+
+    renderArea.innerHTML = html;
+    // debug 区域保留 prompt(用折叠)
+    if (dbg) dbg.textContent = '【AI 解读 prompt 预览】\n' + prompt.substring(0, 800) + (prompt.length > 800 ? '\n... (省略)' : '');
+
+    showToast('大六壬起课已生成(见下方四课/三传/天盘)', 'info');
   } catch (e) {
     showToast('大六壬起课失败: ' + e.message, 'error');
   }

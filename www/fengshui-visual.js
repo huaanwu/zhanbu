@@ -431,10 +431,110 @@ function closeFengshuiModal() {
   if (modal) modal.style.display = 'none';
 }
 
+// ============ v3.1.3 大六壬 SVG 渲染 ============
+// 12 天将颜色(简化:吉/中性/凶分色)
+var DLR_JIANG_COLORS = {
+  '贵人': '#2a7', '螣蛇': '#a37', '朱雀': '#d44', '六合': '#2a7',
+  '勾陈': '#888', '青龙': '#2a7', '天空': '#888', '白虎': '#d44',
+  '太常': '#888', '玄武': '#d44', '太阴': '#2a7', '天后': '#888'
+};
+
+// 四课 SVG: 4 列卡(第一/二/三/四课),每列上神/下神/天将
+function drawDaliurenSike(pan) {
+  if (!pan || !pan.siKe) return '<div style="color:var(--text-muted);">无四课数据</div>';
+  var w = 320, cardH = 100, cardW = 72;
+  var svg = '<svg viewBox="0 0 ' + w + ' ' + (cardH + 10) + '" style="display:block;margin:0 auto;max-width:320px;width:100%;">';
+  var x0 = 8;
+  for (var i = 0; i < pan.siKe.length; i++) {
+    var k = pan.siKe[i];
+    var x = x0 + i * (cardW + 4);
+    var bg = '#f9f9f9';
+    svg += '<rect x="' + x + '" y="5" width="' + cardW + '" height="' + cardH + '" fill="' + bg + '" stroke="var(--accent-gold)" stroke-width="1" rx="4"/>';
+    svg += '<text x="' + (x + cardW/2) + '" y="20" text-anchor="middle" font-size="10" fill="var(--text-muted)">第' + k.idx + '课</text>';
+    // 上神(大字)
+    svg += '<text x="' + (x + cardW/2) + '" y="50" text-anchor="middle" font-size="22" font-weight="700" fill="var(--accent-gold)">' + k.shang + '</text>';
+    // 下神(小字)
+    svg += '<text x="' + (x + cardW/2) + '" y="68" text-anchor="middle" font-size="9" fill="var(--text-secondary)">' + k.xia + '上</text>';
+    // 天将(底部)
+    var jiangColor = DLR_JIANG_COLORS[k.shangJiang] || '#888';
+    svg += '<text x="' + (x + cardW/2) + '" y="88" text-anchor="middle" font-size="9" font-weight="600" fill="' + jiangColor + '">' + k.shangJiang + '</text>';
+  }
+  svg += '</svg>';
+  return svg;
+}
+
+// 三传 SVG: 3 列卡(初/中/末),含天将+遁干
+function drawDaliurenSanChuan(pan) {
+  if (!pan || !pan.sanChuan) return '<div style="color:var(--text-muted);">无三传数据</div>';
+  var w = 240, cardH = 80, cardW = 72;
+  var svg = '<svg viewBox="0 0 ' + w + ' ' + (cardH + 10) + '" style="display:block;margin:0 auto;max-width:240px;width:100%;">';
+  var names = ['初传', '中传', '末传'];
+  for (var i = 0; i < pan.sanChuan.length; i++) {
+    var c = pan.sanChuan[i];
+    var x = 8 + i * (cardW + 4);
+    svg += '<rect x="' + x + '" y="5" width="' + cardW + '" height="' + cardH + '" fill="#fff8e1" stroke="var(--accent-red)" stroke-width="1" rx="4"/>';
+    svg += '<text x="' + (x + cardW/2) + '" y="20" text-anchor="middle" font-size="10" fill="var(--text-muted)">' + names[i] + '</text>';
+    svg += '<text x="' + (x + cardW/2) + '" y="48" text-anchor="middle" font-size="22" font-weight="700" fill="var(--accent-red)">' + c.shen + '</text>';
+    var jiangColor = DLR_JIANG_COLORS[c.jiang] || '#888';
+    var dunGanText = c.dunGan ? ' 遁' + c.dunGan : '';
+    svg += '<text x="' + (x + cardW/2) + '" y="68" text-anchor="middle" font-size="8" fill="' + jiangColor + '">' + c.jiang + dunGanText + '</text>';
+  }
+  svg += '</svg>';
+  return svg;
+}
+
+// 天盘 SVG: 12 地支外圈 + 12 宫(地盘) + 天将 标注
+// 简化版: 12 宫轮盘,每格标"地盘+天盘+天将"
+function drawDaliurenTianPan(pan) {
+  if (!pan || !pan.tianPan || !pan.tianJiang) return '<div style="color:var(--text-muted);">无天盘数据</div>';
+  var w = 320, h = 320, cx = w/2, cy = h/2;
+  var R = 130;
+  // 12 地支从正北顺时针: 子丑寅卯辰巳午未申酉戌亥
+  var zhi = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  // 角度: 子=0, 丑=30, 寅=60... 顺时针
+  function pos(angleDeg, r) {
+    var rad = (angleDeg - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+  var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" style="display:block;margin:0 auto;max-width:320px;width:100%;background:var(--bg-inner);border-radius:50%;">';
+  svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="none" stroke="var(--accent-gold)" stroke-width="2"/>';
+  // 12 宫分隔线
+  for (var i = 0; i < 12; i++) {
+    var a1 = pos(i * 30, 0);
+    var a2 = pos(i * 30, R);
+    svg += '<line x1="' + a1.x.toFixed(1) + '" y1="' + a1.y.toFixed(1) + '" x2="' + a2.x.toFixed(1) + '" y2="' + a2.y.toFixed(1) + '" stroke="var(--border)" stroke-width="0.5"/>';
+  }
+  // 每宫标: 地盘(大)+ 天盘(中)+ 天将(小)
+  for (var j = 0; j < 12; j++) {
+    var diZhi = zhi[j];
+    var tianZhi = pan.tianPan[diZhi];
+    var jiang = pan.tianJiang[diZhi] || '';
+    var jiangColor = DLR_JIANG_COLORS[jiang] || '#888';
+    var angle = j * 30;
+    // 地盘 (大字, 中)
+    var p1 = pos(angle, R * 0.45);
+    svg += '<text x="' + p1.x.toFixed(1) + '" y="' + p1.y.toFixed(1) + '" text-anchor="middle" font-size="20" font-weight="700" fill="var(--accent-gold)">' + diZhi + '</text>';
+    // 天盘 (中字)
+    var p2 = pos(angle, R * 0.7);
+    svg += '<text x="' + p2.x.toFixed(1) + '" y="' + p2.y.toFixed(1) + '" text-anchor="middle" font-size="14" fill="var(--text-secondary)">' + tianZhi + '</text>';
+    // 天将 (小字, 圈外)
+    var p3 = pos(angle, R * 0.88);
+    svg += '<text x="' + p3.x.toFixed(1) + '" y="' + p3.y.toFixed(1) + '" text-anchor="middle" font-size="8" fill="' + jiangColor + '">' + jiang + '</text>';
+  }
+  // 中心提示
+  svg += '<text x="' + cx + '" y="' + (cy + 4) + '" text-anchor="middle" font-size="9" fill="var(--text-muted)">天盘·地盘·天将</text>';
+  svg += '</svg>';
+  return svg;
+}
+
 window.fengshuiVisual = {
   drawLuopan24: drawLuopan24,
   drawHouseLayout: drawHouseLayout,
   drawJiugong: drawJiugong,
+  // v3.1.3:大六壬排盘 SVG
+  drawDaliurenSike: drawDaliurenSike,
+  drawDaliurenSanChuan: drawDaliurenSanChuan,
+  drawDaliurenTianPan: drawDaliurenTianPan,
   // v3.0.13:详情
   showShanDetail: showShanDetail,
   showStarDetail: showStarDetail,
@@ -443,6 +543,7 @@ window.fengshuiVisual = {
   // 数据暴露给测试
   SHAN_DETAILS: FS_SHAN_DETAILS,
   STAR_DETAILS: FS_STAR_DETAILS,
+  DLR_JIANG_COLORS: DLR_JIANG_COLORS,
   DIR_ANGLE: FS_DIR_ANGLE,
   LUOPAN_24: FS_LUOPAN_24
 };
