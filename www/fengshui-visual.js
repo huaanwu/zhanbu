@@ -66,30 +66,38 @@ function drawLuopan24(doorDir) {
   }
 
   // 24 山向字(每卦 3 字, 地盘标准排布)
+  // v3.1.1: 三层罗盘用 sanPan 数据(每山三盘字不同)
   for (var d = 0; d < 8; d++) {
     var dir = FS_LUOPAN_24[d].dir;
-    var shans = FS_LUOPAN_24[d].dir;  // 简化
     var shans = FS_LUOPAN_24[d].shan;
     var baseAngle = d * 45;
     for (var s = 0; s < 3; s++) {
+      var shanName = shans[s];
       var subAngle = baseAngle + (s - 1) * 15;  // 5° 偏移
       // 地盘正针: 内层, 标准角度
       var pDi = pos(subAngle, (R_DI_OUT + R_DI_IN) / 2);
       var isDoor = (dir === doorDir);
       var fill = isDoor ? 'var(--accent-red)' : 'var(--accent-gold)';
       var weight = isDoor ? '700' : '500';
-      svg += '<text x="' + pDi.x.toFixed(1) + '" y="' + pDi.y.toFixed(1) + '" text-anchor="middle" font-size="10" font-weight="' + weight + '" fill="' + fill + '" style="cursor:pointer;" onclick="window.fengshuiVisual.showShanDetail(\'' + shans[s] + '\')">' + shans[s] + '</text>';
+      // v3.1.1: 用 sanPan.di(地盘字)— 多数情况 == shanName,但保留字段
+      var diChar = (vis && vis.SHAN_DETAILS && vis.SHAN_DETAILS[shanName] && vis.SHAN_DETAILS[shanName].sanPan)
+        ? vis.SHAN_DETAILS[shanName].sanPan.di : shanName;
+      svg += '<text x="' + pDi.x.toFixed(1) + '" y="' + pDi.y.toFixed(1) + '" text-anchor="middle" font-size="10" font-weight="' + weight + '" fill="' + fill + '" style="cursor:pointer;" onclick="window.fengshuiVisual.showShanDetail(\'' + shanName + '\')">' + diChar + '</text>';
 
-      // v3.0.19: 天盘缝针 - 左旋 7.5°(纳水)
+      // v3.1.1: 天盘缝针 - 左旋 7.5°(纳水),用 sanPan.tian 字
+      var tianChar = (vis && vis.SHAN_DETAILS && vis.SHAN_DETAILS[shanName] && vis.SHAN_DETAILS[shanName].sanPan)
+        ? vis.SHAN_DETAILS[shanName].sanPan.tian : shanName;
       var pTian = pos(subAngle - 7.5, (R_TIAN_OUT + R_TIAN_IN) / 2);
-      svg += '<text x="' + pTian.x.toFixed(1) + '" y="' + pTian.y.toFixed(1) + '" text-anchor="middle" font-size="7" fill="var(--accent-gold)" opacity="0.7">' + shans[s] + '</text>';
+      svg += '<text x="' + pTian.x.toFixed(1) + '" y="' + pTian.y.toFixed(1) + '" text-anchor="middle" font-size="7" fill="var(--accent-gold)" opacity="0.7">' + tianChar + '</text>';
 
-      // v3.0.19: 人盘中针 - 右旋 7.5°(消砂)
+      // v3.1.1: 人盘中针 - 右旋 7.5°(消砂),用 sanPan.ren 字
+      var renChar = (vis && vis.SHAN_DETAILS && vis.SHAN_DETAILS[shanName] && vis.SHAN_DETAILS[shanName].sanPan)
+        ? vis.SHAN_DETAILS[shanName].sanPan.ren : shanName;
       var pRen = pos(subAngle + 7.5, (R_REN_OUT + R_REN_IN) / 2);
-      svg += '<text x="' + pRen.x.toFixed(1) + '" y="' + pRen.y.toFixed(1) + '" text-anchor="middle" font-size="7" fill="var(--accent-blue)" opacity="0.7">' + shans[s] + '</text>';
+      svg += '<text x="' + pRen.x.toFixed(1) + '" y="' + pRen.y.toFixed(1) + '" text-anchor="middle" font-size="7" fill="var(--accent-blue)" opacity="0.7">' + renChar + '</text>';
 
-      // 透明命中矩形(只地盘点可点,避免天/人盘重复触发)
-      svg += '<rect x="' + (pDi.x - 8).toFixed(1) + '" y="' + (pDi.y - 8).toFixed(1) + '" width="16" height="16" fill="transparent" style="cursor:pointer;" onclick="window.fengshuiVisual.showShanDetail(\'' + shans[s] + '\')" data-shan="' + shans[s] + '"/>';
+      // 透明命中矩形(只地盘点可点)
+      svg += '<rect x="' + (pDi.x - 8).toFixed(1) + '" y="' + (pDi.y - 8).toFixed(1) + '" width="16" height="16" fill="transparent" style="cursor:pointer;" onclick="window.fengshuiVisual.showShanDetail(\'' + shanName + '\')" data-shan="' + shanName + '"/>';
     }
     // 8 卦方向大标(外圈外侧)
     var pDir = pos(baseAngle, R_TIAN_OUT + 14);
@@ -263,31 +271,82 @@ function drawJiugong(panByGong, yunName) {
 
 // 24 山简表(地盘正针): 五行/纳音/简述/吉凶
 // 来源: 传统罗盘基础 + KB fengshui_base_kb + fengshui_luopan_kb 综合
+// v3.1.1: 加 sanPan(人盘+天盘)字段 — 72 龙简化(每山带 3 盘数据)
+//   renZhong(人盘中针,消砂) + tianPan(天盘缝针,纳水) — 业内各派字不同,
+//   本轮取常见派别(沈氏玄空 + 三合派 兼用),以五行为主
 var FS_SHAN_DETAILS = {
-  '壬': { wuxing: '水', nayin: '癸山', jiXiong: '阳水', desc: '壬山为天干阳水,五行属水,主智谋、流动性。', use: '宜水景/动位/通道' },
-  '子': { wuxing: '水', nayin: '壬山', jiXiong: '阳水', desc: '子山为地支阳水,正北方,主暗动、潜伏。', use: '宜静不宜动,可放鱼缸/水种' },
-  '癸': { wuxing: '水', nayin: '辛山', jiXiong: '阴水', desc: '癸山为天干阴水,主收敛、内向。', use: '宜暗色/封闭空间' },
-  '丑': { wuxing: '土', nayin: '丁山', jiXiong: '阴土', desc: '丑山为地支阴土,东北偏北,主厚重、收藏。', use: '宜储藏室/杂物间' },
-  '艮': { wuxing: '土', nayin: '丙山', jiXiong: '阳土', desc: '艮山为八卦阳土,主止、稳、青少年。', use: '宜书房/子女房' },
-  '寅': { wuxing: '木', nayin: '庚山', jiXiong: '阳木', desc: '寅山为地支阳木,东北偏东,主生发、动。', use: '宜运动/早起步' },
-  '甲': { wuxing: '木', nayin: '丁山', jiXiong: '阳木', desc: '甲山为天干阳木,正东,主高大、首领。', use: '宜主梁/主柱/书桌向' },
-  '卯': { wuxing: '木', nayin: '乙山', jiXiong: '阴木', desc: '卯山为地支阴木,正东偏南,主柔美、文昌。', use: '宜文昌位/学业' },
-  '乙': { wuxing: '木', nayin: '癸山', jiXiong: '阴木', desc: '乙山为天干阴木,主花草、柔顺。', use: '宜花草/玄关' },
-  '辰': { wuxing: '土', nayin: '壬山', jiXiong: '阳土', desc: '辰山为地支阳土,东南偏东,主水库、聚财。', use: '宜鱼缸/水景' },
-  '巽': { wuxing: '木', nayin: '辛山', jiXiong: '阴木', desc: '巽山为八卦阴木,主文曲、长女、利学业。', use: '宜文昌位/书房' },
-  '巳': { wuxing: '火', nayin: '庚山', jiXiong: '阴火', desc: '巳山为地支阴火,东南偏南,主文明、礼仪。', use: '宜厅堂/待客' },
-  '丙': { wuxing: '火', nayin: '己山', jiXiong: '阳火', desc: '丙山为天干阳火,正南,主文明、礼仪、名声。', use: '宜主厅/采光/灯火' },
-  '午': { wuxing: '火', nayin: '丁山', jiXiong: '阳火', desc: '午山为地支阳火,正南偏西,主大礼、礼堂。', use: '宜采光/红灯笼' },
-  '丁': { wuxing: '火', nayin: '壬山', jiXiong: '阴火', desc: '丁山为天干阴火,主文昌、礼花。', use: '宜香薰/灯火/文昌' },
-  '未': { wuxing: '土', nayin: '癸山', jiXiong: '阴土', desc: '未山为地支阴土,西南偏南,主花园、情义。', use: '宜花园/客厅' },
-  '坤': { wuxing: '土', nayin: '甲山', jiXiong: '阴土', desc: '坤山为八卦阴土,主柔、母、主妇。', use: '宜主卧(女主人)/餐厅' },
-  '申': { wuxing: '金', nayin: '乙山', jiXiong: '阳金', desc: '申山为地支阳金,西南偏西,主刀兵、肃杀。', use: '宜刀具/金属器械' },
-  '庚': { wuxing: '金', nayin: '丙山', jiXiong: '阳金', desc: '庚山为天干阳金,正西,主刚、武。', use: '宜大型金属/车房' },
-  '酉': { wuxing: '金', nayin: '丁山', jiXiong: '阴金', desc: '酉山为地支阴金,正西偏北,主珠宝、首饰。', use: '宜珠宝/首饰盒' },
-  '辛': { wuxing: '金', nayin: '戊山', jiXiong: '阴金', desc: '辛山为天干阴金,主小金属、颗粒。', use: '宜小金属饰物' },
-  '戌': { wuxing: '土', nayin: '己山', jiXiong: '阳土', desc: '戌山为地支阳土,西北偏西,主收藏、库房。', use: '宜储藏/酒窖' },
-  '乾': { wuxing: '金', nayin: '甲山', jiXiong: '阳金', desc: '乾山为八卦阳金,主天、父、首创。', use: '宜主卧(男主人)/书房' },
-  '亥': { wuxing: '水', nayin: '壬山', jiXiong: '阴水', desc: '亥山为地支阴水,西北偏北,主收藏、终结。', use: '宜静室/收尾' }
+  '壬': { wuxing: '水', nayin: '癸山', jiXiong: '阳水',
+    sanPan: { di: '壬', ren: '子', tian: '天壬' },
+    desc: '壬山为天干阳水,五行属水,主智谋、流动性。', use: '宜水景/动位/通道' },
+  '子': { wuxing: '水', nayin: '壬山', jiXiong: '阳水',
+    sanPan: { di: '子', ren: '癸', tian: '缝壬' },
+    desc: '子山为地支阳水,正北方,主暗动、潜伏。', use: '宜静不宜动,可放鱼缸/水种' },
+  '癸': { wuxing: '水', nayin: '辛山', jiXiong: '阴水',
+    sanPan: { di: '癸', ren: '壬', tian: '缝子' },
+    desc: '癸山为天干阴水,主收敛、内向。', use: '宜暗色/封闭空间' },
+  '丑': { wuxing: '土', nayin: '丁山', jiXiong: '阴土',
+    sanPan: { di: '丑', ren: '艮', tian: '缝艮' },
+    desc: '丑山为地支阴土,东北偏北,主厚重、收藏。', use: '宜储藏室/杂物间' },
+  '艮': { wuxing: '土', nayin: '丙山', jiXiong: '阳土',
+    sanPan: { di: '艮', ren: '丑', tian: '缝丁' },
+    desc: '艮山为八卦阳土,主止、稳、青少年。', use: '宜书房/子女房' },
+  '寅': { wuxing: '木', nayin: '庚山', jiXiong: '阳木',
+    sanPan: { di: '寅', ren: '甲', tian: '缝庚' },
+    desc: '寅山为地支阳木,东北偏东,主生发、动。', use: '宜运动/早起步' },
+  '甲': { wuxing: '木', nayin: '丁山', jiXiong: '阳木',
+    sanPan: { di: '甲', ren: '寅', tian: '缝寅' },
+    desc: '甲山为天干阳木,正东,主高大、首领。', use: '宜主梁/主柱/书桌向' },
+  '卯': { wuxing: '木', nayin: '乙山', jiXiong: '阴木',
+    sanPan: { di: '卯', ren: '乙', tian: '缝甲' },
+    desc: '卯山为地支阴木,正东偏南,主柔美、文昌。', use: '宜文昌位/学业' },
+  '乙': { wuxing: '木', nayin: '癸山', jiXiong: '阴木',
+    sanPan: { di: '乙', ren: '卯', tian: '缝乙' },
+    desc: '乙山为天干阴木,主花草、柔顺。', use: '宜花草/玄关' },
+  '辰': { wuxing: '土', nayin: '壬山', jiXiong: '阳土',
+    sanPan: { di: '辰', ren: '巽', tian: '缝巽' },
+    desc: '辰山为地支阳土,东南偏东,主水库、聚财。', use: '宜鱼缸/水景' },
+  '巽': { wuxing: '木', nayin: '辛山', jiXiong: '阴木',
+    sanPan: { di: '巽', ren: '辰', tian: '缝辰' },
+    desc: '巽山为八卦阴木,主文曲、长女、利学业。', use: '宜文昌位/书房' },
+  '巳': { wuxing: '火', nayin: '庚山', jiXiong: '阴火',
+    sanPan: { di: '巳', ren: '丙', tian: '缝丙' },
+    desc: '巳山为地支阴火,东南偏南,主文明、礼仪。', use: '宜厅堂/待客' },
+  '丙': { wuxing: '火', nayin: '己山', jiXiong: '阳火',
+    sanPan: { di: '丙', ren: '巳', tian: '缝巳' },
+    desc: '丙山为天干阳火,正南,主文明、礼仪、名声。', use: '宜主厅/采光/灯火' },
+  '午': { wuxing: '火', nayin: '丁山', jiXiong: '阳火',
+    sanPan: { di: '午', ren: '丁', tian: '缝午' },
+    desc: '午山为地支阳火,正南偏西,主大礼、礼堂。', use: '宜采光/红灯笼' },
+  '丁': { wuxing: '火', nayin: '壬山', jiXiong: '阴火',
+    sanPan: { di: '丁', ren: '午', tian: '缝丁' },
+    desc: '丁山为天干阴火,主文昌、礼花。', use: '宜香薰/灯火/文昌' },
+  '未': { wuxing: '土', nayin: '癸山', jiXiong: '阴土',
+    sanPan: { di: '未', ren: '坤', tian: '缝坤' },
+    desc: '未山为地支阴土,西南偏南,主花园、情义。', use: '宜花园/客厅' },
+  '坤': { wuxing: '土', nayin: '甲山', jiXiong: '阴土',
+    sanPan: { di: '坤', ren: '未', tian: '缝未' },
+    desc: '坤山为八卦阴土,主柔、母、主妇。', use: '宜主卧(女主人)/餐厅' },
+  '申': { wuxing: '金', nayin: '乙山', jiXiong: '阳金',
+    sanPan: { di: '申', ren: '庚', tian: '缝庚' },
+    desc: '申山为地支阳金,西南偏西,主刀兵、肃杀。', use: '宜刀具/金属器械' },
+  '庚': { wuxing: '金', nayin: '丙山', jiXiong: '阳金',
+    sanPan: { di: '庚', ren: '申', tian: '缝辛' },
+    desc: '庚山为天干阳金,正西,主刚、武。', use: '宜大型金属/车房' },
+  '酉': { wuxing: '金', nayin: '丁山', jiXiong: '阴金',
+    sanPan: { di: '酉', ren: '辛', tian: '缝庚' },
+    desc: '酉山为地支阴金,正西偏北,主珠宝、首饰。', use: '宜珠宝/首饰盒' },
+  '辛': { wuxing: '金', nayin: '戊山', jiXiong: '阴金',
+    sanPan: { di: '辛', ren: '酉', tian: '缝酉' },
+    desc: '辛山为天干阴金,主小金属、颗粒。', use: '宜小金属饰物' },
+  '戌': { wuxing: '土', nayin: '己山', jiXiong: '阳土',
+    sanPan: { di: '戌', ren: '乾', tian: '缝乾' },
+    desc: '戌山为地支阳土,西北偏西,主收藏、库房。', use: '宜储藏/酒窖' },
+  '乾': { wuxing: '金', nayin: '甲山', jiXiong: '阳金',
+    sanPan: { di: '乾', ren: '戌', tian: '缝戌' },
+    desc: '乾山为八卦阳金,主天、父、首创。', use: '宜主卧(男主人)/书房' },
+  '亥': { wuxing: '水', nayin: '壬山', jiXiong: '阴水',
+    sanPan: { di: '亥', ren: '壬', tian: '缝亥' },
+    desc: '亥山为地支阴水,西北偏北,主收藏、终结。', use: '宜静室/收尾' }
 };
 
 // 9 星简表: 五行/特性/吉凶/化解

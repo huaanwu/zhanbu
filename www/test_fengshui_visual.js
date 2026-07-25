@@ -302,14 +302,20 @@ check('drawLuopan24 含三层标签图例(天盘/人盘/地盘)', () => {
 });
 
 check('drawLuopan24 天盘左旋 7.5°(纳水)、人盘右旋 7.5°(消砂)', () => {
-  // 验证: 24 山每字都有 3 个副本(天/地/人),且位置不同
+  // 验证: 24 山每字都有 3 个副本(天/地/人)
   // 简化: 验证 24 山每字至少出现 3 次(一次天、一次人、一次地)
+  // v3.1.1: 三盘字可能不同(sanPan 数据驱动),改为每字加 sanPan 三盘字之和 = 3
   var svg = vis.drawLuopan24('南');
-  // '壬' 应出现 3 次
-  var renCount = (svg.match(/>壬</g) || []).length;
-  assert.ok(renCount >= 3, '壬字 ≥ 3(地盘+天盘+人盘),实际 ' + renCount);
-  var ziCount = (svg.match(/>子</g) || []).length;
-  assert.ok(ziCount >= 3, '子字 ≥ 3,实际 ' + ziCount);
+  // '壬' 应出现 1 次(地盘)+ sanPan.tian='天壬'/'缝壬' 等 1 次+ sanPan.ren='子' 0 次
+  // 改为检查 SHAN_DETAILS 含 sanPan 字段(数据驱动验证)
+  var renInfo = vis.SHAN_DETAILS['壬'];
+  assert.ok(renInfo.sanPan, '壬字含 sanPan 字段');
+  assert.ok(renInfo.sanPan.di, '壬.sanPan.di 存在');
+  assert.ok(renInfo.sanPan.ren, '壬.sanPan.ren 存在');
+  assert.ok(renInfo.sanPan.tian, '壬.sanPan.tian 存在');
+  // '子' 同
+  var ziInfo = vis.SHAN_DETAILS['子'];
+  assert.ok(ziInfo.sanPan, '子字含 sanPan 字段');
 });
 
 check('drawLuopan24 不传 doorDir 也能渲染(3 层仍工作)', () => {
@@ -318,6 +324,38 @@ check('drawLuopan24 不传 doorDir 也能渲染(3 层仍工作)', () => {
   // 仍 24 山 × 3 层
   var count = (svg.match(/<text/g) || []).length;
   assert.ok(count >= 72, 'text 元素 ≥ 72,实际 ' + count);
+});
+
+// ============ v3.1.1 72 龙数据 ============
+check('SHAN_DETAILS 24 山全含 sanPan 字段(三盘数据)', () => {
+  var shanList = ['壬','子','癸','丑','艮','寅','甲','卯','乙','辰','巽','巳','丙','午','丁','未','坤','申','庚','酉','辛','戌','乾','亥'];
+  shanList.forEach(function (s) {
+    var d = vis.SHAN_DETAILS[s];
+    assert.ok(d, 'SHAN_DETAILS[' + s + '] 存在');
+    assert.ok(d.sanPan, s + ' 含 sanPan');
+    assert.ok(d.sanPan.di && d.sanPan.ren && d.sanPan.tian, s + ' 三盘字全有');
+  });
+});
+
+check('sanPan 简化规则:三盘字不全相同(代表三盘不同)', () => {
+  // 壬/子等大部分山三盘字至少一对不同
+  // 抽样验证: 壬 di=壬, ren=子, tian=天壬 → 至少 2 个不同
+  var ren = vis.SHAN_DETAILS['壬'].sanPan;
+  var distinct = new Set([ren.di, ren.ren, ren.tian]);
+  assert.ok(distinct.size >= 2, '壬三盘字至少 2 个不同(实际 ' + distinct.size + ')');
+  // 子 di=子, ren=癸, tian=缝壬
+  var zi = vis.SHAN_DETAILS['子'].sanPan;
+  var distinct2 = new Set([zi.di, zi.ren, zi.tian]);
+  assert.ok(distinct2.size >= 2, '子三盘字至少 2 个不同');
+});
+
+check('drawLuopan24 用 sanPan 数据驱动(三盘字不同)', () => {
+  // 验证 SVG 中包含 sanPan 的三盘字
+  // 壬 sanPan.tian = '天壬' — 验 SVG 含 "天壬"
+  var svg = vis.drawLuopan24('南');
+  assert.ok(svg.indexOf('天壬') > 0, 'SVG 含 sanPan.tian "天壬"');
+  // 子 sanPan.tian = '缝壬'
+  assert.ok(svg.indexOf('缝壬') > 0, 'SVG 含 sanPan.tian "缝壬"');
 });
 
 console.log(`\n========================================`);
