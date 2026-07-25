@@ -11,7 +11,7 @@ function sxGet(hand, side) { return sxImages[hand][side] || ''; }
 function sxHasAll() { return sxGet('left','palm') && sxGet('left','back') && sxGet('right','palm') && sxGet('right','back'); }
 function sxHasAny() { return sxGet('left','palm') || sxGet('left','back') || sxGet('right','palm') || sxGet('right','back'); }
 
-function compressImage(base64, maxWidth = 800, quality = 0.7) {
+function compressImage(base64, maxWidth = 1200, quality = 0.85) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -371,7 +371,17 @@ async function doShouxiang() {
   const linkSrc = link ? link.src : '';
   var linkHint = '';
   if (linkPan) {
-    linkHint = `\n\n【已联动】本次手相解读结合用户最新一次${linkSrc}排盘做交叉印证。`;
+    const Expert = window.Expert;
+    var linkFacts = '';
+    if (Expert) {
+      try {
+        if (linkPan.bazi && typeof Expert.bazi === 'function') linkFacts += '【八字事实·100%准确】\n' + Expert.bazi(linkPan.bazi) + '\n';
+        if (linkPan.ziwei && typeof Expert.ziwei === 'function') linkFacts += '【紫微事实·100%准确】\n' + Expert.ziwei(linkPan.ziwei) + '\n';
+        if (linkPan.liuyao && typeof Expert.liuyao === 'function') linkFacts += '【六爻事实·100%准确】\n' + Expert.liuyao(linkPan.liuyao) + '\n';
+        if (linkPan.qimen && typeof Expert.qimen === 'function') linkFacts += '【奇门事实·100%准确】\n' + Expert.qimen(linkPan.qimen) + '\n';
+      } catch (e) { console.warn('[sx] Expert 联动事实生成失败:', e); }
+    }
+    linkHint = '\n\n【已联动】本次手相解读结合用户最新一次' + linkSrc + '排盘做交叉印证。\n' + linkFacts;
   }
   const system = await Core.AI.buildSystemPrompt({
     domain: 'shouxiang',

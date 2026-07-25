@@ -71,6 +71,14 @@ const BUNDLE_KEYS = {
   'kb_specialty.json': [
     // 梅花易数
     'meihua_ext', 'meihua_lei_xiang',
+    // 小六壬
+    'xiaoliuren',
+    // 大六壬
+    'daliuren',
+    // 称骨算命
+    'chenggu',
+    // 关帝灵签
+    'guandi_qian',
     // 面相
     'mianxiang_ext', 'mianxiang_qise', 'mianxiang_qise2',
     // 手相纹理

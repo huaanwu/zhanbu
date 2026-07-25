@@ -301,4 +301,36 @@ runner.test('寻物用神不现时可从伏神定位，螣蛇环境映射有效'
   runner.assertEq(analysis.probability.level, 'low');
 });
 
+runner.module('大衍筮法(揲蓍)');
+runner.test('三变归奇集合合法: 一变 5/9, 二三变 4/8, 归奇+余策=49', function() {
+  var g1 = {}, g23 = {};
+  for (var i = 0; i < 100; i++) {
+    var q = liuyao.qiGuaByYarrow();
+    runner.assertEq(q.stalkResults.length, 6);
+    q.stalkResults.forEach(function(r) {
+      g1[r.changes[0]] = true;
+      g23[r.changes[1]] = true;
+      g23[r.changes[2]] = true;
+      runner.assert([6,7,8,9].indexOf(r.value) >= 0, '爻值应在 6-9: ' + r.value);
+      runner.assertEq(r.changes[0] + r.changes[1] + r.changes[2] + r.value * 4, 49);
+      if (r.isDong) runner.assert(r.value === 6 || r.value === 9, '仅老阴老阳为动');
+    });
+  }
+  runner.assertEq(Object.keys(g1).sort().join(','), '5,9');
+  runner.assertEq(Object.keys(g23).sort().join(','), '4,8');
+});
+runner.test('panGua(yarrow) 结构完整且动爻与六九一致', function() {
+  for (var i = 0; i < 20; i++) {
+    var pan = liuyao.panGua('yarrow', { dt: new Date(2026,5,28,14,30) });
+    runner.assert(pan.gua && pan.gua.name.length >= 3, '应有卦名');
+    runner.assertEq(pan.yaoList.length, 6);
+    runner.assertEq(pan.stalkResults.length, 6);
+    runner.assertEq(pan.method, '大衍筮法');
+    pan.gua.dongYaoList.forEach(function(y) {
+      var v = pan.stalkResults[y - 1].value;
+      runner.assert(v === 6 || v === 9, '动爻应对应老阴/老阳, 实际: ' + v);
+    });
+  }
+});
+
 runner.run();

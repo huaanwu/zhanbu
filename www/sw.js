@@ -9,7 +9,7 @@
  * 版本: 通过 CACHE_NAME 升级,旧缓存自动清空
  */
 
-const SW_VERSION = '3.0.5-2'; // 六爻算盘修复，强制淘汰旧JS缓存
+const SW_VERSION = '3.0.7-lq'; // 新增灵签页(观音/关帝),强制淘汰旧JS缓存
 const CACHE_NAME = 'zhanbu-' + SW_VERSION;
 const STATIC_ASSETS = [
   './',
@@ -20,6 +20,11 @@ const STATIC_ASSETS = [
   './expert.js',
   './rag.js',
   './liuyao.js',
+  './xiaoliuren.js',
+  './meihua.js',
+  './daliuren.js',
+  './chenggu.js',
+  './lingqian.js',
   './qimen.js',
   './xingshi.js',
   './visual.js',

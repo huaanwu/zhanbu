@@ -87,7 +87,11 @@ const KB_PATHS = {
   // v1.3.2 交叉模块 KB
   bazi_ziwei_hecan: 'kb_data/bazi_ziwei_hecan_kb.json',
   qimen_fengshui_jiehe: 'kb_data/qimen_fengshui_jiehe_kb.json',
-  liuyao_meihua_hucan: 'kb_data/liuyao_meihua_hucan_kb.json'
+  liuyao_meihua_hucan: 'kb_data/liuyao_meihua_hucan_kb.json',
+  xiaoliuren: 'kb_data/xiaoliuren_kb.json',
+  daliuren: 'kb_data/daliuren_kb.json',
+  chenggu: 'kb_data/chenggu_kb.json',
+  guandi_qian: 'kb_data/guandi_qian_kb.json'
 };
 
 // KB 分组：core 必加载，其余按页面/AI 调用按需加载
@@ -103,7 +107,12 @@ const KB_GROUPS = {
   // KB 数据只在 _bundleCache 里出现、从未进入 prompt。KB_TIERS.primary.shouxiang 早就声明了 ['shouxiang','guxiang'],
   // KB_TIERS.extended.shouxiang 声明了 ['shengxiang','qise','shouxiang_wenli'],这里把这些一起包进来
   shouxiang: ['shouxiang', 'guxiang', 'shengxiang', 'qise', 'shouxiang_wenli'],
-  daofobuddhism: ['daoism_fuzhou', 'daoism_zhoushu', 'daoism_shoujue', 'daoism_zhaijiao', 'buddhism_mantra', 'buddhism_divine', 'daoism_jiuhuo']
+  daofobuddhism: ['daoism_fuzhou', 'daoism_zhoushu', 'daoism_shoujue', 'daoism_zhaijiao', 'buddhism_mantra', 'buddhism_divine', 'daoism_jiuhuo'],
+  xiaoliuren: ['xiaoliuren', 'wannianli'],
+  meihua: ['meihua_ext', 'meihua_lei_xiang', 'wannianli'],
+  daliuren: ['daliuren', 'wannianli'],
+  chenggu: ['chenggu', 'wannianli'],
+  lingqian: ['buddhism_divine', 'guandi_qian']
 };
 
 // v1.3.0 KB 3 级权重（核心/主/扩）
@@ -119,6 +128,12 @@ const KB_TIERS = {
     shouxiang: ['shouxiang', 'guxiang'],
     xingshi: ['xingshi', 'xingshi_ext'],
     daofobuddhism: ['daoism_fuzhou', 'daoism_zhoushu', 'daoism_shoujue', 'buddhism_mantra', 'buddhism_divine'],
+    xiaoliuren: ['xiaoliuren'],
+  meihua: ['meihua'],
+    meihua: ['meihua_ext'],
+    daliuren: ['daliuren'],
+    chenggu: ['chenggu'],
+    lingqian: ['guandi_qian'],
     cross: ['bazi', 'ziwei', 'liuyao', 'qimen', 'nihai_xia']
   },
   extended: {
@@ -129,7 +144,12 @@ const KB_TIERS = {
     fengshui: ['fengshui_luopan', 'zeri_ext', 'zeri_jixiong', 'meihua_ext', 'meihua_lei_xiang', 'mianxiang_ext', 'mianxiang_qise', 'mianxiang_qise2', 'qimen_fengshui_jiehe'],
     shouxiang: ['shengxiang', 'qise', 'shouxiang_wenli'],
     xingshi: ['xingshi_cases'],
-    daofobuddhism: ['daoism_zhaijiao', 'daoism_jiuhuo']
+    daofobuddhism: ['daoism_zhaijiao', 'daoism_jiuhuo'],
+    xiaoliuren: ['wannianli'],
+    meihua: ['meihua_lei_xiang', 'wannianli'],
+    daliuren: ['wannianli'],
+    chenggu: ['wannianli'],
+    lingqian: ['buddhism_divine']
   }
 };
 
@@ -183,6 +203,9 @@ const KB_TRIGGER_RULES = {
   daofobuddhism: [
     { re: /科仪|斋醮|道场|法事|超度|开光|/, libs: ['daoism_zhaijiao'] },
     { re: /化解|噩梦|失眠|破财|太岁|压床|场景/, libs: ['daoism_jiuhuo'] }
+  ],
+  meihua: [
+    { re: /类象|万物|取象|方位|人物|物色/, libs: ['meihua_lei_xiang'] }
   ]
 };
 
@@ -191,7 +214,11 @@ const PAGE_KB_GROUPS = {
   bazi: ['bazi'],
   ziwei: ['ziwei'],
   liuyao: ['liuyao'],
+  xiaoliuren: ['xiaoliuren'],
   qimen: ['qimen'],
+  daliuren: ['daliuren'],
+  chenggu: ['chenggu'],
+  lingqian: ['lingqian'],
   shouxiang: ['shouxiang'],
   xingshi: ['xingshi'],
   fengshui: ['fengshui'],

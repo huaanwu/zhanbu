@@ -41,7 +41,9 @@ const Cache = {
   // ===== 生成缓存 Key =====
   makeKey(domain, params) {
     // params 是各模块的特征对象
-    const parts = [domain];
+    const parts = [domain];
+    // 区分本地/云端模型结果，避免切换模型后仍返回旧缓存
+    parts.push(localStorage.getItem('use_local_model') === '1' ? 'model:local' : 'model:cloud');
     switch (domain) {
       case 'bazi':
         parts.push(params.gz?.year, params.gz?.month, params.gz?.day, params.gz?.hour);
@@ -57,7 +59,31 @@ const Cache = {
         parts.push(params.gua?.name);
         parts.push((params.gua?.dongYaoList || []).join('-'));
         break;
+      case 'xiaoliuren':
+        parts.push(params.yueGong?.name, params.riGong?.name, params.shiGong?.name);
+        break;
+      case 'meihua':
+        parts.push(params.gua?.name);
+        parts.push(String(params.dong));
+        break;
+      case 'daliuren':
+        // daliuren-v1: 九宗门算法首版,隔离未来算法修订的旧缓存
+        parts.push('daliuren-v1');
+        parts.push([params.dayGZ, params.yueJiang?.zhi, params.hourZhi].join('_'));
+        parts.push((params.sanChuan || []).map(c => c.shen).join(''));
+        break;
+      case 'chenggu':
+        // chenggu-v1: 称骨首版,隔离未来算法/数据表修订的旧缓存
+        parts.push('chenggu-v1');
+        parts.push([params.lunar?.yearGZ, params.lunar?.month, params.lunar?.day, params.lunar?.hourZhi].join('_'));
+        break;
+      case 'lingqian':
+        // lingqian-v1: 灵签首版,隔离未来签文数据修订的旧缓存
+        parts.push('lingqian-v1', params.kind, String(params.num));
+        break;
       case 'qimen':
+        // chaibu-v1: 定局改为拆补法符头定元,隔离旧'天数/5'算法的错误局数缓存。
+        parts.push('chaibu-v1');
         parts.push(params.jushu_text);
         parts.push(params.bazi?.join('_'));
         break;

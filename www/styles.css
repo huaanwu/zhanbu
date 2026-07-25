@@ -1043,3 +1043,47 @@ body.night-mode::after {
   0%, 100% { box-shadow: var(--shadow-md); }
   50%      { box-shadow: var(--shadow-md), 0 0 20px rgba(139,90,43,0.2); }
 }
+
+/* ============================================================
+   分组页卡片(命理/占卦)
+   ============================================================ */
+.group-cards {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+.group-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 1rem 1.1rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+}
+.group-card:hover {
+  border-color: var(--accent-gold);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-gold);
+}
+.group-card:active { transform: scale(0.98); }
+.group-card .gc-icon { font-size: 1.8rem; line-height: 1; }
+.group-card .gc-name {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.group-card .gc-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+.group-card .gc-arrow {
+  margin-left: auto;
+  color: var(--accent-gold-dim);
+  font-size: 1.1rem;
+}

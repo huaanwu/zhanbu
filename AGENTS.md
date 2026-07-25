@@ -2,15 +2,17 @@
 
 This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
-# AI 占卜大师 v3.0.5
+# AI 占卜大师 v3.0.7
 
-Capacitor + Vite + 原生 JS 的多流派占卜 Android / PWA 应用。覆盖八字 / 六爻 / 奇门 / 紫微 / 面相 / 手相 / 风水 / 佛道等流派,65+ 知识库 JSON,DeepSeek/OpenAI/本地大模型 解读。
+Capacitor + Vite + 原生 JS 的多流派占卜 Android / PWA 应用。覆盖八字 / 六爻 / 小六壬 / 梅花 / 奇门 / 紫微 / 面相 / 手相 / 风水 / 佛道等流派,65+ 知识库 JSON,DeepSeek/OpenAI/本地大模型 解读。
 
 v3.0 主要升级:
 - v1.4: AES-GCM 加密、历史/反馈加密、SSE 流式、ChatSession 追问、本地大模型 CORS 修复
 - v2.0: 知识库 bundle、可选真 embedding、TypeScript 渐进迁移、app.js 从 index.html 拆出
 - v3.0: PWA + Service Worker 离线、GitHub Actions CI、app.js 按域代码分割、IndexedDB embedding 向量缓存
 - v3.0.5: Core 模块拆分(event-bus/toast/ai-service/stream/util/router/state)+ 统一 AI 入口 `Core.AI.interpret()`(缓存 + 流式 + 事件派发)
+- v3.0.6: 新增小六壬/梅花易数流派、底部导航分组(命理/占卦)、奇门定局改拆补法(符头定元)
+- v3.0.7: 新增大六壬(月将加时/四课/九宗门/十二天将)、称骨算命(袁天罡称骨四表查重)
 
 ## 常用命令
 
@@ -37,7 +39,7 @@ cd android && ./gradlew assembleDebug
 npm run sync                                           # build + cap sync 一条龙
 
 # 飞书推送 APK(DevOps)
-node scripts/send-feishu.js <file_path>                # 默认推到武华安群
+node scripts/send-feishu.js <file_path>                # 默认推到武华安群(需先 export FEISHU_APP_ID/FEISHU_APP_SECRET)
 ```
 
 **重要:** v1.4 起 `npm run build` 已自动跑 Vite + `scripts/build-web.mjs` 把 dist 合并回 www/,直接 `cap sync` 即可。**不要单独 `vite build`**(产物会落到没人用的 www/dist/)。
@@ -51,8 +53,10 @@ node scripts/send-feishu.js <file_path>                # 默认推到武华安�
 │ index.html (SPA,所有页面)                                   │
 │   ├─ Core 逻辑: www/app.js (页面切换/设置/历史/流式/AI调用) │
 │   ├─ 按域脚本: www/app/{bazi,ziwei,liuyao,qimen,shouxiang,  │
-│   │            xingshi,cross,fengshui,daofobuddhism}.js     │
+│   │            xingshi,cross,fengshui,daofobuddhism,        │
+│   │            xiaoliuren,meihua,daliuren,chenggu}.js                        │
 │   ├─ 算盘层: liuyao.js / qimen.js / expert.js / xingshi.js  │
+│   │            / xiaoliuren.js / meihua.js / daliuren.js / chenggu.js                 │
 │   ├─ RAG 层: rag.js + vector-cache.js (BM25 + 向量/embedding│
 │   │            缓存,KB bundle)                              │
 │   ├─ 解读 → cache.js (LRU 50/7天) → history.js (加密)      │
@@ -69,7 +73,7 @@ node scripts/send-feishu.js <file_path>                # 默认推到武华安�
 ```
 
 **核心分层:**
-- **算盘层** (`expert.js` + `liuyao.js` + `qimen.js` + `xingshi.js`/`visual.js`):100% 准确的命理事实。**原则:确定的事实由代码给出,AI 不允许"创作"推算结果。**
+- **算盘层** (`expert.js` + `liuyao.js` + `qimen.js` + `xingshi.js`/`visual.js` + `xiaoliuren.js` + `meihua.js` + `daliuren.js` + `chenggu.js`):100% 准确的命理事实。**原则:确定的事实由代码给出,AI 不允许"创作"推算结果。** `meihua.js` 复用 `liuyao.js` 的 `qiGuaByTime/qiGuaByNumber/getGuaImage`,只做体用/生克/互变分析。`daliuren.js` 完整实现月将加时/四课/九宗门取三传/十二天将,九宗门取不出三传时 throw 不回退。`chenggu.js` 为袁天罡称骨纯查表(60甲子年重/12月重/30日重/12时重求和→52档称骨歌),闰月按当月算(流派分歧见文件头注释)。
 - **RAG 层** (`rag.js` + `vector-cache.js`):BM25 + 中文一/二/三元组 + 标签加权;可选真 embedding API,文档/查询向量缓存在 IndexedDB。
 - **AI 层** (`expert.js` / `app.js`):提示词组装 → SSE 流式调用 DeepSeek/OpenAI/本地大模型;API Key 运行时 UI 输入,**禁止硬编码**。
 - **隐私层** (`crypto.js` + `chat.js`):敏感 birth/历史/反馈/对话 AES-GCM 加密,设备绑定 key。
@@ -85,6 +89,7 @@ node scripts/send-feishu.js <file_path>                # 默认推到武华安�
 | **catch 空块** | 空 `catch {}` 必须加 `console.warn('[模块] 错误:', e)`,便于线上排查 |
 | **缓存 Key** | `Cache.makeKey(domain, params)` 按模块分别构造,新增模块需扩展 `makeKey` switch |
 | **六爻算法** | 互卦=上下卦切片反转;改时核对 |
+| **奇门定局** | 拆补法:节气定局数表 + 日干支符头定元(子午卯酉→上元/寅申巳亥→中元/辰戌丑未→下元),**禁止回退"节气天数/5"估元**;置闰法未实现(另一流派) |
 | **版本号** | `window.APP_VERSION` 在 `www/app.js` 维护,升级触发本地缓存清空 |
 | **PWA 资源** | manifest / icons 放在 `www/public/`,由 `build-web.mjs` 复制到 `www/` 根目录 |
 | **域脚本** | 新增页面逻辑优先放到 `www/app/<domain>.js`,保持 `app.js` 为 Core |
@@ -98,7 +103,7 @@ node scripts/send-feishu.js <file_path>                # 默认推到武华安�
 - `qimen_*` (9 个):排盘/用神/格局/星门/占吉/风水结合
 - `ziwei_*` (8 个):基础/格局/宫位/四化/大限 v2/双星组合/辅星
 - `buddhism_*` / `daoism_*` (7 个):佛教占卜/真言/道教符咒/救火/受戒/斋醮/咒术
-- 杂项:`fengshui_*` (3) / `mianxiang_*` (3) / `shouxiang_*` (3) / `xingshi_*` (3) / `meihua_*` (2) / `nihai_xia_*` / `zeri_*` / `wannianli_*` / `qise_*` / `guxiang_*` / `shengxiang_*`
+- 杂项:`fengshui_*` (3) / `mianxiang_*` (3) / `shouxiang_*` (3) / `xingshi_*` (3) / `meihua_*` (2) / `xiaoliuren_*` (1) / `daliuren_*` (1) / `chenggu_*` (1) / `nihai_xia_*` / `zeri_*` / `wannianli_*` / `qise_*` / `guxiang_*` / `shengxiang_*`
 
 **注意 `*.bak-*` 备份文件**:`*.bak-20260525` / `*.bak-20260604` 是手动备份,删除前确认内容已合并;`.bak-20260604b` 表示同一天第二次备份。
 
@@ -109,7 +114,7 @@ node scripts/send-feishu.js <file_path>                # 默认推到武华安�
 | `www/test_expert.html` | 单模块专家系统测试 |
 | `www/test_expert3.html` | 完整流程(命盘+RAG+AI) |
 | `www/test_comprehensive.html` | 综合压测页面 |
-| `www/test_liuyao.js` / `test_qimen.js` / `test_xingshi.js` | 命令行 Node 测试(直接 `node www/test_xxx.js`) |
+| `www/test_liuyao.js` / `test_qimen.js` / `test_xingshi.js` / `test_xiaoliuren.js` / `test_meihua.js` / `test_daliuren.js` / `test_chenggu.js` | 命令行 Node 测试(直接 `node www/test_xxx.js`) |
 | `www/test_suite.js` | 整套测试入口 |
 
 **测试单文件:** `node www/test_liuyao.js` (需 Node 环境,无打包器)
@@ -122,7 +127,7 @@ node scripts/send-feishu.js <file_path>                # 默认推到武华安�
 - **`www/dist/`** / **`www/assets/`** 是 Vite 构建产物,gitignore 已忽略
 - **PWA 资源**: `www/public/manifest.webmanifest` + `www/public/icons/` 是源文件;构建后出现在 `www/` 根目录
 - **Service Worker**: `www/sw.js` 缓存静态资源/KB bundle/API 请求跳过;修改 SW 后浏览器会自动检测并更新
-- **`scripts/send-feishu.js`** 含飞书 APP_SECRET,提交前**确认**是否需要轮换
+- **`scripts/send-feishu.js`** 飞书凭证**不硬编码**,从环境变量 `FEISHU_APP_ID` / `FEISHU_APP_SECRET` 读取(可写在 `~/.bashrc` 或 `.env.local` 后 source);缺变量时脚本会报错退出
 - **`window.APP_VERSION`** 在 `www/app.js` 声明(用于 cache 失效判断)
 - **升级 lunar-javascript / iztro**:改 `www/lib/package.json` → `cd www/lib && npm install` → `./build_libs.sh` → 重新 `npm run build`
 - **Capacitor 配置**: `capacitor.config.json` 在根目录,`appId=com.divination.master`,`androidScheme=http`(本地大模型 HTTP 访问必需)

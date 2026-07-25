@@ -148,6 +148,8 @@
     const sp = switchPage();
     if (!sp) return;
     const navMap = {
+      'navMingli': () => sp('mingli'),
+      'navZhangua': () => sp('zhangua'),
       'navBazi': () => sp('bazi'),
       'navZiwei': () => sp('ziwei'),
       'navLiuyao': () => sp('liuyao'),

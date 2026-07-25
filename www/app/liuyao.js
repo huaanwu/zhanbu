@@ -68,6 +68,8 @@ async function doLiuyao() {
       });
     } else if (method === 'coin') {
       pan = window.liuyao.panGua('coin', { dt: new Date() });
+    } else if (method === 'yarrow') {
+      pan = window.liuyao.panGua('yarrow', { dt: new Date() });
     } else {
       pan = window.liuyao.panGua('random', {});
     }
@@ -119,6 +121,24 @@ function renderLiuyao(pan) {
       html += `<div style="background:var(--bg-card);padding:0.3rem;border-radius:4px;color:${clr};font-size:0.7rem;">`;
       html += `<div style="font-size:0.65rem;color:var(--text-muted);">${labels[i]}</div>`;
       html += `<div style="font-weight:600;">${r.label}</div>`;
+      html += `<div style="font-size:0.6rem;color:var(--text-muted);">${r.desc}</div>`;
+      html += `</div>`;
+    }
+    html += '</div></div>';
+  }
+
+  // 大衍筮法：显示每爻三变结果
+  if (pan.stalkResults && pan.stalkResults.length === 6) {
+    const ylabels = ['初爻','二爻','三爻','四爻','五爻','上爻'];
+    html += '<div style="background:var(--bg-inner);padding:0.6rem;border-radius:6px;margin:0.5rem 0;font-size:0.8rem;">';
+    html += '<div style="color:var(--accent-gold);margin-bottom:0.3rem;">🌿 大衍筮法·十八变记录（四十九策，三变成爻）</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:0.3rem;text-align:center;">';
+    for (let i = 0; i < 6; i++) {
+      const r = pan.stalkResults[i];
+      const clr = r.isDong ? 'var(--accent-red)' : 'var(--text-primary)';
+      html += `<div style="background:var(--bg-card);padding:0.3rem;border-radius:4px;color:${clr};font-size:0.7rem;">`;
+      html += `<div style="font-size:0.65rem;color:var(--text-muted);">${ylabels[i]}</div>`;
+      html += `<div style="font-weight:600;">${r.label} ${r.value}</div>`;
       html += `<div style="font-size:0.6rem;color:var(--text-muted);">${r.desc}</div>`;
       html += `</div>`;
     }

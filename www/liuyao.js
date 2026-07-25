@@ -232,6 +232,63 @@ function qiGuaByCoin() {
   };
 }
 
+// === 大衍筮法(揲蓍): 《系辞传》"大衍之数五十,其用四十有九" ===
+// 一变: 49策分二、挂一、揲四、归奇,归奇非 5 即 9;二/三变归奇非 4 即 8。
+// 三变余策 24/28/32/36,除四得 6/7/8/9 = 老阴/少阳/少阴/老阳。六爻共十八变。
+function yarrowOneChange(stalks) {
+  // 分二: 随机分为左右两堆(至少各 1)
+  var left = 1 + Math.floor(Math.random() * (stalks - 1));
+  var right = stalks - left;
+  // 挂一: 从右堆取一
+  right -= 1;
+  // 揲四归奇: 整除归 4
+  var lRem = left % 4 || 4;
+  var rRem = right % 4 || 4;
+  var guiki = 1 + lRem + rRem;
+  return { remain: stalks - guiki, guiki: guiki };
+}
+
+function qiGuaByYarrow() {
+  var YAO_VALUE = {
+    6: { yao: 0, isDong: true,  label: '老阴', desc: '交(阴动)' },
+    7: { yao: 1, isDong: false, label: '少阳', desc: '单' },
+    8: { yao: 0, isDong: false, label: '少阴', desc: '拆' },
+    9: { yao: 1, isDong: true,  label: '老阳', desc: '重(阳动)' }
+  };
+  var linesFromBottom = [];
+  var dongYaoList = [];
+  var stalkResults = [];
+  for (var y = 0; y < 6; y++) {
+    var stalks = 49;
+    var changes = [];
+    for (var c = 0; c < 3; c++) {
+      var r = yarrowOneChange(stalks);
+      changes.push(r.guiki);
+      stalks = r.remain;
+    }
+    var value = stalks / 4;
+    var info = YAO_VALUE[value];
+    linesFromBottom.push(info.yao);
+    if (info.isDong) dongYaoList.push(y + 1);
+    stalkResults.push({
+      value: value,
+      changes: changes,
+      yao: info.yao,
+      isDong: info.isDong,
+      label: info.label,
+      desc: '归奇' + changes.join('/') + '→余策' + stalks
+    });
+  }
+  return {
+    method: '大衍筮法',
+    upper: getGuaNumFromBottomLines(linesFromBottom.slice(3, 6)),
+    lower: getGuaNumFromBottomLines(linesFromBottom.slice(0, 3)),
+    dongYaoList: dongYaoList,
+    stalkResults: stalkResults,
+    lines: linesFromBottom
+  };
+}
+
 function normalizeDongYaoList(dongYaoList) {
   if (!Array.isArray(dongYaoList)) return [];
   var seen = {};
@@ -381,6 +438,8 @@ function panGua(method, params) {
     qigua.dongYaoList = [qigua.dong];
   } else if (method === 'coin') {
     qigua = qiGuaByCoin();
+  } else if (method === 'yarrow') {
+    qigua = qiGuaByYarrow();
   } else if (method === 'random') {
     qigua = qiGuaByRandom();
     qigua.dongYaoList = [qigua.dong];
@@ -453,7 +512,8 @@ function panGua(method, params) {
     bianYaoList: bianYaoList,
     fuShenList: fuShenList,
     huGua: guaInfo.huGuaName,
-    coinResults: qigua.coinResults || null
+    coinResults: qigua.coinResults || null,
+    stalkResults: qigua.stalkResults || null
   };
 }
 
@@ -506,6 +566,7 @@ window.liuyao = {
   qiGuaByNumber: qiGuaByNumber,
   qiGuaByRandom: qiGuaByRandom,
   qiGuaByCoin: qiGuaByCoin,
+  qiGuaByYarrow: qiGuaByYarrow,
   tossCoin: tossCoin,
   getGuaImage: getGuaImage,
   getGuaMeta: getGuaMeta

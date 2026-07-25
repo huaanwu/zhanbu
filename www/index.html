@@ -10,7 +10,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 
-  <script type="module" crossorigin src="/assets/index-C8kFlKtn.js"></script>
+  <script type="module" crossorigin src="/assets/index-KIFe7S7o.js"></script>
   <link rel="stylesheet" crossorigin href="/styles.css">
 </head>
 <body>
@@ -139,6 +139,66 @@
         </div>
         <div id="historyList" style="max-height:60vh;overflow-y:auto;"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- ============ 命理分组页(八字/紫微/奇门) ============ -->
+  <div class="page" id="pageMingli">
+    <div class="header"><h1 data-seal="命">命理</h1><div class="subtitle">命由天定 · 运在人为</div></div>
+    <div class="group-cards">
+      <div class="group-card" onclick="switchPage('bazi')">
+        <span class="gc-icon">📅</span>
+        <span><div class="gc-name">八字</div><div class="gc-desc">四柱推命 · 格局喜忌 · 大运流年</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+      <div class="group-card" onclick="switchPage('ziwei')">
+        <span class="gc-icon">⭐</span>
+        <span><div class="gc-name">紫微斗数</div><div class="gc-desc">命盘十二宫 · 星曜四化</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+      <div class="group-card" onclick="switchPage('qimen')">
+        <span class="gc-icon">🔮</span>
+        <span><div class="gc-name">奇门遁甲</div><div class="gc-desc">遁甲运筹 · 趋吉避凶</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+      <div class="group-card" onclick="switchPage('chenggu')">
+        <span class="gc-icon">⚖️</span>
+        <span><div class="gc-name">称骨</div><div class="gc-desc">骨重论命 · 一生荣枯</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 占卦分组页(六爻/小六壬/梅花) ============ -->
+  <div class="page" id="pageZhangua">
+    <div class="header"><h1 data-seal="占">占卦</h1><div class="subtitle">一事一占 · 心诚则灵</div></div>
+    <div class="group-cards">
+      <div class="group-card" onclick="switchPage('liuyao')">
+        <span class="gc-icon">🪙</span>
+        <span><div class="gc-name">六爻</div><div class="gc-desc">纳甲装卦 · 六亲六神 · 寻物占</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+      <div class="group-card" onclick="switchPage('xiaoliuren')">
+        <span class="gc-icon">🤏</span>
+        <span><div class="gc-name">小六壬</div><div class="gc-desc">掐指一算 · 快占吉凶</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+      <div class="group-card" onclick="switchPage('meihua')">
+        <span class="gc-icon">🌸</span>
+        <span><div class="gc-name">梅花易数</div><div class="gc-desc">触机起卦 · 体用生克</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+      <div class="group-card" onclick="switchPage('daliuren')">
+        <span class="gc-icon">🐉</span>
+        <span><div class="gc-name">大六壬</div><div class="gc-desc">三式之首 · 四课三传</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+      <div class="group-card" onclick="switchPage('lingqian')">
+        <span class="gc-icon">🔖</span>
+        <span><div class="gc-name">灵签</div><div class="gc-desc">观音百签 · 关帝百签</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+
     </div>
   </div>
 
@@ -308,6 +368,172 @@
         <button onclick="saveResult('lyAIContent','六爻解读')">💾 保存为txt</button>
       </div>
       <button class="divine-btn" style="margin-top:0.8rem;" id="lyAIBtn" onclick="doAILiuyao()">AI 解读</button>
+    </div>
+  </div>
+
+  <!-- ============ 小六壬页 ============ -->
+  <div class="page" id="pageXiaoliuren">
+    <div class="header"><h1 data-seal="壬">小六壬</h1><div class="subtitle">掐指一算 · 快占吉凶</div></div>
+    <div class="input-section">
+      <div class="input-row">
+        <div class="input-group"><label>起课方式</label>
+          <div class="btn-row-grid" style="--btn-count:3;">
+            <button class="toggle-btn active" data-xlr-method="time" onclick="selXlrMethod(this)">时间</button>
+            <button class="toggle-btn" data-xlr-method="lunar" onclick="selXlrMethod(this)">农历</button>
+            <button class="toggle-btn" data-xlr-method="number" onclick="selXlrMethod(this)">报数</button>
+          </div>
+        </div>
+      </div>
+      <div class="input-row" id="xlrLunarRow" style="display:none;">
+        <div class="input-group"><label>农历月</label><input type="number" id="xlrMonth" value="1" min="1" max="12"></div>
+        <div class="input-group"><label>农历日</label><input type="number" id="xlrDay" value="1" min="1" max="30"></div>
+        <div class="input-group"><label>时辰</label>
+          <select id="xlrHour">
+            <option value="1">子(23-1)</option><option value="2">丑(1-3)</option>
+            <option value="3">寅(3-5)</option><option value="4">卯(5-7)</option>
+            <option value="5">辰(7-9)</option><option value="6">巳(9-11)</option>
+            <option value="7">午(11-13)</option><option value="8">未(13-15)</option>
+            <option value="9">申(15-17)</option><option value="10">酉(17-19)</option>
+            <option value="11">戌(19-21)</option><option value="12">亥(21-23)</option>
+          </select>
+        </div>
+      </div>
+      <div class="input-row" id="xlrNumberRow" style="display:none;">
+        <div class="input-group"><label>第一个数</label><input type="number" id="xlrNum1" value="1" min="1"></div>
+        <div class="input-group"><label>第二个数</label><input type="number" id="xlrNum2" value="2" min="1"></div>
+        <div class="input-group"><label>第三个数</label><input type="number" id="xlrNum3" value="3" min="1"></div>
+      </div>
+      <div class="input-row">
+        <div class="input-group" style="grid-column:span 2;"><label>所问之事(可选)</label><input type="text" id="xlrQuestion" placeholder="例如:现在出发顺利吗?"></div>
+      </div>
+      <button class="divine-btn" id="xlrBtn" onclick="doXiaoliuren()">掐指起课</button>
+    </div>
+    <div class="result-section" id="xlrResult"></div>
+    <div class="ai-section" id="xlrAI" style="display:none">
+      <div class="result-title">AI 小六壬解读</div>
+      <div class="ai-content" id="xlrAIContent"></div>
+      <div class="ai-actions" id="xlrAIActions">
+        <button onclick="copyResult('xlrAIContent')">📋 复制文本</button>
+        <button onclick="saveResult('xlrAIContent','小六壬解读')">💾 保存为txt</button>
+      </div>
+      <button class="divine-btn" style="margin-top:0.8rem;" id="xlrAIBtn" onclick="doAIXiaoliuren()">AI 解读</button>
+    </div>
+  </div>
+
+  <!-- ============ 梅花易数页 ============ -->
+  <div class="page" id="pageMeihua">
+    <div class="header"><h1 data-seal="梅">梅花易数</h1><div class="subtitle">触机起卦 · 体用生克</div></div>
+    <div class="input-section">
+      <div class="input-row">
+        <div class="input-group"><label>起卦方式</label>
+          <div class="btn-row-grid" style="--btn-count:2;">
+            <button class="toggle-btn active" data-mh-method="time" onclick="selMhMethod(this)">时间</button>
+            <button class="toggle-btn" data-mh-method="number" onclick="selMhMethod(this)">数字</button>
+          </div>
+        </div>
+      </div>
+      <div class="input-row" id="mhNumberRow" style="display:none;">
+        <div class="input-group"><label>上卦数</label><input type="number" id="mhNum1" value="1" min="1"></div>
+        <div class="input-group"><label>下卦数</label><input type="number" id="mhNum2" value="2" min="1"></div>
+        <div class="input-group"><label>动爻数(可选)</label><input type="number" id="mhNum3" placeholder="空则取两数和"></div>
+      </div>
+      <div class="input-row">
+        <div class="input-group" style="grid-column:span 2;"><label>所问之事(可选)</label><input type="text" id="mhQuestion" placeholder="例如:这笔生意能成吗?"></div>
+      </div>
+      <button class="divine-btn" id="mhBtn" onclick="doMeihua()">起卦</button>
+    </div>
+    <div class="result-section" id="mhResult"></div>
+    <div class="ai-section" id="mhAI" style="display:none">
+      <div class="result-title">AI 梅花解读</div>
+      <div class="ai-content" id="mhAIContent"></div>
+      <div class="ai-actions" id="mhAIActions">
+        <button onclick="copyResult('mhAIContent')">📋 复制文本</button>
+        <button onclick="saveResult('mhAIContent','梅花易数解读')">💾 保存为txt</button>
+      </div>
+      <button class="divine-btn" style="margin-top:0.8rem;" id="mhAIBtn" onclick="doAIMeihua()">AI 解读</button>
+    </div>
+  </div>
+
+  <!-- ============ 大六壬页 ============ -->
+  <div class="page" id="pageDaliuren">
+    <div class="header"><h1 data-seal="壬">大六壬</h1><div class="subtitle">月将加时 · 四课三传</div></div>
+    <div class="input-section">
+      <div class="input-row">
+        <div class="input-group"><label>年</label><input type="number" id="dlrYear" value="2026"></div>
+        <div class="input-group"><label>月</label><input type="number" id="dlrMonth" value="7"></div>
+        <div class="input-group"><label>日</label><input type="number" id="dlrDay" value="25"></div>
+        <div class="input-group"><label>时</label><input type="number" id="dlrHour" value="14"></div>
+      </div>
+      <div class="input-row">
+        <div class="input-group" style="grid-column:span 2;"><label>所问之事(可选)</label><input type="text" id="dlrQuestion" placeholder="例如:这次合作能成吗?"></div>
+      </div>
+      <button class="divine-btn" id="dlrBtn" onclick="doDaliuren()">起课</button>
+    </div>
+    <div class="result-section" id="dlrResult"></div>
+    <div class="ai-section" id="dlrAI" style="display:none">
+      <div class="result-title">AI 大六壬解读</div>
+      <div class="ai-content" id="dlrAIContent"></div>
+      <div class="ai-actions" id="dlrAIActions">
+        <button onclick="copyResult('dlrAIContent')">📋 复制文本</button>
+        <button onclick="saveResult('dlrAIContent','大六壬解读')">💾 保存为txt</button>
+      </div>
+      <button class="divine-btn" style="margin-top:0.8rem;" id="dlrAIBtn" onclick="doAIDaliuren()">AI 解读</button>
+    </div>
+  </div>
+
+  <!-- ============ 称骨算命页 ============ -->
+  <div class="page" id="pageChenggu">
+    <div class="header"><h1 data-seal="骨">称骨算命</h1><div class="subtitle">袁天罡称骨 · 骨重知命</div></div>
+    <div class="input-section">
+      <div class="input-row">
+        <div class="input-group"><label>年(公历)</label><input type="number" id="cgYear" value="1990"></div>
+        <div class="input-group"><label>月</label><input type="number" id="cgMonth" value="3"></div>
+        <div class="input-group"><label>日</label><input type="number" id="cgDay" value="15"></div>
+        <div class="input-group"><label>时</label><input type="number" id="cgHour" value="10" min="0" max="23"></div>
+      </div>
+      <div class="input-row">
+        <div class="input-group" style="grid-column:span 2;"><label>所问之事(可选)</label><input type="text" id="cgQuestion" placeholder="例如:我一生事业运如何?"></div>
+      </div>
+      <button class="divine-btn" id="cgBtn" onclick="doChenggu()">开始称骨</button>
+    </div>
+    <div class="result-section" id="cgResult"></div>
+    <div class="ai-section" id="cgAI" style="display:none">
+      <div class="result-title">AI 称骨解读</div>
+      <div class="ai-content" id="cgAIContent"></div>
+      <div class="ai-actions" id="cgAIActions">
+        <button onclick="copyResult('cgAIContent')">📋 复制文本</button>
+        <button onclick="saveResult('cgAIContent','称骨算命解读')">💾 保存为txt</button>
+      </div>
+      <button class="divine-btn" style="margin-top:0.8rem;" id="cgAIBtn" onclick="doAIChenggu()">AI 解读</button>
+    </div>
+  </div>
+
+  <!-- ============ 灵签页 ============ -->
+  <div class="page" id="pageLingqian">
+    <div class="header"><h1 data-seal="签">灵签</h1><div class="subtitle">心诚则灵 · 有求必应</div></div>
+    <div class="input-section">
+      <div class="input-row">
+        <div class="input-group"><label>签种</label>
+          <div class="btn-row-grid" style="--btn-count:2;">
+            <button class="toggle-btn active" data-lq-kind="guanyin" onclick="selLqKind(this)">观音灵签</button>
+            <button class="toggle-btn" data-lq-kind="guandi" onclick="selLqKind(this)">关帝灵签</button>
+          </div>
+        </div>
+      </div>
+      <div class="input-row">
+        <div class="input-group" style="grid-column:span 2;"><label>所问之事(可选)</label><input type="text" id="lqQuestion" placeholder="例如:这次换工作顺利吗?"></div>
+      </div>
+      <button class="divine-btn" id="lqBtn" onclick="doLingqian()">虔诚抽签</button>
+    </div>
+    <div class="result-section" id="lqResult"></div>
+    <div class="ai-section" id="lqAI" style="display:none">
+      <div class="result-title">AI 解签</div>
+      <div class="ai-content" id="lqAIContent"></div>
+      <div class="ai-actions" id="lqAIActions">
+        <button onclick="copyResult('lqAIContent')">📋 复制文本</button>
+        <button onclick="saveResult('lqAIContent','灵签解签')">💾 保存为txt</button>
+      </div>
+      <button class="divine-btn" style="margin-top:0.8rem;" id="lqAIBtn" onclick="doAILingqian()">AI 解签</button>
     </div>
   </div>
 
@@ -722,10 +948,8 @@
 
   <!-- 底部导航 -->
   <nav class="bottom-nav">
-    <button onclick="switchPage('bazi')" id="navBazi"><span class="icon">📅</span>八字</button>
-    <button onclick="switchPage('ziwei')" id="navZiwei"><span class="icon">⭐</span>紫微</button>
-    <button onclick="switchPage('liuyao')" id="navLiuyao"><span class="icon">☯</span>六爻</button>
-    <button onclick="switchPage('qimen')" id="navQimen"><span class="icon">🔮</span>奇门</button>
+    <button onclick="switchPage('mingli')" id="navMingli"><span class="icon">📜</span>命理</button>
+    <button onclick="switchPage('zhangua')" id="navZhangua"><span class="icon">☯</span>占卦</button>
     <button onclick="switchPage('shouxiang')" id="navShouxiang"><span class="icon">✋</span>手相</button>
     <button onclick="switchPage('xingshi')" id="navXingshi"><span class="icon">👤</span>姓名</button>
     <button onclick="switchPage('cross')" id="navCross"><span class="icon">🔀</span>三术</button>
@@ -779,6 +1003,11 @@
 
 <!-- 六爻、奇门、姓名学算法 -->
 <script src="liuyao.js?v=310"></script>
+<script src="xiaoliuren.js?v=310"></script>
+<script src="meihua.js?v=310"></script>
+<script src="daliuren.js?v=310"></script>
+<script src="chenggu.js?v=310"></script>
+<script src="lingqian.js?v=310"></script>
 <script src="qimen.js?v=310"></script>
 <script src="xingshi.js?v=310"></script>
 <script src="history.js?v=310"></script>
@@ -810,6 +1039,11 @@
 <script src="app/bazi.js?v=310"></script>
 <script src="app/ziwei.js?v=310"></script>
 <script src="app/liuyao.js?v=310"></script>
+<script src="app/xiaoliuren.js?v=310"></script>
+<script src="app/meihua.js?v=310"></script>
+<script src="app/daliuren.js?v=310"></script>
+<script src="app/chenggu.js?v=310"></script>
+<script src="app/lingqian.js?v=310"></script>
 <script src="app/qimen.js?v=310"></script>
 <script src="app/shouxiang.js?v=310"></script>
 <script src="app/shouxiang-mp.js?v=311"></script>

@@ -9,11 +9,21 @@
     bazi: { cal: 'solar', leap: false, gender: 'male' },
     zw:   { cal: 'solar', leap: false, gender: 'male' },
     liuyao: { method: 'time', mode: 'normal' },
+    xiaoliuren: { method: 'time' },
+    meihua: { method: 'time' },
+    daliuren: {},
+    chenggu: {},
+    lingqian: { kind: 'guanyin' },
   };
 
   window.currentBazi = null; window.currentBaziPrompt = '';
   window.currentZw = null; window.currentZwPrompt = '';
   window.currentLy = null; window.currentLyPrompt = '';
+  window.currentXlr = null; window.currentXlrPrompt = '';
+  window.currentMh = null; window.currentMhPrompt = '';
+  window.currentDlr = null; window.currentDlrPrompt = '';
+  window.currentCg = null; window.currentCgPrompt = '';
+  window.currentLq = null; window.currentLqPrompt = '';
   window.currentQm = null; window.currentQmPrompt = '';
   window.currentXs = null; window.currentXsPrompt = '';
   window.currentCross = null; window.currentCrossPrompt = '';

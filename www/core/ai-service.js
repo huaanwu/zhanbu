@@ -70,10 +70,10 @@
               rawFull += text;
               chunkCount++;
               const newFiltered = stripThinking(rawFull);
+              const oldFiltered = filteredFull;
               filteredFull = newFiltered;
-              if (newFiltered.length > filteredFull.length || showRaw) {
-                const passThrough = newFiltered.slice(filteredFull.length);
-                filteredFull = newFiltered;
+              if (newFiltered.length > oldFiltered.length || showRaw) {
+                const passThrough = newFiltered.slice(oldFiltered.length);
                 onChunk(passThrough, filteredFull);
               }
             }
@@ -105,6 +105,11 @@
   // DeepSeek V4 官方 API 仅支持 deepseek-v4-pro / deepseek-v4-flash(无 deepseek-v4)
   const MODEL_ROUTER = {
     liuyao:   'deepseek-v4-pro',     // 六爻逻辑推理强,优先 Pro(强推理)
+    xiaoliuren: 'deepseek-v4-flash', // 小六壬快占,解读简短,Flash 足够
+    meihua:   'deepseek-v4-flash', // 梅花体用类象,中等篇幅,Flash 足够
+    daliuren: 'deepseek-v4-pro',     // 大六壬九宗门推理复杂,Pro 更稳
+    chenggu:  'deepseek-v4-flash', // 称骨断语查表已定,展开解读篇幅中等,Flash 足够
+    lingqian: 'deepseek-v4-flash', // 灵签签文既定,解签篇幅中等,Flash 足够
     bazi:     'deepseek-v4-flash',   // 八字 V4 旗舰日常够用,Flash 更快更便宜
     ziwei:    'deepseek-v4-flash',
     qimen:    'deepseek-v4-pro',     // 奇门星门组合复杂,Pro 推理更强
@@ -481,6 +486,11 @@
       bazi:   { expert: 'bazi',   label: '八字',     source: '八字',     signalFn: function(p) { return p.gz?.day; } },
       ziwei:  { expert: 'ziwei',  label: '紫微',     source: '紫微',     signalFn: function(p) { return p.mingGong?.ganzhi; }, ragBudget: 1200 },
       liuyao: { expert: 'liuyao', label: '六爻',     source: '六爻',     signalFn: function(p) { return p.gua?.name; } },
+      xiaoliuren: { label: '小六壬', signalFn: function(p) { return p.final?.name; }, isCustom: true, kbFlags: { daoism: false, chainOfThought: false } },
+      meihua: { label: '梅花易数', signalFn: function(p) { return p.gua?.name; }, isCustom: true, kbFlags: { daoism: false } },
+      daliuren: { label: '大六壬', signalFn: function(p) { return p.sanChuan?.[0]?.shen; }, isCustom: true, kbFlags: { daoism: false } },
+      chenggu: { label: '称骨算命', signalFn: function(p) { return p.totalText; }, isCustom: true, kbFlags: { daoism: false } },
+      lingqian: { label: '灵签', signalFn: function(p) { return p && p.title; }, isCustom: true, kbFlags: { daoism: false } },
       qimen:  { expert: 'qimen',  label: '奇门',     source: '奇门',     signalFn: function(p) { return p.jushu_text; }, ragBudget: 1200 },
       cross:  { label: '三术同参', source: '三术同参', signalFn: function(p) { return p.bazi?.gz?.day; }, isCross: true, kbFlags: { primary: false, extended: false, daoism: true } },
       fengshui:  { label: '风水',     isCustom: true, kbFlags: { daoism: false, chainOfThought: false }, ragBudget: 1200 },

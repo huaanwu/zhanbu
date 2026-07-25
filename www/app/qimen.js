@@ -37,6 +37,7 @@ function renderQimen(pan) {
   html += `<div class="gua-info">`;
   html += `<span>节气：<strong>${pan.jieqi}</strong></span>`;
   html += `<span>局数：<strong>${pan.jushu_text}</strong></span>`;
+  if (pan.yuan) html += `<span>定局：<strong>${pan.dingju || '拆补法'} · ${pan.yuan}（符头${pan.futou}）</strong></span>`;
   html += `<span>旬首：<strong>${pan.xunshou}</strong></span>`;
   html += `</div>`;
 

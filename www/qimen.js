@@ -1,4 +1,5 @@
-// ========== 奇门遁甲排盘系统 v1.1 ==========
+// ========== 奇门遁甲排盘系统 v1.2 ==========
+// v1.2: 定局由"节气天数/5估元"改为拆补法(日干支符头定上中下元)
 // 基础干支函数(GAN/ZHI/getYearGZ/getMonthGZ/getDayGZ/getHourGZ)由 lib/ganzhi.js 提供(单一来源)
 // 本文件仅保留奇门特有: 节气/局数/九宫/天盘/地盘/人盘/神盘 + panQimen/formatQimenPrompt
 // ==============================================
@@ -125,6 +126,24 @@ function getJieQiInfo(year, month, day, hour, minute) {
   const name = JIE_QI_NAMES[jqIndex];
   const days = daysFromWs - jqIndex * 15.218425;
   return { name, days };
+}
+
+// === 拆补法定元: 以日干支符头定上中下元 ===
+// 符头 = 甲/己日(一元的起点); 符头地支 子午卯酉→上元, 寅申巳亥→中元, 辰戌丑未→下元。
+// 旧版按"节气已过天数/5"估元, 符头与节气错位时会定错元(如2026-07-15庚寅日,
+// 旧法判中元2局, 实际符头己丑为下元5局), 故改为严格的符头拆补。
+const FUTOU_SHANG = ['子', '午', '卯', '酉'];
+const FUTOU_ZHONG = ['寅', '申', '巳', '亥'];
+function getYuanByDayGz(dayGZ) {
+  const ganIdx = GAN.indexOf(dayGZ[0]);
+  const zhiIdx = ZHI.indexOf(dayGZ[1]);
+  if (ganIdx < 0 || zhiIdx < 0) throw new Error('日干支无效: ' + dayGZ);
+  const daysBack = ganIdx % 5; // 甲=0/己=5, %5 得距本元符头的天数
+  const futouZhi = ZHI[(zhiIdx - daysBack + 12) % 12];
+  const futou = (ganIdx >= 5 ? '己' : '甲') + futouZhi;
+  if (FUTOU_SHANG.includes(futouZhi)) return { yuan: 0, yuanName: '上元', futou };
+  if (FUTOU_ZHONG.includes(futouZhi)) return { yuan: 1, yuanName: '中元', futou };
+  return { yuan: 2, yuanName: '下元', futou };
 }
 
 // === 奇门排盘 ===
@@ -346,16 +365,14 @@ class PaiPan {
 }
 
 // === 主函数 ===
-function getJushu(jieqiName, daysInJq) {
-  let yuanIdx;
-  if (daysInJq < 5) yuanIdx = 0;
-  else if (daysInJq < 10) yuanIdx = 1;
-  else yuanIdx = 2;
+// 拆补法定局: 节气定局数表(阴阳遁), 日干支符头定元
+function getJushu(jieqiName, dayGZ) {
+  const { yuan } = getYuanByDayGz(dayGZ);
 
   if (YANG_DUN_JUSHU[jieqiName]) {
-    return { isYang: true, jushu: YANG_DUN_JUSHU[jieqiName][yuanIdx] };
+    return { isYang: true, jushu: YANG_DUN_JUSHU[jieqiName][yuan] };
   } else if (YIN_DUN_JUSHU[jieqiName]) {
-    return { isYang: false, jushu: YIN_DUN_JUSHU[jieqiName][yuanIdx] };
+    return { isYang: false, jushu: YIN_DUN_JUSHU[jieqiName][yuan] };
   }
   return { isYang: true, jushu: 1 };
 }
@@ -363,7 +380,6 @@ function getJushu(jieqiName, daysInJq) {
 function panQimen(year, month, day, hour, minute) {
   minute = minute || 0;
   const jq = getJieQiInfo(year, month, day, hour, minute);
-  const { isYang, jushu } = getJushu(jq.name, jq.days);
 
   const dt = new Date(year, month - 1, day, hour, minute);
   const yearGZ = getYearGZ(year);
@@ -371,6 +387,9 @@ function panQimen(year, month, day, hour, minute) {
   const dayGZ = getDayGZ(dt);
   const hourGZ = getHourGZ(dayGZ[0], hour);
   const bazi = [yearGZ, monthGZ, dayGZ, hourGZ];
+
+  const { isYang, jushu } = getJushu(jq.name, dayGZ);
+  const yuanInfo = getYuanByDayGz(dayGZ);
 
   const pp = new PaiPan(bazi, isYang, jushu);
 
@@ -413,6 +432,9 @@ function panQimen(year, month, day, hour, minute) {
     yang_dun: isYang,
     jushu: jushu,
     jushu_text: (isYang ? '阳' : '阴') + '遁' + jushu + '局',
+    yuan: yuanInfo.yuanName,          // 上元/中元/下元(拆补法,符头定元)
+    futou: yuanInfo.futou,            // 本元符头(甲/己日干支)
+    dingju: '拆补法',
     bazi: bazi,
     gong9: gong9,
     xunshou: pp.shichenXunshou(),
@@ -427,6 +449,7 @@ function formatQimenPrompt(pan, question) {
   let s = '=== 奇门遁甲排盘 ===\n';
   s += `时间：${pan.input_time}\n`;
   s += `节气：${pan.jieqi}（已过${pan.days_in_jq}天）\n`;
+  s += `定局：拆补法,符头${pan.futou}为${pan.yuan}\n`;
   s += `局数：${pan.jushu_text}\n`;
   s += `四柱：${pan.bazi.join(' ')}\n`;
   s += `旬首：${pan.xunshou}\n\n九宫格：\n`;
@@ -448,4 +471,4 @@ function formatQimenPrompt(pan, question) {
   return s;
 }
 
-window.qimen = { panQimen, formatQimenPrompt };
+window.qimen = { panQimen, formatQimenPrompt, getYuanByDayGz };

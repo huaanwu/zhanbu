@@ -1,4 +1,4 @@
-﻿/**
+/**
  * AI 占卜大师 - 主应用逻辑 (v2.0)
  * v2.0.1: 从 index.html 拆出 4770 行 inline JS
  * v3.0.5: 拆分到 www/core/ 7 个模块 + 按域 app/*.js
@@ -57,8 +57,8 @@ window.kbDaoismBuddhismOnDemand = Core.KB.kbDaoismBuddhismOnDemand;
   }
 })();
 
-var APP_VERSION = 'v3.0.5';
-var APP_BUILD_DATE = '2026-07-07';
+var APP_VERSION = 'v3.0.7';
+var APP_BUILD_DATE = '2026-07-25';
 
 // ========== 版本升级清理旧配置 ==========
 (function() {
@@ -154,6 +154,6 @@ if (document.readyState === 'loading') {
 // 初始化
 loadSettings();
 initDateInputs();
-switchPage('bazi');
+switchPage('mingli');
 
 
