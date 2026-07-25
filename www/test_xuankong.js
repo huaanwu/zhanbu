@@ -381,6 +381,78 @@ check('window.xuankong v3.0.15 暴露 lunarMonthGZ', () => {
   assert.strictEqual(typeof xk.lunarMonthGZ, 'function');
 });
 
+// ============ Case 9: v3.0.16 替卦 ============
+check('TI_GUA 表完整(8 卦→替星,主流派)', () => {
+  // 主流派: 坎1→7, 坤2→2(本宫), 震3→5(本宫), 巽4→6,
+  //        乾6→9, 兑7→3, 艮8→8(本宫), 离9→4
+  assert.strictEqual(xk.TI_GUA[1], 7);
+  assert.strictEqual(xk.TI_GUA[2], 2);
+  assert.strictEqual(xk.TI_GUA[3], 5);
+  assert.strictEqual(xk.TI_GUA[4], 6);
+  assert.strictEqual(xk.TI_GUA[6], 9);
+  assert.strictEqual(xk.TI_GUA[7], 3);
+  assert.strictEqual(xk.TI_GUA[8], 8);
+  assert.strictEqual(xk.TI_GUA[9], 4);
+});
+
+check('tiGuaMountainPan 坐北(坎1→替星7):5宫=7,顺飞', () => {
+  var m = xk.tiGuaMountainPan(2026, '北');
+  assert.strictEqual(m.sitGong, 1);
+  assert.strictEqual(m.tiStar, 7);
+  assert.strictEqual(m.centerStar, 7);
+  assert.strictEqual(m.panByGong[5], 7, '5宫入7');
+  assert.strictEqual(m.panByGong[6], 8);
+  assert.strictEqual(m.panByGong[9], 2);  // 9宫入2
+});
+
+check('tiGuaMountainPan 坐南(离9→替星4):5宫=4', () => {
+  var m = xk.tiGuaMountainPan(2026, '南');
+  assert.strictEqual(m.sitGong, 9);
+  assert.strictEqual(m.tiStar, 4);
+  assert.strictEqual(m.centerStar, 4);
+  assert.strictEqual(m.panByGong[5], 4);
+});
+
+check('tiGuaMountainPan 与元月旦盘不同(替卦生效)', () => {
+  var yuandan = xk.mountainPan(2026, '北');  // 元旦:入中=1
+  var ti = xk.tiGuaMountainPan(2026, '北');  // 替卦:入中=7
+  assert.strictEqual(yuandan.centerStar, 1);
+  assert.strictEqual(ti.centerStar, 7);
+  assert.notDeepStrictEqual(yuandan.panByGong, ti.panByGong);
+});
+
+check('tiGuaFacePan 向东(震3→替星5):5宫=5', () => {
+  var f = xk.tiGuaFacePan(2026, '东');
+  assert.strictEqual(f.faceGong, 3);
+  assert.strictEqual(f.tiStar, 5);
+  assert.strictEqual(f.centerStar, 5);
+});
+
+check('tiGuaMountainPan 非法坐向报错', () => {
+  assert.throws(() => xk.tiGuaMountainPan(2026, '天顶'), /未知坐向/);
+});
+
+check('app/fengshui.js v3.0.16 用替卦 toggle', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/tiGuaMountainPan/.test(src), '用 tiGuaMountainPan');
+  assert.ok(/tiGuaFacePan/.test(src), '用 tiGuaFacePan');
+  assert.ok(/state\.xuankong\.tiGua/.test(src), '读 state.xuankong.tiGua toggle');
+  assert.ok(/selXkTiGua/.test(src), 'selXkTiGua 函数挂到 window');
+});
+
+check('index.html 含替卦 toggle', () => {
+  var src = fs.readFileSync('index.html', 'utf-8');
+  assert.ok(/data-xk-tigua="true"/.test(src), '替卦(标准) 按钮');
+  assert.ok(/data-xk-tigua="false"/.test(src), '元旦盘(基础) 按钮');
+  assert.ok(/onclick="selXkTiGua/.test(src), 'selXkTiGua onclick');
+});
+
+check('window.xuankong 暴露 TI_GUA + tiGua* 函数', () => {
+  assert.ok(xk.TI_GUA, 'TI_GUA 暴露');
+  assert.strictEqual(typeof xk.tiGuaMountainPan, 'function');
+  assert.strictEqual(typeof xk.tiGuaFacePan, 'function');
+});
+
 check('app/fengshui.js 含玄空 tab 切换函数 selFsTab', () => {
   var src = fs.readFileSync('app/fengshui.js', 'utf-8');
   assert.ok(/selFsTab\b/.test(src), 'tab 切换函数');

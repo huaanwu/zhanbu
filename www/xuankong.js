@@ -347,6 +347,73 @@ function xkLiunianAndLiuyueWuhuang(year, month) {
   };
 }
 
+// ============ v3.0.16 替卦(替星起法) ============
+// 八宫卦对应替星表(传统玄空本义 + 沈氏玄空学):
+//   坎(1) 替星 = 7  (坤/震/巽/中/乾/兑/艮/离 类似)
+// 派别分歧: [A]坎=1,[B]坎=7。主流派 [B] 因 "子午卯酉挨星" 替换规则
+//   巽(4) 替星 = 6
+//   乾(6) 替星 = 9
+//   兑(7) 替星 = 3
+//   艮(8) 替星 = 8 (本宫, 不替)
+//   离(9) 替星 = 4
+//   坤(2) = 2 (本宫)
+//   震(3) = 5 (本宫)
+var XK_TI_GUA = { 1: 7, 2: 2, 3: 5, 4: 6, 6: 9, 7: 3, 8: 8, 9: 4 };
+
+// 替卦山盘: 坐卦找替星,替星入中,顺飞
+function xkTiGuaMountainPan(year, sitDir) {
+  var sitGong = xkDirToGuaNum(sitDir);
+  if (!sitGong) throw new Error('玄空替卦山盘: 未知坐向 ' + sitDir);
+  var tiStar = XK_TI_GUA[sitGong];
+  if (!tiStar) throw new Error('玄空替卦山盘: 坐卦' + sitGong + '无替星映射');
+  var centerStar = tiStar;
+  var panByGong = {};
+  for (var i = 0; i < 9; i++) {
+    var gong = XK_LUO_SHU_PATH[i];
+    var star = ((centerStar - 1 + i) % 9) + 1;
+    panByGong[gong] = star;
+  }
+  return {
+    year: year,
+    sitDir: sitDir,
+    sitGong: sitGong,
+    tiStar: tiStar,
+    centerStar: centerStar,
+    panByGong: panByGong,
+    starName: function (gong) {
+      var star = panByGong[gong];
+      return star + '(' + XK_STARS[star - 1].slice(2) + '/' + XK_NATURE[star - 1] + ')';
+    }
+  };
+}
+
+// 替卦向盘: 向卦找替星
+function xkTiGuaFacePan(year, faceDir) {
+  var faceGong = xkDirToGuaNum(faceDir);
+  if (!faceGong) throw new Error('玄空替卦向盘: 未知向方 ' + faceDir);
+  var tiStar = XK_TI_GUA[faceGong];
+  if (!tiStar) throw new Error('玄空替卦向盘: 向卦' + faceGong + '无替星映射');
+  var centerStar = tiStar;
+  var panByGong = {};
+  for (var i = 0; i < 9; i++) {
+    var gong = XK_LUO_SHU_PATH[i];
+    var star = ((centerStar - 1 + i) % 9) + 1;
+    panByGong[gong] = star;
+  }
+  return {
+    year: year,
+    faceDir: faceDir,
+    faceGong: faceGong,
+    tiStar: tiStar,
+    centerStar: centerStar,
+    panByGong: panByGong,
+    starName: function (gong) {
+      var star = panByGong[gong];
+      return star + '(' + XK_STARS[star - 1].slice(2) + '/' + XK_NATURE[star - 1] + ')';
+    }
+  };
+}
+
 window.xuankong = {
   // 算盘层
   currentYun: xkCurrentYun,
@@ -361,6 +428,10 @@ window.xuankong = {
   liuyuePan: xkLiuyuePan,
   liunianAndLiuyueWuhuang: xkLiunianAndLiuyueWuhuang,
   lunarMonthGZ: xkLunarMonthGZ,
+  // v3.0.16:替卦
+  tiGuaMountainPan: xkTiGuaMountainPan,
+  tiGuaFacePan: xkTiGuaFacePan,
+  TI_GUA: XK_TI_GUA,
   // 查表常量
   STARS: XK_STARS,
   NATURE: XK_NATURE,

@@ -268,6 +268,14 @@ function selXkFace(btn) {
 }
 window.selXkFace = selXkFace;
 
+// v3.0.16:替卦 toggle
+function selXkTiGua(btn) {
+  document.querySelectorAll('#pageFengshui [data-xk-tigua]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.xuankong.tiGua = btn.dataset.xkTiGua === 'true';
+}
+window.selXkTiGua = selXkTiGua;
+
 function doXuankong() {
   var errEl = document.getElementById('xkError');
   if (errEl) errEl.style.display = 'none';
@@ -281,8 +289,14 @@ function doXuankong() {
 
     var yun = window.xuankong.currentYun(year);
     var yp = window.xuankong.yunPan(year);
-    var mp = window.xuankong.mountainPan(year, sitDir);
-    var fp = window.xuankong.facePan(year, faceDir);
+    // v3.0.16:替卦 toggle(state.xuankong.tiGua=true 用替卦,否则用元旦盘)
+    var useTiGua = state.xuankong && state.xuankong.tiGua;
+    var mp = useTiGua
+      ? window.xuankong.tiGuaMountainPan(year, sitDir)
+      : window.xuankong.mountainPan(year, sitDir);
+    var fp = useTiGua
+      ? window.xuankong.tiGuaFacePan(year, faceDir)
+      : window.xuankong.facePan(year, faceDir);
     var ws = window.xuankong.wangShanWangXiang(yp, mp, fp, sitDir, faceDir);
     var wh = window.xuankong.wuhuangAndErhei(yp);
     // v3.0.14/15:流年/流月飞星(按当前日期自动算)
@@ -362,7 +376,7 @@ function doXuankong() {
         ${lw.doubleWu ? '<br><strong style="color:var(--accent-red);">⚠️ 双五黄叠加(' + lw.liunianWuhuang + '宫) — 当月最凶,避免动土装修!</strong>' : ''}
       </div>
 
-      <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">⚠️ 本盘为基础版(山向飞星用元旦盘起星);替卦、零神等进阶操作由 AI 在解读中说明。</div>
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">⚠️ 本盘山向飞星使用 <strong>${useTiGua ? '替卦' : '元旦盘(基础)'}</strong>起星;${useTiGua ? '替卦为商业风水标准做法(主流派)' : '替卦请切换为替卦模式查看完整结果'}。零神等进阶操作由 AI 在解读中说明。</div>
     `;
     result.innerHTML = html;
 

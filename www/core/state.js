@@ -15,7 +15,7 @@
     chenggu: { cal: 'solar', gender: 'male' },
     lingqian: { kind: 'guanyin' },
     fengshui: { cal: 'solar', gender: 'male', houseType: 'zhai', doorDir: '南', mainRoomDir: '北' },
-    xuankong: { year: 2026, sitDir: '南', faceDir: '北' },  // v3.0.11 玄空飞星
+    xuankong: { year: 2026, sitDir: '南', faceDir: '北', tiGua: true },  // v3.0.11 玄空飞星, v3.0.16 加替卦开关
   };
 
   window.currentBazi = null; window.currentBaziPrompt = '';
