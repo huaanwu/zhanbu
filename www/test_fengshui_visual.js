@@ -444,6 +444,49 @@ check('app/fengshui.js doDaliurenFromFengshui 调 3 个 SVG 渲染 + 创建 #dlr
   assert.ok(/大六壬起课\(v3\.1\.3 SVG/.test(src), '标题含 v3.1.3 SVG');
 });
 
+// ============ v3.1.4 大六壬手动输入 ============
+check('app/fengshui.js 暴露 doDaliurenManual + manual/time 双路径', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/window\.doDaliurenManual\s*=/.test(src), 'doDaliurenManual 挂到 window');
+  assert.ok(/paiKe\('manual'/.test(src), '支持 manual 模式');
+  assert.ok(/paiKe\('time'/.test(src), '支持 time 模式(用户指定)');
+});
+
+check('app/fengshui.js manual 模式读 dlrDayGZ/dlrYueJiang/dlrHourZhi 字段', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/getElementById\('dlrDayGZ'\)/.test(src), '读 dlrDayGZ');
+  assert.ok(/getElementById\('dlrYueJiang'\)/.test(src), '读 dlrYueJiang');
+  assert.ok(/getElementById\('dlrHourZhi'\)/.test(src), '读 dlrHourZhi');
+  assert.ok(/getElementById\('dlrMethod'\)/.test(src), '读 dlrMethod 起课方式');
+});
+
+check('index.html 大六壬手动输入字段(dlrMethod/dlrDayGZ/dlrYueJiang/dlrHourZhi/dlrYear/dlrMonth/dlrDay/dlrHour)', () => {
+  var src = fs.readFileSync('index.html', 'utf-8');
+  assert.ok(/id="dlrMethod"/.test(src), '起课方式 select');
+  assert.ok(/id="dlrDayGZ"/.test(src), '日干支 select');
+  assert.ok(/id="dlrYueJiang"/.test(src), '月将 select');
+  assert.ok(/id="dlrHourZhi"/.test(src), '占时 select');
+  assert.ok(/id="dlrYear"/.test(src), '年份输入');
+  assert.ok(/id="dlrMonth"/.test(src), '月份输入');
+  assert.ok(/id="dlrDay"/.test(src), '日输入');
+  assert.ok(/id="dlrHour"/.test(src), '时输入');
+  assert.ok(/onclick="doDaliurenManual\(\)"/.test(src), 'doDaliurenManual onclick');
+  assert.ok(/大六壬手动排盘/.test(src), '按钮文案');
+});
+
+check('index.html 大六壬手动字段默认隐藏(dlrManualRow style="display:none")', () => {
+  var src = fs.readFileSync('index.html', 'utf-8');
+  assert.ok(/id="dlrManualRow"[\s\S]*display:none/.test(src), '手动字段默认隐藏');
+});
+
+check('app/fengshui.js doDaliurenManual 调 drawDaliurenSike/SanChuan/TianPan + 创建 #dlrRenderArea', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/drawDaliurenSike\(pan\)/.test(src), '调 drawDaliurenSike');
+  assert.ok(/drawDaliurenSanChuan\(pan\)/.test(src), '调 drawDaliurenSanChuan');
+  assert.ok(/drawDaliurenTianPan\(pan\)/.test(src), '调 drawDaliurenTianPan');
+  assert.ok(/dlrRenderArea/.test(src), '创建 #dlrRenderArea');
+});
+
 console.log(`\n========================================`);
 console.log(`   Total: ${PASS + FAIL}  Pass: ${PASS}  Fail: ${FAIL}`);
 console.log(`   Rate: ${((PASS / (PASS + FAIL)) * 100).toFixed(1)}%`);

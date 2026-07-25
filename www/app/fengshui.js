@@ -68,6 +68,89 @@ function doDaliurenFromFengshui() {
     showToast('大六壬起课失败: ' + e.message, 'error');
   }
 }
+// v3.1.4:大六壬手动排盘(支持 time/manual 两种模式)
+function doDaliurenManual() {
+  if (!window.daliuren) {
+    showToast('大六壬库未加载', 'error');
+    return;
+  }
+  try {
+    var method = document.getElementById('dlrMethod').value;
+    var pan;
+    if (method === 'manual') {
+      // 手动: 日干支 + 月将 + 占时
+      var dayGZ = document.getElementById('dlrDayGZ').value;
+      var yueJiang = document.getElementById('dlrYueJiang').value;
+      var hourZhi = document.getElementById('dlrHourZhi').value;
+      pan = window.daliuren.paiKe('manual', { dayGZ: dayGZ, yueJiang: yueJiang, hourZhi: hourZhi });
+    } else {
+      // 自动: 用户输入的 年/月/日/时 转 Date
+      var year = +document.getElementById('dlrYear').value;
+      var month = +document.getElementById('dlrMonth').value;
+      var day = +document.getElementById('dlrDay').value;
+      var hour = +document.getElementById('dlrHour').value;
+      if (!year || !month || !day || hour < 0 || hour > 23) {
+        throw new Error('请输入完整有效的 年/月/日/时');
+      }
+      pan = window.daliuren.paiKe('time', { dt: new Date(year, month - 1, day, hour, 0, 0) });
+    }
+    var prompt = window.daliuren.formatDaliurenPrompt(pan, '请分析');
+    console.log('[daliuren manual] pan:', pan);
+    console.log('[daliuren manual] prompt:\n' + prompt);
+
+    // 复用 v3.1.3 的渲染区
+    var renderArea = document.getElementById('dlrRenderArea');
+    if (!renderArea) {
+      renderArea = document.createElement('div');
+      renderArea.id = 'dlrRenderArea';
+      renderArea.style.cssText = 'margin-top:0.5rem;';
+      var fsPaneXuankong = document.getElementById('fsPaneXuankong');
+      var debugResult = document.getElementById('dlrDebugResult');
+      if (fsPaneXuankong) fsPaneXuankong.insertBefore(renderArea, debugResult);
+    }
+
+    var yearGZ = pan.siZhu ? pan.siZhu.year : '?';
+    var monthGZ = pan.siZhu ? pan.siZhu.month : '?';
+    var dayGZ = pan.dayGZ || '?';
+    var hourZhi = pan.hourZhi || '?';
+    var yueJiang = pan.yueJiang ? (pan.yueJiang.zhi + '将' + pan.yueJiang.name) : '?';
+    var shenSha = (pan.flags && pan.flags.fuYin) ? '伏吟' : (pan.flags && pan.flags.fanYin) ? '返吟' : (pan.flags && pan.flags.baZhuan) ? '八专' : '正常';
+
+    var html = '<div style="background:var(--bg-inner);padding:0.6rem;border-radius:6px;margin-top:0.5rem;font-size:0.85rem;">';
+    html += '<div style="color:var(--accent-gold);font-weight:700;margin-bottom:0.4rem;">🐉 大六壬手动排盘(v3.1.4 · ' + (method === 'manual' ? '手动' : '按时间') + ')</div>';
+    html += '<div style="font-size:0.75rem;color:var(--text-secondary);">';
+    html += '四柱: ' + yearGZ + '年 ' + monthGZ + '月 ' + dayGZ + '日 ' + hourZhi + '时 | ';
+    html += '月将: ' + yueJiang + ' | 课式: ' + shenSha + ' | 旬空: ' + (pan.xunKong || '无') + ' | 贵人: ' + (pan.guiRen ? (pan.guiRen.zhi + ' ' + (pan.guiRen.isDay ? '昼' : '夜') + '临' + pan.guiRen.linGong + (pan.guiRen.shun ? '顺' : '逆')) : '?');
+    html += '</div>';
+    html += '<div style="margin-top:0.5rem;color:var(--text-secondary);font-size:0.7rem;">发用: ' + (pan.faYong ? (pan.faYong.zongmen + ' · ' + pan.faYong.keti) : '?') + '</div>';
+    html += '</div>';
+
+    html += '<div style="margin-top:0.6rem;font-size:0.8rem;color:var(--accent-gold);">【四课】</div>';
+    html += window.fengshuiVisual.drawDaliurenSike(pan);
+    html += '<div style="margin-top:0.5rem;font-size:0.8rem;color:var(--accent-red);">【三传】</div>';
+    html += window.fengshuiVisual.drawDaliurenSanChuan(pan);
+    html += '<div style="margin-top:0.5rem;font-size:0.8rem;color:var(--accent-blue);">【天盘 12 宫】(外圈=天盘字,内圈=地盘,周边=天将)</div>';
+    html += window.fengshuiVisual.drawDaliurenTianPan(pan);
+
+    renderArea.innerHTML = html;
+    showToast('大六壬手动排盘已生成(见下方四课/三传/天盘)', 'info');
+  } catch (e) {
+    showToast('大六壬排盘失败: ' + e.message, 'error');
+  }
+}
+window.doDaliurenManual = doDaliurenManual;
+
+// 起课方式 change 监听: manual → 显示手动字段
+document.addEventListener('DOMContentLoaded', function () {
+  var methodSel = document.getElementById('dlrMethod');
+  if (methodSel) {
+    methodSel.addEventListener('change', function () {
+      var row = document.getElementById('dlrManualRow');
+      if (row) row.style.display = methodSel.value === 'manual' ? 'grid' : 'none';
+    });
+  }
+});
+// v3.1.2/3 大六壬排盘(完整版 — SVG 四课/三传/天盘) — 兼容旧调用
 window.doDaliurenFromFengshui = doDaliurenFromFengshui;
 
 // v3.0.11:八宅/玄空 tab 切换
