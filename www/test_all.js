@@ -14,6 +14,7 @@ var tests = [
   'test_mianxiang.js',
   'test_fengshui.js',
   'test_xuankong.js',
+  'test_fengshui_visual.js',
   'test_qimen.js',
   'test_xingshi.js',
   'test_expert.js',

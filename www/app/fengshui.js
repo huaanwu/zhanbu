@@ -88,6 +88,16 @@ function doFengshui() {
 
     var html = `
       <h3 style="color:var(--accent-gold);">🧭 八宅风水分析</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin:0.5rem 0;">
+        <div style="background:var(--bg-inner);padding:0.4rem;border-radius:6px;">
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.3rem;text-align:center;">🧭 罗盘 24 山向</div>
+          ${window.fengshuiVisual.drawLuopan24(door)}
+        </div>
+        <div style="background:var(--bg-inner);padding:0.4rem;border-radius:6px;">
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.3rem;text-align:center;">🏠 户型方位</div>
+          ${window.fengshuiVisual.drawHouseLayout({ doorDir: door, mainRoomDir: mainRoom, ji: ji, xiong: xiong })}
+        </div>
+      </div>
       <div style="background:var(--bg-inner);padding:0.8rem;border-radius:8px;margin-top:0.5rem;">
         <div style="font-size:0.95rem;">命主生辰：<strong style="color:var(--accent-gold);">${ming.yearGanZhi}年 性别${gender === 'male' ? '男' : '女'}（${ming.yangYear ? '阳年' : '阴年'}生）</strong></div>
         <div style="font-size:0.95rem;margin-top:0.3rem;">命卦：<strong style="color:var(--accent-gold);">${ming.guaName}（${ming.nature}·${ming.group === 'east' ? '东四命' : '西四命'}）</strong></div>
@@ -279,27 +289,8 @@ function doXuankong() {
     var result = document.getElementById('xkResult');
     result.style.display = 'block';
 
-    // 9 宫表渲染函数
-    function renderPan(pan, title) {
-      var html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.4rem;font-size:0.8rem;text-align:center;">';
-      var order = [7, 8, 9, 4, 5, 6, 1, 2, 3];  // 洛书方位:左下=1坎,正中=5,右上=9离
-      for (var i = 0; i < 9; i++) {
-        var g = order[i];
-        var star = pan.panByGong[g];
-        var isJi = star === 1 || star === 6 || star === 8 || star === 9;
-        var isWu = star === 5;
-        var color = isWu ? 'var(--accent-red)' : (isJi ? 'var(--accent-green)' : 'var(--text-primary)');
-        var bg = isWu ? 'rgba(220,80,80,0.15)' : (isJi ? 'rgba(120,180,120,0.1)' : 'var(--bg-inner)');
-        html += '<div style="background:' + bg + ';padding:0.4rem;border-radius:6px;border:1px solid ' + color + ';">';
-        html += '<div style="font-size:0.65rem;color:var(--text-muted);">' + g + '宫</div>';
-        html += '<div style="font-weight:700;color:' + color + ';">' + star + '</div>';
-        html += '<div style="font-size:0.6rem;color:var(--text-muted);">' + window.xuankong.STARS[star-1].slice(2) + '</div>';
-        html += '</div>';
-      }
-      html += '</div>';
-      return html;
-    }
-
+    // 9 宫 SVG 渲染(替代原 renderPan)
+    // 3 个并排:运盘/山盘/向盘
     var html = `
       <h3 style="color:var(--accent-gold);">🌌 玄空飞星排盘</h3>
       <div style="background:var(--bg-inner);padding:0.8rem;border-radius:8px;margin-top:0.5rem;">
@@ -313,19 +304,19 @@ function doXuankong() {
         </div>
       </div>
 
-      <div style="margin-top:1rem;">
-        <div style="font-size:0.85rem;color:var(--accent-gold);margin-bottom:0.3rem;">【运盘】当运 ${yun.yunName} 入中,洛书顺飞</div>
-        ${renderPan(yp, '运盘')}
-      </div>
-
-      <div style="margin-top:0.8rem;">
-        <div style="font-size:0.85rem;color:var(--accent-gold);margin-bottom:0.3rem;">【山盘】坐 ${sitDir}(${mp.sitGong}宫) 入中,顺飞</div>
-        ${renderPan(mp, '山盘')}
-      </div>
-
-      <div style="margin-top:0.8rem;">
-        <div style="font-size:0.85rem;color:var(--accent-gold);margin-bottom:0.3rem;">【向盘】向 ${faceDir}(${fp.faceGong}宫) 入中,顺飞</div>
-        ${renderPan(fp, '向盘')}
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-top:1rem;">
+        <div>
+          <div style="font-size:0.8rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【运盘】${yun.yunName}入中</div>
+          ${window.fengshuiVisual.drawJiugong(yp.panByGong, yun.yunName)}
+        </div>
+        <div>
+          <div style="font-size:0.8rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【山盘】坐 ${sitDir}</div>
+          ${window.fengshuiVisual.drawJiugong(mp.panByGong, '坐' + sitDir + '入中')}
+        </div>
+        <div>
+          <div style="font-size:0.8rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【向盘】向 ${faceDir}</div>
+          ${window.fengshuiVisual.drawJiugong(fp.panByGong, '向' + faceDir + '入中')}
+        </div>
       </div>
 
       <div style="margin-top:0.8rem;background:rgba(220,80,80,0.08);padding:0.6rem;border-radius:6px;border-left:3px solid var(--accent-red);font-size:0.85rem;">
