@@ -487,6 +487,34 @@ check('app/fengshui.js doDaliurenManual 调 drawDaliurenSike/SanChuan/TianPan + 
   assert.ok(/dlrRenderArea/.test(src), '创建 #dlrRenderArea');
 });
 
+// ============ v3.1.5 大六壬 AI 解读 ============
+check('app/fengshui.js 暴露 doAIDaliuren + saveDlrForAI 函数', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/window\.doAIDaliuren\s*=/.test(src), 'doAIDaliuren 挂到 window');
+  assert.ok(/function saveDlrForAI\(pan\)/.test(src), 'saveDlrForAI 函数');
+  assert.ok(/window\.currentDlrPan\s*=/.test(src), 'currentDlrPan 写入 window');
+  assert.ok(/window\.currentDlrPrompt\s*=/.test(src), 'currentDlrPrompt 写入 window');
+});
+
+check('app/fengshui.js doAIDaliuren 调 Core.AI.interpret', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/await Core\.AI\.interpret\(/.test(src), '调 Core.AI.interpret');
+  assert.ok(/domain:\s*'fengshui_xuankong'/.test(src), 'domain=fengshui_xuankong');
+  assert.ok(/saveHistory\('fengshui_xuankong'/.test(src), 'saveHistory 用 fengshui_xuankong');
+});
+
+check('app/fengshui.js doDaliurenManual + doDaliurenFromFengshui 都调 saveDlrForAI', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  var matches = src.match(/saveDlrForAI\(pan\)/g);
+  assert.ok(matches && matches.length >= 2, 'saveDlrForAI 至少调 2 次(daliurenManual + daliurenFromFengshui)');
+});
+
+check('index.html 大六壬 AI 解读按钮 onclick="doAIDaliuren"', () => {
+  var src = fs.readFileSync('index.html', 'utf-8');
+  assert.ok(/onclick="doAIDaliuren\(\)"/.test(src), 'doAIDaliuren onclick');
+  assert.ok(/大六壬 AI 解读\(v3\.1\.5\)/.test(src), '按钮文案 v3.1.5');
+});
+
 console.log(`\n========================================`);
 console.log(`   Total: ${PASS + FAIL}  Pass: ${PASS}  Fail: ${FAIL}`);
 console.log(`   Rate: ${((PASS / (PASS + FAIL)) * 100).toFixed(1)}%`);

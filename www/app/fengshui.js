@@ -63,7 +63,8 @@ function doDaliurenFromFengshui() {
     // debug 区域保留 prompt(用折叠)
     if (dbg) dbg.textContent = '【AI 解读 prompt 预览】\n' + prompt.substring(0, 800) + (prompt.length > 800 ? '\n... (省略)' : '');
 
-    showToast('大六壬起课已生成(见下方四课/三传/天盘)', 'info');
+    saveDlrForAI(pan);  // v3.1.5: 供 doAIDaliuren 复用
+    showToast('大六壬起课已生成(见下方四课/三传/天盘 + 可点 AI 解读)', 'info');
   } catch (e) {
     showToast('大六壬起课失败: ' + e.message, 'error');
   }
@@ -133,12 +134,86 @@ function doDaliurenManual() {
     html += window.fengshuiVisual.drawDaliurenTianPan(pan);
 
     renderArea.innerHTML = html;
-    showToast('大六壬手动排盘已生成(见下方四课/三传/天盘)', 'info');
+    saveDlrForAI(pan);  // v3.1.5: 供 doAIDaliuren 复用
+    showToast('大六壬手动排盘已生成(见下方四课/三传/天盘 + 可点 AI 解读)', 'info');
   } catch (e) {
     showToast('大六壬排盘失败: ' + e.message, 'error');
   }
 }
 window.doDaliurenManual = doDaliurenManual;
+
+// v3.1.5:大六壬 AI 解读 — 接 Core.AI.interpret() 统一入口
+// state.currentDlrPan 缓存最后一次排盘,提供 doAIDaliuren 复用
+async function doAIDaliuren() {
+  if (!window.currentDlrPan || !window.currentDlrPrompt) {
+    showToast('请先排盘(v3.1.3/4 大六壬起课或手动排盘)', 'error');
+    return;
+  }
+  await ensureKB();
+  await loadKBGroup('fengshui');
+  const btn = document.getElementById('dlrAIBtn');
+  const content = document.getElementById('dlrAIContent');
+  if (!btn || !content) {
+    // 创建 AI 解读容器(若不存在)
+    var renderArea = document.getElementById('dlrRenderArea');
+    if (!renderArea) { showToast('请先排盘', 'error'); return; }
+    var aiWrap = document.createElement('div');
+    aiWrap.style.cssText = 'margin-top:0.8rem;background:var(--bg-card);padding:0.6rem;border-radius:6px;';
+    aiWrap.innerHTML = '<div style="color:var(--accent-gold);font-size:0.85rem;margin-bottom:0.3rem;">🤖 大六壬 AI 解读</div>' +
+      '<div id="dlrAIContent" style="white-space:pre-wrap;line-height:1.7;font-size:0.85rem;color:var(--text-primary);min-height:60px;"></div>' +
+      '<button class="divine-btn" id="dlrAIBtn" onclick="doAIDaliuren()" style="margin-top:0.5rem;">重新解读</button>';
+    renderArea.appendChild(aiWrap);
+    showToast('AI 解读容器已创建,请重新点击', 'info');
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = '解读中...';
+  const pan = window.currentDlrPan;
+  const question = '';
+  const prefix = _followUpPrefix;
+  _followUpPrefix = '';
+  const separator = prefix ? '\n\n─────────────────\n📌 追问\n─────────────────\n\n' : '';
+  if (!prefix) content.textContent = '';
+
+  try {
+    // v3.0.5: 统一 AI 入口(任务 #19)
+    let system = await Core.AI.buildSystemPrompt({
+      domain: 'fengshui_xuankong',
+      pan: pan,
+      question,
+      extraSystem: '你是一位精通大六壬的风水大师。四柱/月将/四课/三传/天将/发用宗门/旬空为代码确定事实,不可更改。' +
+        '课式(伏吟/返吟/八专)与旺山旺向判定为代码定论。' +
+        '重点说明:1. 课式(伏吟/返吟/八专)对应的吉凶寓意 2. 三传(初/中/末)的发展演变 3. 天将+天盘神煞对当事人的影响 ' +
+        '4. 化解方案(若三传不吉) 5. 大六壬与玄空飞星的关联(月将/占时 vs 三元九运)。' +
+        '输出要求:总字数不少于 1500 字,分章节、条理清晰、actionable。'
+    });
+    const { finalText } = await Core.AI.interpret({
+      domain: 'fengshui_xuankong',
+      prompt: window.currentDlrPrompt,
+      system,
+      pan: pan,
+      question,
+      contentEl: content,
+      prefix,
+      separator,
+    });
+    saveHistory('fengshui_xuankong', pan.dayGZ || '大六壬', '大六壬解读', finalText);
+    addFeedbackUI('fengshui_xuankong', content, finalText, window.currentDlrPrompt, system);
+    showResultActions('dlrAIContent', 'dlrAIActions');
+  } catch (e) {
+    content.innerHTML = prefix + separator + '<div class="error">解读失败: ' + escapeHtml(e.message) + '</div>';
+  } finally {
+    btn.disabled = false; btn.textContent = '重新解读';
+    if (window.Core?.Stream?.hideStreamIndicator) window.Core.Stream.hideStreamIndicator();
+  }
+}
+window.doAIDaliuren = doAIDaliuren;
+
+// 把 pan/prompt 写入全局供 doAIDaliuren 使用
+function saveDlrForAI(pan) {
+  window.currentDlrPan = pan;
+  window.currentDlrPrompt = window.daliuren.formatDaliurenPrompt(pan, '');
+}
 
 // 起课方式 change 监听: manual → 显示手动字段
 document.addEventListener('DOMContentLoaded', function () {
