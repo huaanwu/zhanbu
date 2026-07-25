@@ -285,6 +285,15 @@ function doXuankong() {
     var fp = window.xuankong.facePan(year, faceDir);
     var ws = window.xuankong.wangShanWangXiang(yp, mp, fp, sitDir, faceDir);
     var wh = window.xuankong.wuhuangAndErhei(yp);
+    // v3.0.14:流年/流月飞星(按当前日期自动算)
+    var now = new Date();
+    var curYear = now.getFullYear();
+    var curMonthIdx = now.getMonth() + 1;  // 1-12(阳历月 → 需转农历,但本轮简化用阳历月数 — 月份地支按月份推算)
+    // 注: 严格玄空流月需用农历月(干支纪月),本轮用月份数 1-12 → XK_MONTH_ZHI[month-1]
+    var liunian = window.xuankong.liunianPan(curYear);
+    var liuyue = window.xuankong.liuyuePan(curYear, curMonthIdx);
+    var lw = window.xuankong.liunianAndLiuyueWuhuang(curYear, curMonthIdx);
+    var curMonthCN = window.xuankong.MONTH_CN[curMonthIdx - 1] + '(' + curMonthIdx + '月)';
 
     var result = document.getElementById('xkResult');
     result.style.display = 'block';
@@ -322,6 +331,24 @@ function doXuankong() {
       <div style="margin-top:0.8rem;background:rgba(220,80,80,0.08);padding:0.6rem;border-radius:6px;border-left:3px solid var(--accent-red);font-size:0.85rem;">
         <strong>五黄煞</strong>在 <strong>${wh.wuhuangAt}宫</strong>(最凶,宜静不宜动);<br>
         <strong>二黑病符</strong>在 <strong>${wh.erheiAt}宫</strong>(主病,化解:铜器/灰色地毯/避免红色)
+      </div>
+
+      <div style="margin-top:1rem;font-size:0.85rem;color:var(--accent-gold);border-top:1px solid var(--border);padding-top:0.6rem;">📅 v3.0.14 流年飞星 (按当前日期自动计算)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.5rem;">
+        <div>
+          <div style="font-size:0.75rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【流年盘】${year}年 (${liunian.yearZhi}年)</div>
+          ${window.fengshuiVisual.drawJiugong(liunian.panByGong, year + '年' + liunian.yearZhi + '年')}
+        </div>
+        <div>
+          <div style="font-size:0.75rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【流月盘】${curMonthCN}(${liuyue.monthZhi}月)</div>
+          ${window.fengshuiVisual.drawJiugong(liuyue.panByGong, curMonthCN + liuyue.monthZhi)}
+        </div>
+      </div>
+
+      <div style="margin-top:0.6rem;background:rgba(220,80,80,0.08);padding:0.6rem;border-radius:6px;border-left:3px solid var(--accent-red);font-size:0.85rem;">
+        <strong>流年五黄</strong>在 <strong>${lw.liunianWuhuang}宫</strong>，<strong>流年二黑</strong>在 <strong>${lw.liunianErhei}宫</strong>;<br>
+        <strong>流月五黄</strong>在 <strong>${lw.liuyueWuhuang}宫</strong>，<strong>流月二黑</strong>在 <strong>${lw.liuyueErhei}宫</strong>;
+        ${lw.doubleWu ? '<br><strong style="color:var(--accent-red);">⚠️ 双五黄叠加(' + lw.liunianWuhuang + '宫) — 当月最凶,避免动土装修!</strong>' : ''}
       </div>
 
       <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">⚠️ 本盘为基础版(山向飞星用元旦盘起星);替卦、零神等进阶操作由 AI 在解读中说明。</div>

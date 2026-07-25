@@ -20,6 +20,7 @@ var XK_STARS = ['一白贪狼','二黑巨门','三碧禄存','四绿文曲','五
 var XK_NATURE = ['水','土','木','木','土','金','金','土','火'];  // 按 1-9
 var XK_GOOD   = [true, false, false, true,  false, true,  false, true,  true];  // 吉/平/凶 (4 绿算平)
 var XK_LV     = ['桃花/智慧','病符','是非','文昌','大煞','偏财','破财','财/旺','喜气/桃花'];
+var XK_ZHI    = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];  // v3.0.14 加
 
 // 洛书九宫顺飞路径: 中5→乾6→兑7→艮8→离9→坎1→坤2→震3→巽4→回中
 // 即 从 5 起,顺序为 [5,6,7,8,9,1,2,3,4]
@@ -216,6 +217,102 @@ function xkFormatPrompt(year, sitDir, faceDir) {
   return s;
 }
 
+// ============ v3.0.14 流年飞星 ============
+// 流年地支 → 后天八卦宫号
+// 子=1坎 丑=8艮 寅=8艮(同上) 卯=3震 辰=4巽 巳=4巽
+// 午=9离 未=2坤 申=2坤 酉=7兑 戌=6乾 亥=6乾
+var XK_ZHI_TO_GONG = {
+  '子': 1, '丑': 8, '寅': 8,
+  '卯': 3, '辰': 4, '巳': 4,
+  '午': 9, '未': 2, '申': 2,
+  '酉': 7, '戌': 6, '亥': 6
+};
+
+// 12 月份地支(农历正月寅、二月卯...十二月丑)
+var XK_MONTH_ZHI = ['寅','卯','辰','巳','午','未','申','酉','戌','亥','子','丑'];
+var XK_MONTH_CN = ['正月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+
+// 流年飞星: 流年地支所在宫入中, 顺飞
+// year: 公历年(4 位)
+function xkLiunianPan(year) {
+  if (!year || year < 1864 || year > 9999) {
+    throw new Error('流年飞星: 年份超出范围: ' + year);
+  }
+  // 流年地支: ((year - 4) % 12 + 12) % 12
+  var zhiIdx = ((year - 4) % 12 + 12) % 12;
+  var zhi = XK_ZHI[zhiIdx];  // 0=子,1=丑,...,11=亥
+  var centerGong = XK_ZHI_TO_GONG[zhi];
+  var centerStar = centerGong;  // 起中星=起中宫
+  var panByGong = {};
+  for (var i = 0; i < 9; i++) {
+    var gong = XK_LUO_SHU_PATH[i];
+    var star = ((centerStar - 1 + i) % 9) + 1;
+    panByGong[gong] = star;
+  }
+  return {
+    year: year,
+    yearZhi: zhi,
+    centerGong: centerGong,
+    centerStar: centerStar,
+    panByGong: panByGong,
+    starName: function (gong) {
+      var star = panByGong[gong];
+      return star + '(' + XK_STARS[star - 1].slice(2) + '/' + XK_NATURE[star - 1] + ')';
+    }
+  };
+}
+
+// 流月飞星: 月份地支所在宫入中, 顺飞
+// month: 1-12 (农历月, 1=正月寅)
+function xkLiuyuePan(year, month) {
+  if (!month || month < 1 || month > 12) {
+    throw new Error('流月飞星: 月份须为 1-12: ' + month);
+  }
+  var monthZhi = XK_MONTH_ZHI[month - 1];
+  var centerGong = XK_ZHI_TO_GONG[monthZhi];
+  var centerStar = centerGong;
+  var panByGong = {};
+  for (var i = 0; i < 9; i++) {
+    var gong = XK_LUO_SHU_PATH[i];
+    var star = ((centerStar - 1 + i) % 9) + 1;
+    panByGong[gong] = star;
+  }
+  return {
+    year: year,
+    month: month,
+    monthZhi: monthZhi,
+    monthCN: XK_MONTH_CN[month - 1],
+    centerGong: centerGong,
+    centerStar: centerStar,
+    panByGong: panByGong,
+    starName: function (gong) {
+      var star = panByGong[gong];
+      return star + '(' + XK_STARS[star - 1].slice(2) + '/' + XK_NATURE[star - 1] + ')';
+    }
+  };
+}
+
+// 流年/流月 五黄定位(用于叠加化解提示)
+function xkLiunianAndLiuyueWuhuang(year, month) {
+  var ln = xkLiunianPan(year);
+  var ly = month ? xkLiuyuePan(year, month) : null;
+  var lnWh = null, lnEr = null, lyWh = null, lyEr = null;
+  for (var g = 1; g <= 9; g++) {
+    if (ln.panByGong[g] === 5) lnWh = g;
+    if (ln.panByGong[g] === 2) lnEr = g;
+    if (ly && ly.panByGong[g] === 5) lyWh = g;
+    if (ly && ly.panByGong[g] === 2) lyEr = g;
+  }
+  return {
+    liunianWuhuang: lnWh,
+    liunianErhei: lnEr,
+    liuyueWuhuang: lyWh,
+    liuyueErhei: lyEr,
+    // 双五黄叠加标记
+    doubleWu: (lnWh !== null && lyWh !== null && lnWh === lyWh)
+  };
+}
+
 window.xuankong = {
   // 算盘层
   currentYun: xkCurrentYun,
@@ -225,10 +322,17 @@ window.xuankong = {
   wangShanWangXiang: xkWangShanWangXiang,
   wuhuangAndErhei: xkWuhuangAndErhei,
   formatPrompt: xkFormatPrompt,
+  // v3.0.14:流年/流月飞星
+  liunianPan: xkLiunianPan,
+  liuyuePan: xkLiuyuePan,
+  liunianAndLiuyueWuhuang: xkLiunianAndLiuyueWuhuang,
   // 查表常量
   STARS: XK_STARS,
   NATURE: XK_NATURE,
   GOOD: XK_GOOD,
   LUO_SHU_PATH: XK_LUO_SHU_PATH,
+  ZHI_TO_GONG: XK_ZHI_TO_GONG,
+  MONTH_ZHI: XK_MONTH_ZHI,
+  MONTH_CN: XK_MONTH_CN,
   dirToGuaNum: xkDirToGuaNum
 };

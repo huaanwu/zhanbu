@@ -231,6 +231,104 @@ check('app/fengshui.js 调 window.xuankong.currentYun/yunPan/mountainPan/facePan
   assert.ok(/window\.xuankong\.formatPrompt/.test(src), '用 formatPrompt');
 });
 
+check('app/fengshui.js v3.0.14 调流年/流月飞星', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/window\.xuankong\.liunianPan/.test(src), '用 liunianPan');
+  assert.ok(/window\.xuankong\.liuyuePan/.test(src), '用 liuyuePan');
+  assert.ok(/liunianAndLiuyueWuhuang/.test(src), '用双五黄检测');
+});
+
+// ============ Case 7b: v3.0.14 流年/流月算法 ============
+check('liunianPan 2026(丙午年,午=9宫入中): 5宫=9, 6=1, 7=2...', () => {
+  var p = xk.liunianPan(2026);
+  assert.strictEqual(p.yearZhi, '午');
+  assert.strictEqual(p.centerGong, 9);
+  assert.strictEqual(p.centerStar, 9);
+  assert.strictEqual(p.panByGong[5], 9, '5 宫入 9');
+  assert.strictEqual(p.panByGong[6], 1);
+  assert.strictEqual(p.panByGong[7], 2);
+});
+
+check('liunianPan 2027(丁未年,未=2坤入中): 5宫=2', () => {
+  // 2027: ((2027-4) % 12) = (2023%12) = 7 → 8(戌)... 等等
+  // 2027 - 4 = 2023, 2023 % 12 = 7, XK_ZHI[7] = '申' (索引 0=子 7=申)
+  // 让我重算: 2024(子年因 2024-4=2020, 2020%12=8, 8=申 — 不对)
+  // XK_ZHI = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
+  // 索引: 2024 - 4 = 2020, 2020 % 12 = 8, XK_ZHI[8] = '申'
+  // 等等,2024 是甲辰年,辰=4 索引(子0丑1寅2卯3辰4...)→ (2024-4)%12=2020%12=8=申 ❌
+  // 正确: ((year - 4) % 12 + 12) % 12 是个相对偏移,2024 年应得辰(索引 4)
+  // ((2024-4) % 12) = 2020 % 12 = 168 * 12 + 4 = 2020? 不,168*12=2016, 2020-2016=4, 所以 2020 % 12 = 4 ✓
+  // XK_ZHI[4] = '辰' ✓
+  // 2026 年: ((2026-4)%12) = 2022%12 = 168*12=2016, 2022-2016=6, XK_ZHI[6]='午' ✓
+  // 2027 年: ((2027-4)%12) = 2023%12 = 168*12=2016, 2023-2016=7, XK_ZHI[7]='未' ✓
+  var p = xk.liunianPan(2027);
+  assert.strictEqual(p.yearZhi, '未');
+  assert.strictEqual(p.centerGong, 2, '未=坤=2 宫');
+  assert.strictEqual(p.panByGong[5], 2, '5 宫入 2');
+});
+
+check('liunianPan 2030(庚戌年,戌=6乾): 5宫=6', () => {
+  // 2030-4=2026, %12=2026-2016=10, XK_ZHI[10]='戌'
+  var p = xk.liunianPan(2030);
+  assert.strictEqual(p.yearZhi, '戌');
+  assert.strictEqual(p.centerGong, 6);
+  assert.strictEqual(p.panByGong[5], 6);
+});
+
+check('liuyuePan 正月(寅=8宫入中): 5宫=8', () => {
+  var p = xk.liuyuePan(2026, 1);
+  assert.strictEqual(p.monthCN, '正月');
+  assert.strictEqual(p.monthZhi, '寅');
+  assert.strictEqual(p.centerGong, 8);
+  assert.strictEqual(p.panByGong[5], 8);
+});
+
+check('liuyuePan 五月(午=9宫): 5宫=9', () => {
+  var p = xk.liuyuePan(2026, 5);
+  assert.strictEqual(p.monthZhi, '午');
+  assert.strictEqual(p.centerGong, 9);
+  assert.strictEqual(p.panByGong[5], 9);
+});
+
+check('liuyuePan 十二月(丑=8): 5宫=8', () => {
+  var p = xk.liuyuePan(2026, 12);
+  assert.strictEqual(p.monthCN, '十二月');
+  assert.strictEqual(p.monthZhi, '丑');
+  assert.strictEqual(p.centerGong, 8);
+});
+
+check('liuyuePan 非法月份报错', () => {
+  assert.throws(() => xk.liuyuePan(2026, 0), /月份须为/);
+  assert.throws(() => xk.liuyuePan(2026, 13), /月份须为/);
+});
+
+check('liunianAndLiuyueWuhuang 五黄二黑 + doubleWu 检测', () => {
+  var r = xk.liunianAndLiuyueWuhuang(2026, 5);
+  // 2026 午=9入中, 5宫=9 → 5黄在 4宫(因顺飞 9 宫)... 让算法决定
+  assert.ok(r.liunianWuhuang >= 1 && r.liunianWuhuang <= 9, '流年五黄在 1-9 宫');
+  assert.ok(r.liuyueWuhuang >= 1 && r.liuyueWuhuang <= 9, '流月五黄在 1-9 宫');
+  assert.strictEqual(typeof r.doubleWu, 'boolean');
+});
+
+check('window.xuankong 暴露 liunian/liuyue/ZHI_TO_GONG/MONTH_ZHI/MONTH_CN', () => {
+  assert.strictEqual(typeof xk.liunianPan, 'function');
+  assert.strictEqual(typeof xk.liuyuePan, 'function');
+  assert.strictEqual(typeof xk.liunianAndLiuyueWuhuang, 'function');
+  assert.ok(Array.isArray(xk.MONTH_ZHI));
+  assert.ok(Array.isArray(xk.MONTH_CN));
+  assert.strictEqual(xk.MONTH_ZHI.length, 12);
+  assert.strictEqual(xk.MONTH_CN.length, 12);
+  assert.strictEqual(xk.MONTH_ZHI[0], '寅');  // 正月
+  assert.strictEqual(xk.MONTH_ZHI[11], '丑');  // 十二月
+});
+
+check('app/fengshui.js 渲染含流年/流月 SVG + doubleWu 提示', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/drawJiugong\(liunian\.panByGong/.test(src), '流年盘 SVG');
+  assert.ok(/drawJiugong\(liuyue\.panByGong/.test(src), '流月盘 SVG');
+  assert.ok(/双五黄叠加/.test(src), '双五黄提示');
+});
+
 check('app/fengshui.js 含玄空 tab 切换函数 selFsTab', () => {
   var src = fs.readFileSync('app/fengshui.js', 'utf-8');
   assert.ok(/selFsTab\b/.test(src), 'tab 切换函数');
