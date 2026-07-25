@@ -358,6 +358,30 @@ check('drawLuopan24 用 sanPan 数据驱动(三盘字不同)', () => {
   assert.ok(svg.indexOf('缝壬') > 0, 'SVG 含 sanPan.tian "缝壬"');
 });
 
+// ============ v3.1.2 大六壬集成到风水页 ============
+check('app/fengshui.js 调 window.daliuren.paiKe + 暴露 doDaliurenFromFengshui', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/window\.daliuren\.paiKe/.test(src), '用 daliuren.paiKe');
+  assert.ok(/window\.daliuren\.formatDaliurenPrompt/.test(src), '用 formatDaliurenPrompt');
+  assert.ok(/window\.doDaliurenFromFengshui\s*=/.test(src), 'doDaliurenFromFengshui 挂到 window');
+});
+
+check('index.html 大六壬按钮 onclick="doDaliurenFromFengshui"', () => {
+  var src = fs.readFileSync('index.html', 'utf-8');
+  assert.ok(/onclick="doDaliurenFromFengshui\(\)"/.test(src), '大六壬按钮 onclick 绑定');
+  assert.ok(/大六壬起课\(v3\.1\.2\)/.test(src), '按钮文案带 v3.1.2');
+});
+
+check('doDaliurenFromFengshui 函数签名', () => {
+  // 通过 window 验证函数挂载
+  // 注: 测试环境不加载 fengshui-visual.js 的 app/fengshui.js(那是浏览器脚本)
+  // 改为通过文件源码检查函数结构
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/function doDaliurenFromFengshui\(\)/.test(src), '函数定义');
+  assert.ok(/showToast\(/.test(src), '用 showToast 提示');
+  assert.ok(/paiKe\('time'/.test(src), '用 time 模式起课');
+});
+
 console.log(`\n========================================`);
 console.log(`   Total: ${PASS + FAIL}  Pass: ${PASS}  Fail: ${FAIL}`);
 console.log(`   Rate: ${((PASS / (PASS + FAIL)) * 100).toFixed(1)}%`);

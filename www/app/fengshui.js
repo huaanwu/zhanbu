@@ -1,6 +1,34 @@
 // ========== 风水罗盘(八宅 + 玄空飞星)v3.0.11 ==========
-// 算盘层: window.fengshui.mingGua/eightZhai/zhaiMingHe/mainRoomAssess + window.xuankong.*
+// 算盘层: window.fengshui.mingGua/eightZhai/zhaiMingHe/mainRoomAssess + window.xuankong.* + window.daliuren.paiKe
 // 本文件只负责 UI 绑定 + 渲染 + AI 解读调用
+
+// v3.1.2:大六壬排盘(简版 — 自动用当前时间,console.log + 隐藏 div 展示)
+function doDaliurenFromFengshui() {
+  if (!window.daliuren) {
+    showToast('大六壬库未加载', 'error');
+    return;
+  }
+  try {
+    var pan = window.daliuren.paiKe('time', { dt: new Date() });
+    var prompt = window.daliuren.formatDaliurenPrompt(pan, '请分析');
+    console.log('[daliuren] pan:', pan);
+    console.log('[daliuren] prompt:\n' + prompt);
+    // 写入隐藏 div 供用户查看
+    var dbg = document.getElementById('dlrDebugResult');
+    if (!dbg) {
+      dbg = document.createElement('div');
+      dbg.id = 'dlrDebugResult';
+      dbg.style.cssText = 'background:var(--bg-card);padding:0.5rem;margin-top:0.5rem;font-size:0.75rem;white-space:pre-wrap;max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:6px;';
+      var fsPaneXuankong = document.getElementById('fsPaneXuankong');
+      if (fsPaneXuankong) fsPaneXuankong.appendChild(dbg);
+    }
+    dbg.textContent = '【大六壬起课·' + (pan.siZhu ? pan.siZhu.year : '?') + '年 ' + (pan.yueJiang ? pan.yueJiang.name : '?') + '】\n' + prompt;
+    showToast('大六壬起课已生成(见下方调试框)', 'info');
+  } catch (e) {
+    showToast('大六壬起课失败: ' + e.message, 'error');
+  }
+}
+window.doDaliurenFromFengshui = doDaliurenFromFengshui;
 
 // v3.0.11:八宅/玄空 tab 切换
 function selFsTab(btn) {
