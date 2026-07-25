@@ -54,10 +54,33 @@ async function onMxFileSelect(e, view) {
     document.getElementById(wrapId).style.display = 'block';
     document.getElementById(uploadId).style.display = 'none';
     document.getElementById('mxResult').style.display = 'none';
+    // v3.0.8:任一张图上传就显示 AI 解读按钮(单张也能解读,3 张精度更高)
+    if (mxHasAny()) {
+      var act = document.getElementById('mxActionArea');
+      if (act) act.style.display = 'block';
+    }
   };
   reader.readAsDataURL(file);
 }
 window.onMxFileSelect = onMxFileSelect;
+
+// 清空(给"重新上传"按钮用,目前 UI 没暴露,先留作 API)
+function clearMianxiang() {
+  mxImages.front = ''; mxImages.left45 = ''; mxImages.right45 = '';
+  ['Front', 'Left45', 'Right45'].forEach(function (cap) {
+    var wrap = document.getElementById('mxPreviewWrap' + cap);
+    var upload = document.getElementById('mxUploadArea' + cap);
+    var input = document.getElementById('mxFileInput' + cap);
+    if (wrap) wrap.style.display = 'none';
+    if (upload) upload.style.display = 'block';
+    if (input) input.value = '';
+  });
+  var act = document.getElementById('mxActionArea');
+  if (act) act.style.display = 'none';
+  var result = document.getElementById('mxResult');
+  if (result) result.style.display = 'none';
+}
+window.clearMianxiang = clearMianxiang;
 
 // ===== prompt 构造 =====
 function buildMianxiangPrompt(isMale, ageBucket) {
