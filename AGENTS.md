@@ -2,9 +2,9 @@
 
 This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
-# AI 占卜大师 v3.0.8
+# AI 占卜大师 v3.1.0
 
-Capacitor + Vite + 原生 JS 的多流派占卜 Android / PWA 应用。覆盖八字 / 六爻 / 小六壬 / 梅花 / 奇门 / 紫微 / 面相 / 手相 / 风水 / 佛道等流派,65+ 知识库 JSON,DeepSeek/OpenAI/本地大模型 解读。
+Capacitor + Vite + 原生 JS 的多流派占卜 Android / PWA 应用。覆盖八字 / 六爻 / 小六壬 / 梅花 / 奇门 / 紫微 / 面相 / 手相 / **八宅 + 玄空飞星(三层罗盘 + 四柱飞星)** / 佛道等流派,65+ 知识库 JSON,DeepSeek/OpenAI/本地大模型 解读。
 
 v3.0 主要升级:
 - v1.4: AES-GCM 加密、历史/反馈加密、SSE 流式、ChatSession 追问、本地大模型 CORS 修复
@@ -14,6 +14,7 @@ v3.0 主要升级:
 - v3.0.6: 新增小六壬/梅花易数流派、底部导航分组(命理/占卦)、奇门定局改拆补法(符头定元)
 - v3.0.7: 新增大六壬(月将加时/四课/九宗门/十二天将)、称骨算命(袁天罡称骨四表查重)
 - v3.0.8: 新增面相页(图片+AI视觉,shouxiang/mianxiang 共享 `Core.AI.callMultimodalVision`)、六爻加"大衍筮法"起卦按钮
+- **v3.1.0: 风水大版本 — 八宅算盘层补齐(命卦确定性) + 玄空飞星算盘层(元运/山向/四柱) + SVG 可视化(罗盘/户型/九宫) + 罗盘点击详情 + 流年/流月/流日/流时飞星 + 替卦 + 三层罗盘叠加**
 
 ## 常用命令
 
@@ -60,6 +61,9 @@ node scripts/send-feishu.js <file_path>                # 默认推到武华安�
 │   ├─ 算盘层: liuyao.js / qimen.js / expert.js / xingshi.js  │
 │   │            / xiaoliuren.js / meihua.js / daliuren.js     │
 │   │            / chenggu.js / lingqian.js                     │
+│   │            / fengshui.js (八宅 + 24 山向, v3.1.0)         │
+│   │            / xuankong.js (玄空飞星四柱 + 替卦, v3.1.0)   │
+│   │            / fengshui-visual.js (SVG 罗盘/户型/九宫)    │
 │   ├─ RAG 层: rag.js + vector-cache.js (BM25 + 向量/embedding│
 │   │            缓存,KB bundle)                              │
 │   ├─ 解读 → cache.js (LRU 50/7天) → history.js (加密)      │
