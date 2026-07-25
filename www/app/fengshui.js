@@ -306,10 +306,13 @@ function doXuankong() {
     // v3.0.15: 用 lunar 引擎精确化流月(干支纪月 → 地支),不用阳历月数简化版
     var lunarInfo = null;
     var dayInfo = null;  // v3.0.17
+    var shiInfo = null;  // v3.0.18
     var curMonthCN = '';
     var liuyue = null;
     var liuri = null;  // v3.0.17
     var tiGuaLiuri = null;
+    var liushi = null;  // v3.0.18
+    var tiGuaLiushi = null;
     try {
       lunarInfo = window.xuankong.lunarMonthGZ(now);
       curMonthCN = lunarInfo.monthGZ + '月';
@@ -318,6 +321,10 @@ function doXuankong() {
       dayInfo = window.xuankong.lunarDayGZ(now);
       liuri = window.xuankong.liuriPan(curYear, dayInfo.dayGZ);
       tiGuaLiuri = window.xuankong.tiGuaLiuriPan(curYear, dayInfo.dayGZ);
+      // v3.0.18: 流时飞星(同时辰地支入中)
+      shiInfo = window.xuankong.lunarShiGZ(now);
+      liushi = window.xuankong.liushiPan(curYear, shiInfo.shiGZ);
+      tiGuaLiushi = window.xuankong.tiGuaLiushiPan(curYear, shiInfo.shiGZ);
     } catch (e) {
       console.warn('[fengshui] lunar 引擎未加载,流月/流日回退:', e.message);
       var curMonthIdx = now.getMonth() + 1;
@@ -384,6 +391,17 @@ function doXuankong() {
         <div>
           <div style="font-size:0.75rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【替卦流日】${tiGuaLiuri.dayGZ}日(替星 ${tiGuaLiuri.tiStar})</div>
           ${window.fengshuiVisual.drawJiugong(tiGuaLiuri.panByGong, tiGuaLiuri.dayGZ + '日替' + tiGuaLiuri.tiStar)}
+        </div>
+      </div>` : ''}
+
+      ${liushi ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.5rem;">
+        <div>
+          <div style="font-size:0.75rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【流时盘】${liushi.shiZhi}时(子=${liushi.lastZhi}支)</div>
+          ${window.fengshuiVisual.drawJiugong(liushi.panByGong, liushi.shiZhi + '时' + liushi.lastZhi)}
+        </div>
+        <div>
+          <div style="font-size:0.75rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【替卦流时】${tiGuaLiushi.shiZhi}时(替星 ${tiGuaLiushi.tiStar})</div>
+          ${window.fengshuiVisual.drawJiugong(tiGuaLiushi.panByGong, tiGuaLiushi.shiZhi + '时替' + tiGuaLiushi.tiStar)}
         </div>
       </div>` : ''}
 

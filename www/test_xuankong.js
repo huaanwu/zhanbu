@@ -526,6 +526,71 @@ check('window.xuankong 暴露流日函数 + lunarDayGZ', () => {
   assert.strictEqual(typeof xk.lunarDayGZ, 'function');
 });
 
+// ============ Case 11: v3.0.18 流时飞星 ============
+check('hourToShiZhi 12 时辰映射正确', () => {
+  assert.strictEqual(xk.hourToShiZhi(23), '子');
+  assert.strictEqual(xk.hourToShiZhi(0), '子');
+  assert.strictEqual(xk.hourToShiZhi(1), '丑');
+  assert.strictEqual(xk.hourToShiZhi(3), '寅');
+  assert.strictEqual(xk.hourToShiZhi(11), '午');
+  assert.strictEqual(xk.hourToShiZhi(12), '午');
+  assert.strictEqual(xk.hourToShiZhi(13), '未');
+  assert.strictEqual(xk.hourToShiZhi(21), '亥');
+  assert.strictEqual(xk.hourToShiZhi(22), '亥');
+});
+
+check('liushiPan 甲子时(子=1宫):5宫=1', () => {
+  var p = xk.liushiPan(2026, '甲子');
+  assert.strictEqual(p.lastZhi, '子');
+  assert.strictEqual(p.centerGong, 1);
+  assert.strictEqual(p.panByGong[5], 1);
+});
+
+check('liushiPan 丙午时(午=9宫):5宫=9', () => {
+  var p = xk.liushiPan(2026, '丙午');
+  assert.strictEqual(p.lastZhi, '午');
+  assert.strictEqual(p.centerGong, 9);
+  assert.strictEqual(p.panByGong[5], 9);
+});
+
+check('liushiPan 12 时辰一周期(子丑寅...):每时辰 5 宫对应地支→宫', () => {
+  var zhiList = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  for (var i = 0; i < 12; i++) {
+    var p = xk.liushiPan(2026, zhiList[i]);
+    assert.strictEqual(p.centerGong, XK_ZHI_TO_GONG[zhiList[i]], zhiList[i] + ' 宫映射');
+  }
+});
+
+check('liushiPan 非法干支报错', () => {
+  assert.throws(() => xk.liushiPan(2026, 'XX'), /未知干支/);
+});
+
+check('tiGuaLiushiPan 甲子时(子=1→替7):5宫=7', () => {
+  var p = xk.tiGuaLiushiPan(2026, '甲子');
+  assert.strictEqual(p.tiStar, 7);
+  assert.strictEqual(p.panByGong[5], 7);
+});
+
+check('tiGuaLiushiPan 丙午时(午=9→替4):5宫=4', () => {
+  var p = xk.tiGuaLiushiPan(2026, '丙午');
+  assert.strictEqual(p.tiStar, 4);
+  assert.strictEqual(p.panByGong[5], 4);
+});
+
+check('app/fengshui.js 渲染含流时盘 + 替卦流时盘', () => {
+  var src = fs.readFileSync('app/fengshui.js', 'utf-8');
+  assert.ok(/liushi\.panByGong/.test(src), '流时盘 SVG');
+  assert.ok(/tiGuaLiushi\.panByGong/.test(src), '替卦流时盘 SVG');
+  assert.ok(/lunarShiGZ\(now\)/.test(src), 'lunarShiGZ 取时干支');
+});
+
+check('window.xuankong 暴露流时函数 + hourToShiZhi + lunarShiGZ', () => {
+  assert.strictEqual(typeof xk.hourToShiZhi, 'function');
+  assert.strictEqual(typeof xk.liushiPan, 'function');
+  assert.strictEqual(typeof xk.tiGuaLiushiPan, 'function');
+  assert.strictEqual(typeof xk.lunarShiGZ, 'function');
+});
+
 check('app/fengshui.js 含玄空 tab 切换函数 selFsTab', () => {
   var src = fs.readFileSync('app/fengshui.js', 'utf-8');
   assert.ok(/selFsTab\b/.test(src), 'tab 切换函数');

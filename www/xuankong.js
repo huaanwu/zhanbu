@@ -501,6 +501,115 @@ function xkLunarDayGZ(date) {
   };
 }
 
+// ============ v3.0.18 流时飞星 ============
+// 12 时辰(2 小时一格):
+//   子时 23-1, 丑时 1-3, 寅时 3-5, 卯时 5-7, 辰时 7-9, 巳时 9-11
+//   午时 11-13, 未时 13-15, 申时 15-17, 酉时 17-19, 戌时 19-21, 亥时 21-23
+// 时辰地支(时干支的"支")用于入中
+// 注意: 流时飞星业内有争议 — 部分派系认为"日飞星 已够用,流时过细,实操意义不大"
+//       本轮作为"完整玄空体系"的一部分实现,用户可自行选用
+
+// 当前小时 → 时辰地支
+function xkHourToShiZhi(hour) {
+  // hour: 0-23
+  if (hour === 23 || hour === 0) return '子';
+  if (hour >= 1 && hour < 3) return '丑';
+  if (hour >= 3 && hour < 5) return '寅';
+  if (hour >= 5 && hour < 7) return '卯';
+  if (hour >= 7 && hour < 9) return '辰';
+  if (hour >= 9 && hour < 11) return '巳';
+  if (hour >= 11 && hour < 13) return '午';
+  if (hour >= 13 && hour < 15) return '未';
+  if (hour >= 15 && hour < 17) return '申';
+  if (hour >= 17 && hour < 19) return '酉';
+  if (hour >= 19 && hour < 21) return '戌';
+  if (hour >= 21 && hour < 23) return '亥';
+  throw new Error('流时飞星: 无效小时: ' + hour);
+}
+
+// 流时飞星: 时辰地支入中, 顺飞
+// shiZhi: 时辰地支('子'/'丑'/.../'亥') 或时干支('甲子'/'乙丑'/...)
+function xkLiushiPan(year, shiZhi) {
+  if (typeof shiZhi !== 'string' || shiZhi.length < 1) {
+    throw new Error('流时飞星: shiZhi 须为时辰地支或干支: ' + shiZhi);
+  }
+  var last = shiZhi.charAt(shiZhi.length - 1);  // 取最后一位地支
+  if (XK_ZHI_TO_GONG[last] === undefined) {
+    throw new Error('流时飞星: 未知干支地支: ' + shiZhi);
+  }
+  var centerGong = XK_ZHI_TO_GONG[last];
+  var centerStar = centerGong;
+  var panByGong = {};
+  for (var i = 0; i < 9; i++) {
+    var gong = XK_LUO_SHU_PATH[i];
+    var star = ((centerStar - 1 + i) % 9) + 1;
+    panByGong[gong] = star;
+  }
+  return {
+    year: year,
+    shiZhi: shiZhi,
+    lastZhi: last,
+    centerGong: centerGong,
+    centerStar: centerStar,
+    panByGong: panByGong,
+    starName: function (gong) {
+      var star = panByGong[gong];
+      return star + '(' + XK_STARS[star - 1].slice(2) + '/' + XK_NATURE[star - 1] + ')';
+    }
+  };
+}
+
+// 替卦流时
+function xkTiGuaLiushiPan(year, shiZhi) {
+  if (typeof shiZhi !== 'string' || shiZhi.length < 1) {
+    throw new Error('替卦流时飞星: shiZhi 须为时辰地支或干支: ' + shiZhi);
+  }
+  var last = shiZhi.charAt(shiZhi.length - 1);
+  if (XK_ZHI_TO_GONG[last] === undefined) {
+    throw new Error('替卦流时飞星: 未知干支地支: ' + shiZhi);
+  }
+  var gong = XK_ZHI_TO_GONG[last];
+  var tiStar = XK_TI_GUA[gong];
+  if (!tiStar) throw new Error('替卦流时飞星: ' + gong + '宫无替星');
+  var panByGong = {};
+  for (var i = 0; i < 9; i++) {
+    var pathGong = XK_LUO_SHU_PATH[i];
+    var star = ((tiStar - 1 + i) % 9) + 1;
+    panByGong[pathGong] = star;
+  }
+  return {
+    year: year,
+    shiZhi: shiZhi,
+    lastZhi: last,
+    tiStar: tiStar,
+    centerStar: tiStar,
+    panByGong: panByGong,
+    starName: function (g) {
+      var star = panByGong[g];
+      return star + '(' + XK_STARS[star - 1].slice(2) + '/' + XK_NATURE[star - 1] + ')';
+    }
+  };
+}
+
+// 从公历日期取时干支(lunar 引擎)
+function xkLunarShiGZ(date) {
+  var dt = date || new Date();
+  var Solar = (typeof window !== 'undefined' && window.Solar)
+    || (typeof window !== 'undefined' && window.LunarLib && window.LunarLib.Solar);
+  if (!Solar || typeof Solar.fromYmdHms !== 'function') {
+    throw new Error('xkLunarShiGZ: 需要 lunar 引擎(window.Solar)');
+  }
+  var s = Solar.fromYmdHms(dt.getFullYear(), dt.getMonth() + 1, dt.getDate(),
+                            dt.getHours(), dt.getMinutes(), dt.getSeconds() || 0);
+  var l = s.getLunar();
+  return {
+    yearGZ: l.getYearInGanZhi(),
+    monthGZ: l.getMonthInGanZhi(),
+    dayGZ: l.getDayInGanZhi(),
+    shiGZ: l.getTimeInGanZhi()
+  };
+}
+
 window.xuankong = {
   // 算盘层
   currentYun: xkCurrentYun,
@@ -523,6 +632,11 @@ window.xuankong = {
   liuriPan: xkLiuriPan,
   tiGuaLiuriPan: xkTiGuaLiuriPan,
   lunarDayGZ: xkLunarDayGZ,
+  // v3.0.18:流时飞星
+  hourToShiZhi: xkHourToShiZhi,
+  liushiPan: xkLiushiPan,
+  tiGuaLiushiPan: xkTiGuaLiushiPan,
+  lunarShiGZ: xkLunarShiGZ,
   // 查表常量
   STARS: XK_STARS,
   NATURE: XK_NATURE,
