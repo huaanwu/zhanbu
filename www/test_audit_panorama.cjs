@@ -10,6 +10,8 @@ load('history.js');load('visual.js');load('ab_test.js');
 load('feedback-loop.js');
 load('crypto.js');load('chat.js');load('app/cross.js');
 load('app/fengshui.js');load('app/daofobuddhism.js');
+// v3.0.10: 风水算盘层移到独立 www/fengshui.js,需手动 load
+load('fengshui.js');
 
 const TR=require('./test_comprehensive.js');
 const runner=new TR();
@@ -75,12 +77,12 @@ runner.test('姓名学: 五格计算结果符合康熙笔画', function() {
   runner.assertEq(r2.tiange,16,'司马光天16');
   runner.assertEq(r2.renge,16,'司马光人16');
 });
-runner.test('风水: 八宅四方向伏位=大门朝', function() {
-  runner.assertEq(window.eightZhai('东').吉.伏位,'东','东门伏位=东');
-  runner.assertEq(window.eightZhai('南').吉.伏位,'南','南门伏位=南');
-  runner.assertEq(window.eightZhai('西').吉.伏位,'西','西门伏位=西');
-  runner.assertEq(window.eightZhai('北').吉.伏位,'北','北门伏位=北');
-  runner.assertEq(window.eightZhai('东').吉.生气,'南','震宫生气=南');
+runner.test('风水: 八宅四方向伏位=大门朝(v3.0.10 移到 window.fengshui)', function() {
+  runner.assertEq(window.fengshui.eightZhai('东').ji.伏位,'东','东门伏位=东');
+  runner.assertEq(window.fengshui.eightZhai('南').ji.伏位,'南','南门伏位=南');
+  runner.assertEq(window.fengshui.eightZhai('西').ji.伏位,'西','西门伏位=西');
+  runner.assertEq(window.fengshui.eightZhai('北').ji.伏位,'北','北门伏位=北');
+  runner.assertEq(window.fengshui.eightZhai('东').ji.生气,'南','震宫生气=南');
 });
 runner.test('道佛化解: 4个核心渲染函数可调用', function() {
   runner.assert(typeof window.getQianData==='function','getQianData');

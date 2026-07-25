@@ -14,6 +14,7 @@
     daliuren: {},
     chenggu: { cal: 'solar', gender: 'male' },
     lingqian: { kind: 'guanyin' },
+    fengshui: { cal: 'solar', gender: 'male', houseType: 'zhai', doorDir: '南', mainRoomDir: '北' },
   };
 
   window.currentBazi = null; window.currentBaziPrompt = '';

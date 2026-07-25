@@ -93,7 +93,13 @@ const Cache = {
         parts.push(params.name);
         break;
       case 'fengshui':
+        // v3.0.10:加 mainRoomDir(主卧朝向)/ cal(历法)/ doorDir/ houseType
+        parts.push('fs-v3.0.10');
         parts.push(params.address);
+        if (params.doorDir) parts.push('door:' + params.doorDir);
+        if (params.mainRoomDir) parts.push('mainroom:' + params.mainRoomDir);
+        if (params.houseType) parts.push('house:' + params.houseType);
+        if (params.cal) parts.push('cal:' + params.cal);
         break;
       case 'shouxiang': {
         // v3.0.5 + cleanup: _imgFingerprint 与 sxGender + keypoints 组合,
