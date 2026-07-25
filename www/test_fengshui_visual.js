@@ -423,6 +423,64 @@ check('app/daliuren.js 含 doDaliuren + doAIDaliuren(v3.0.7 接入)', () => {
   assert.ok(/window\.doAIDaliuren\s*=/.test(src), 'doAIDaliuren 挂到 window');
 });
 
+// ============ v3.1.9 大六壬精细圆盘(从 app/daliuren.js 迁来) ============
+check('window.fengshuiVisual 暴露 drawDaliurenCircle', () => {
+  assert.strictEqual(typeof vis.drawDaliurenCircle, 'function');
+});
+
+check('drawDaliurenCircle 渲染 12 地支(地盘+天盘+天将 + 三传弧标)', () => {
+  var pan = {
+    tianPan: { '午':'寅', '未':'丑', '申':'子', '酉':'亥', '戌':'戌', '亥':'酉',
+               '子':'申', '丑':'未', '寅':'午', '卯':'巳', '辰':'辰', '巳':'卯' },
+    tianJiang: { '寅':'贵人', '丑':'螣蛇', '子':'朱雀', '亥':'六合', '戌':'勾陈', '酉':'青龙',
+                 '申':'天空', '未':'白虎', '午':'太常', '巳':'玄武', '辰':'太阴', '卯':'天后' },
+    sanChuan: [
+      { name: '初传', shen: '戌', jiang: '玄武' },
+      { name: '中传', shen: '巳', jiang: '太阴' },
+      { name: '末传', shen: '寅', jiang: '勾陈' }
+    ],
+    siKe: [
+      { idx: 1, shang: '未', xia: '庚', xiaGong: '申', shangJiang: '天空' },
+      { idx: 2, shang: '午', xia: '未', xiaGong: '未', shangJiang: '青龙' },
+      { idx: 3, shang: '巳', xia: '丙', xiaGong: '巳', shangJiang: '朱雀' },
+      { idx: 4, shang: '辰', xia: '巳', xiaGong: '辰', shangJiang: '六合' }
+    ],
+    yueJiang: { zhi: '午', name: '胜光' },
+    hourZhi: '未'
+  };
+  var svg = vis.drawDaliurenCircle(pan);
+  assert.ok(svg.indexOf('<svg') >= 0, 'SVG 输出');
+  // 12 地支(地盘 20px 大字体)
+  var allZhi = ['午','未','申','酉','戌','亥','子','丑','寅','卯','辰','巳'];
+  allZhi.forEach(function (z) {
+    assert.ok(svg.indexOf('>' + z + '<') > 0, '含地支 ' + z);
+  });
+  // 三传弧标(path A)
+  assert.ok(svg.indexOf('A 86 86') > 0, '含三传弧标');
+  // 干支标记(干=庚 用 accent-blue,支=丙 用 accent-purple)
+  assert.ok(svg.indexOf('var(--accent-blue)') > 0 || svg.indexOf('var(--accent-purple)') > 0, '含干支标记');
+});
+
+check('drawDaliurenCircle 中心含月将+占时', () => {
+  var pan = {
+    tianPan: {}, tianJiang: {},
+    yueJiang: { zhi: '午', name: '胜光' },
+    hourZhi: '未'
+  };
+  var svg = vis.drawDaliurenCircle(pan);
+  assert.ok(svg.indexOf('午将') > 0, '含月将 "午将"');
+  assert.ok(svg.indexOf('胜光') > 0, '含月将名 "胜光"');
+  assert.ok(svg.indexOf('占时 未') > 0, '含占时');
+});
+
+check('app/daliuren.js v3.1.9 调 window.fengshuiVisual.drawDaliurenCircle 替代 buildDlrCircle', () => {
+  var src = fs.readFileSync('app/daliuren.js', 'utf-8');
+  // 调 drawDaliurenCircle
+  assert.ok(/window\.fengshuiVisual\.drawDaliurenCircle\(pan\)/.test(src), '调 drawDaliurenCircle');
+  // buildDlrCircle 副本已删除
+  assert.ok(!/function buildDlrCircle\(/.test(src), 'buildDlrCircle 副本已删除');
+});
+
 // ============ v3.1.6 大六壬九宗门 + 神煞 ============
 check('window.fengshuiVisual 暴露 drawDaliurenZongmen/drawDaliurenGanSha + DLR_ZONGMEN_DETAILS/DLR_GAN_SHA', () => {
   assert.strictEqual(typeof vis.drawDaliurenZongmen, 'function');

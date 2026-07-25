@@ -515,6 +515,78 @@ function drawDaliurenGanSha(pan) {
   return svg;
 }
 
+// ============ v3.1.9 大六壬圆盘 (从 app/daliuren.js buildDlrCircle 迁来) ============
+// 比 v3.1.3 我做的 drawDaliurenTianPan 更精细: 外圈天盘神+天将, 内圈地盘支,
+// 三传落宫弧线标记 + 干支宫标记
+// 传统方位: 午在南(顶),子在北(底),卯在东(左),酉在西(右),顺时针排布
+function drawDaliurenCircle(pan) {
+  if (!pan || !pan.tianPan || !pan.tianJiang) return '<div style="color:var(--text-muted);">无天盘数据</div>';
+  const order = ['午', '未', '申', '酉', '戌', '亥', '子', '丑', '寅', '卯', '辰', '巳'];
+  const ZHI12 = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+  const C = 110, R_OUT = 93, R_IN = 64;
+  // 天盘支 → 所临地盘支(用于三传落宫标记)
+  const tp2dp = {};
+  ZHI12.forEach(z => { tp2dp[pan.tianPan[z]] = z; });
+  const chuanMark = {};
+  const chuanColors = ['var(--accent-red)', 'var(--accent-gold)', 'var(--accent-green)'];
+  if (pan.sanChuan) {
+    pan.sanChuan.forEach((c, i) => {
+      const dp = tp2dp[c.shen];
+      if (dp) chuanMark[dp] = { label: ['初', '中', '末'][i], color: chuanColors[i], shen: c.shen };
+    });
+  }
+  // 干支标记: pan.siKe[0].xia(第一课的下神=日干寄宫),
+// 寄宫由 pan.siKe[0].xiaGong 给出(该课的上神所在宫即寄宫)
+const TG = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+  const ganGong = (pan.siKe && pan.siKe.length && TG.indexOf(pan.siKe[0].xia) >= 0 && pan.siKe[0].xiaGong)
+    ? pan.siKe[0].xiaGong : null;
+  const zhiGong = pan.siKe && pan.siKe.length > 2 ? pan.siKe[2].xia : null;
+
+  function pos(i, r) {
+    const a = (-90 + i * 30) * Math.PI / 180;
+    return [C + r * Math.cos(a), C + r * Math.sin(a)];
+  }
+
+  let svg = `<svg viewBox="0 0 220 220" style="display:block;margin:0 auto;max-width:260px;width:100%;">`;
+  svg += `<circle cx="${C}" cy="${C}" r="104" fill="none" stroke="var(--border)" stroke-width="1"/>`;
+  svg += `<circle cx="${C}" cy="${C}" r="78" fill="none" stroke="var(--border)" stroke-width="0.75" stroke-dasharray="2,2"/>`;
+  svg += `<circle cx="${C}" cy="${C}" r="50" fill="none" stroke="var(--border)" stroke-width="1"/>`;
+  order.forEach((dz, i) => {
+    const tp = pan.tianPan[dz];
+    const jiang = pan.tianJiang[tp] || '';
+    const [xo, yo] = pos(i, R_OUT);
+    const [xj, yj] = pos(i, R_OUT - 13);
+    const [xi, yi] = pos(i, R_IN);
+    // 三传落宫弧线
+    const mark = chuanMark[dz];
+    if (mark) {
+      const a0 = (-90 + i * 30 - 13) * Math.PI / 180, a1 = (-90 + i * 30 + 13) * Math.PI / 180;
+      const x0 = C + 86 * Math.cos(a0), y0 = C + 86 * Math.sin(a0);
+      const x1 = C + 86 * Math.cos(a1), y1 = C + 86 * Math.sin(a1);
+      svg += `<path d="M ${x0.toFixed(1)} ${y0.toFixed(1)} A 86 86 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}" fill="none" stroke="${mark.color}" stroke-width="3" opacity="0.7"/>`;
+      svg += `<text x="${xo}" y="${yo - 8}" text-anchor="middle" font-size="8" fill="${mark.color}" font-weight="700">${mark.label}</text>`;
+    }
+    // 天盘神 + 天将
+    svg += `<text x="${xo}" y="${yo + 4}" text-anchor="middle" font-size="12" font-weight="700" fill="${mark ? mark.color : 'var(--accent-gold)'}">${tp}</text>`;
+    svg += `<text x="${xj}" y="${yj + 10}" text-anchor="middle" font-size="7.5" fill="var(--text-muted)">${jiang}</text>`;
+    // 地盘支 + 干/支宫标记
+    let dpLabel = dz;
+    svg += `<text x="${xi}" y="${yi + 4}" text-anchor="middle" font-size="11" fill="var(--text-secondary)">${dpLabel}</text>`;
+    if (dz === ganGong) svg += `<text x="${xi}" y="${yi + 14}" text-anchor="middle" font-size="7" fill="var(--accent-blue)">干</text>`;
+    if (dz === zhiGong) svg += `<text x="${xi}" y="${yi - 6}" text-anchor="middle" font-size="7" fill="var(--accent-purple)">支</text>`;
+  });
+  // 中心: 月将/占时
+  if (pan.yueJiang) {
+    svg += `<text x="${C}" y="${C - 6}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--accent-gold)">${pan.yueJiang.zhi}将</text>`;
+    svg += `<text x="${C}" y="${C + 8}" text-anchor="middle" font-size="10" fill="var(--text-secondary)">${pan.yueJiang.name}</text>`;
+  }
+  if (pan.hourZhi) {
+    svg += `<text x="${C}" y="${C + 21}" text-anchor="middle" font-size="9" fill="var(--text-muted)">占时 ${pan.hourZhi}</text>`;
+  }
+  svg += '</svg>';
+  return svg;
+}
+
 // 四课 SVG: 4 列卡(第一/二/三/四课),每列上神/下神/天将
 function drawDaliurenSike(pan) {
   if (!pan || !pan.siKe) return '<div style="color:var(--text-muted);">无四课数据</div>';
@@ -614,6 +686,8 @@ window.fengshuiVisual = {
   // v3.1.6:九宗门 + 神煞
   drawDaliurenZongmen: drawDaliurenZongmen,
   drawDaliurenGanSha: drawDaliurenGanSha,
+  // v3.1.9: 大六壬精细圆盘(从 app/daliuren.js buildDlrCircle 迁来)
+  drawDaliurenCircle: drawDaliurenCircle,
   // v3.0.13:详情
   showShanDetail: showShanDetail,
   showStarDetail: showStarDetail,

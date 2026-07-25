@@ -30,64 +30,6 @@ async function doDaliuren() {
 }
 window.doDaliuren = doDaliuren;
 
-// 天地盘圆图(SVG): 外圈天盘神+天将,内圈地盘支,三传/干宫/支宫标记
-// 传统方位: 午在南(顶),子在北(底),卯在东(左),酉在西(右),顺时针排布
-function buildDlrCircle(pan) {
-  const order = ['午', '未', '申', '酉', '戌', '亥', '子', '丑', '寅', '卯', '辰', '巳'];
-  const ZHI12 = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-  const C = 110, R_OUT = 93, R_IN = 64;
-  // 天盘支 → 所临地盘支(用于三传落宫标记)
-  const tp2dp = {};
-  ZHI12.forEach(z => { tp2dp[pan.tianPan[z]] = z; });
-  const chuanMark = {};
-  const chuanColors = ['var(--accent-red)', 'var(--accent-gold)', 'var(--accent-green)'];
-  pan.sanChuan.forEach((c, i) => {
-    const dp = tp2dp[c.shen];
-    if (dp) chuanMark[dp] = { label: ['初', '中', '末'][i], color: chuanColors[i], shen: c.shen };
-  });
-  const ganGong = pan.siKe.length ? window.daliuren.JIGONG[pan.siKe[0].xia] : null;
-  const zhiGong = pan.siKe.length > 2 ? pan.siKe[2].xia : null;
-
-  function pos(i, r) {
-    const a = (-90 + i * 30) * Math.PI / 180;
-    return [C + r * Math.cos(a), C + r * Math.sin(a)];
-  }
-
-  let svg = `<svg viewBox="0 0 220 220" style="display:block;margin:0 auto;max-width:260px;width:100%;">`;
-  svg += `<circle cx="${C}" cy="${C}" r="104" fill="none" stroke="var(--border)" stroke-width="1"/>`;
-  svg += `<circle cx="${C}" cy="${C}" r="78" fill="none" stroke="var(--border)" stroke-width="0.75" stroke-dasharray="2,2"/>`;
-  svg += `<circle cx="${C}" cy="${C}" r="50" fill="none" stroke="var(--border)" stroke-width="1"/>`;
-  order.forEach((dz, i) => {
-    const tp = pan.tianPan[dz];
-    const jiang = pan.tianJiang[tp] || '';
-    const [xo, yo] = pos(i, R_OUT);
-    const [xj, yj] = pos(i, R_OUT - 13);
-    const [xi, yi] = pos(i, R_IN);
-    // 三传落宫弧线
-    const mark = chuanMark[dz];
-    if (mark) {
-      const a0 = (-90 + i * 30 - 13) * Math.PI / 180, a1 = (-90 + i * 30 + 13) * Math.PI / 180;
-      const x0 = C + 86 * Math.cos(a0), y0 = C + 86 * Math.sin(a0);
-      const x1 = C + 86 * Math.cos(a1), y1 = C + 86 * Math.sin(a1);
-      svg += `<path d="M ${x0.toFixed(1)} ${y0.toFixed(1)} A 86 86 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}" fill="none" stroke="${mark.color}" stroke-width="3" opacity="0.7"/>`;
-      svg += `<text x="${xo}" y="${yo - 8}" text-anchor="middle" font-size="8" fill="${mark.color}" font-weight="700">${mark.label}</text>`;
-    }
-    // 天盘神 + 天将
-    svg += `<text x="${xo}" y="${yo + 4}" text-anchor="middle" font-size="12" font-weight="700" fill="${mark ? mark.color : 'var(--accent-gold)'}">${tp}</text>`;
-    svg += `<text x="${xj}" y="${yj + 10}" text-anchor="middle" font-size="7.5" fill="var(--text-muted)">${jiang}</text>`;
-    // 地盘支 + 干/支宫标记
-    let dpLabel = dz;
-    svg += `<text x="${xi}" y="${yi + 4}" text-anchor="middle" font-size="11" fill="var(--text-secondary)">${dpLabel}</text>`;
-    if (dz === ganGong) svg += `<text x="${xi}" y="${yi + 14}" text-anchor="middle" font-size="7" fill="var(--accent-blue)">干</text>`;
-    if (dz === zhiGong) svg += `<text x="${xi}" y="${yi - 6}" text-anchor="middle" font-size="7" fill="var(--accent-purple)">支</text>`;
-  });
-  // 中心: 月将/占时
-  svg += `<text x="${C}" y="${C - 6}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--accent-gold)">${pan.yueJiang.zhi}将</text>`;
-  svg += `<text x="${C}" y="${C + 8}" text-anchor="middle" font-size="10" fill="var(--text-secondary)">${pan.yueJiang.name}</text>`;
-  svg += `<text x="${C}" y="${C + 21}" text-anchor="middle" font-size="9" fill="var(--text-muted)">占时 ${pan.hourZhi}</text>`;
-  svg += '</svg>';
-  return svg;
-}
 
 function renderDaliuren(pan) {
   let html = '<div class="result-title">大六壬起课结果</div>';
@@ -106,9 +48,10 @@ function renderDaliuren(pan) {
   }
 
   // 天盘圆图: 传统十二宫圆盘(外圈天盘神+天将,内圈地盘,三传落宫弧标记)
+  // v3.1.9: 改用 window.fengshuiVisual.drawDaliurenCircle(替代本文件 buildDlrCircle 副本)
   html += '<div style="background:var(--bg-inner);border:1px solid var(--border);border-radius:8px;padding:0.6rem;margin:0.5rem 0;">';
   html += '<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.3rem;text-align:center;">天地盘（外圈天盘·天将 / 内圈地盘，弧标为三传落宫）</div>';
-  html += buildDlrCircle(pan);
+  html += window.fengshuiVisual.drawDaliurenCircle(pan);
   html += '</div>';
 
   // 四课
