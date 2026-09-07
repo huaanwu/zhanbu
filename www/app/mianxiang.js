@@ -283,7 +283,10 @@ async function doMianxiang() {
     usedSource = '云端 DeepSeek (VL)';
     resultEl.innerHTML = '<div class="loading">调用云端识图(' + imageUrls.length + ' 张图分析)...</div>';
     try {
-      const model = localStorage.getItem('vision_model') || 'deepseek-v4-flash';
+      // v3.1.2: 统一云端走 DeepSeek 视觉模型
+      // 强制使用 deepseek-v4-flash-vision-exp;清理 qwen-vl 残留值
+      const savedVisionModel = localStorage.getItem('vision_model') || '';
+      const model = (savedVisionModel.startsWith('deepseek')) ? savedVisionModel : 'deepseek-v4-flash-vision-exp';
       fullText = await Core.AI.callMultimodalVision(
         (localStorage.getItem('ds_base_url') || 'https://api.deepseek.com/v1').replace(/\/v1\/?$/, '') + '/v1/chat/completions',
         { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + vKey },

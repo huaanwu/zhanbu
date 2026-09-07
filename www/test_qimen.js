@@ -128,4 +128,23 @@ runner.test('prompt 含定局/符头信息', function() {
   runner.assert(prompt.indexOf('下元') >= 0, '应含元');
 });
 
+runner.module('qimen.js - Bug2 四柱精度回归(立春换年/节气换月)');
+runner.test('2026-09-07 月柱应为丙申(非戊戌)', function() {
+  var pan = qimen.panQimen(2026, 9, 7, 10, 30);
+  runner.assertEq(pan.bazi[1], '丙申', '月柱错误，实际：' + pan.bazi[1]);
+});
+runner.test('2026-01-15 立春前 年柱应为乙巳(非丙午)', function() {
+  var pan = qimen.panQimen(2026, 1, 15, 12, 0);
+  runner.assertEq(pan.bazi[0], '乙巳', '年柱错误，实际：' + pan.bazi[0]);
+});
+
+runner.module('qimen.js - 农历文本');
+runner.test('pan.lunarText 非空且含"年""月"', function() {
+  var pan = qimen.panQimen(2026, 9, 7, 10, 30);
+  runner.assert(pan.lunarText !== undefined, 'lunarText 应存在');
+  runner.assert(pan.lunarText !== '', 'lunarText 不应为空');
+  runner.assert(pan.lunarText.indexOf('年') >= 0, 'lunarText 应含"年"');
+  runner.assert(pan.lunarText.indexOf('月') >= 0, 'lunarText 应含"月"');
+});
+
 runner.run();

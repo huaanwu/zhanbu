@@ -57,8 +57,8 @@ window.kbDaoismBuddhismOnDemand = Core.KB.kbDaoismBuddhismOnDemand;
   }
 })();
 
-var APP_VERSION = 'v3.1.0';
-var APP_BUILD_DATE = '2026-07-26';
+var APP_VERSION = 'v3.1.4';
+var APP_BUILD_DATE = '2026-09-07';
 
 // ========== 版本升级清理旧配置 ==========
 (function() {

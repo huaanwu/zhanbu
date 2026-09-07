@@ -145,6 +145,13 @@ runner.test('冬至后大寒前 → 丑将大吉', function () {
   runner.assertEq(pan.yueJiang.zhi, '丑', '实际：' + pan.yueJiang.zhi);
   runner.assertEq(pan.yueJiang.zhongqi, '冬至');
 });
+runner.test('冬至交节当天(2026-12-22 12:30) → 丑将大吉(Bug1回归)', function () {
+  // getJieQiTable() 只含当年小寒-惊蛰,缺当年冬至; getPrevJieQi() 链可正确找到2026年冬至
+  var pan = dlr.paiKe('time', { dt: new Date(2026, 11, 22, 12, 30) }); // 2026-12-22 12:30
+  runner.assertEq(pan.yueJiang.zhi, '丑', '实际：' + pan.yueJiang.zhi + '，应为丑将');
+  runner.assertEq(pan.yueJiang.name, '大吉', '实际：' + pan.yueJiang.name);
+  runner.assertEq(pan.yueJiang.zhongqi, '冬至', '实际：' + pan.yueJiang.zhongqi);
+});
 runner.test('大寒后雨水前 → 子将神后(跨年边界)', function () {
   var pan = dlr.paiKe('time', { dt: new Date(2026, 1, 10, 10, 0) }); // 2026-02-10
   runner.assertEq(pan.yueJiang.zhi, '子', '实际：' + pan.yueJiang.zhi);

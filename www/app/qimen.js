@@ -42,6 +42,7 @@ function renderQimen(pan) {
   html += `</div>`;
 
   html += `<div style="text-align:center;margin-bottom:0.8rem;font-size:0.8rem;color:var(--text-secondary);">四柱：${pan.bazi.join(' ')}</div>`;
+  if (pan.lunarText) html += `<div style="text-align:center;margin-bottom:0.5rem;font-size:0.75rem;color:var(--text-muted);">农历：<strong>${pan.lunarText}</strong></div>`;
 
   // 九宫格按洛书顺序：4 9 2 / 3 5 7 / 8 1 6
   const luoshuOrder = [4, 9, 2, 3, 5, 7, 8, 1, 6];

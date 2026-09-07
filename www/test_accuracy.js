@@ -458,15 +458,15 @@ runner.test('今例：2024-10-01 10:00 = 甲辰 乙亥 戊戌 丁巳', function(
 runner.module('第五层·排盘一致性');
 
 runner.test('panGua 完整结构', function() {
-  var dt = new Date(2026, 5, 28, 14, 30); var pan = liuyao.panGua("time", { dt: dt }); runner.assertHasKeys(pan, ["method","datetime","timeGanzhi","gua","yaoList"]); runner.assertEq(pan.yaoList.length, 6);
+  var dt = new Date(2026, 5, 28, 14, 30); var pan = liuyao.panGua("coin", { dt: dt }); runner.assertHasKeys(pan, ["method","datetime","timeGanzhi","gua","yaoList"]); runner.assertEq(pan.yaoList.length, 6);
 });
 
 runner.test('六爻六亲全部有值', function() {
-  var pan = liuyao.panGua("number", { num1: 1, num2: 2, num3: 3, dt: new Date(2024, 0, 1, 12, 0) }); for (var i = 0; i < pan.yaoList.length; i++) { var y = pan.yaoList[i]; runner.assertHasKeys(y, ["yao","name","gan","zhi","wuxing","liuqin","liushen","isDong"]); runner.assert(y.liuqin !== "未知"); }
+  var pan = liuyao.panGua("number", { _internal: true, num1: 1, num2: 2, num3: 3, dt: new Date(2024, 0, 1, 12, 0) }); for (var i = 0; i < pan.yaoList.length; i++) { var y = pan.yaoList[i]; runner.assertHasKeys(y, ["yao","name","gan","zhi","wuxing","liuqin","liushen","isDong"]); runner.assert(y.liuqin !== "未知"); }
 });
 
 runner.test('有动爻必有变卦', function() {
-  var pan = liuyao.panGua("number", { num1: 22, num2: 77, num3: 45, dt: new Date(2026, 5, 28, 14, 30) }); runner.assert(pan.gua.dongYaoList.length > 0); runner.assert(pan.gua.bianUpperGua !== null); runner.assert(pan.gua.bianLowerGua !== null);
+  var pan = liuyao.panGua("number", { _internal: true, num1: 22, num2: 77, num3: 45, dt: new Date(2026, 5, 28, 14, 30) }); runner.assert(pan.gua.dongYaoList.length > 0); runner.assert(pan.gua.bianUpperGua !== null); runner.assert(pan.gua.bianLowerGua !== null);
 });
 
 

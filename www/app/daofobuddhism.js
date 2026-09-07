@@ -60,6 +60,9 @@ function switchDfTab(name) {
       window.loadKBGroups(['daofobuddhism']).then(() => renderZhouList()).catch(e => console.warn('[DF] zhou KB load fail:', e));
     }
   }
+  if (name === 'zhen') {
+    renderZhenFuGallery();
+  }
 }
 
 // ========== 灵签抽签 ==========
@@ -525,6 +528,62 @@ ${kbBuddhismDivine()}
   }
 })();
 
+// ========== 古籍真符画廊（v3.1.4） ==========
+async function renderZhenFuGallery() {
+  const container = document.getElementById('zhenFuGallery');
+  if (!container) return;
+  try {
+    const res = await fetch('images/fulu-zhen/manifest.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('fetch failed');
+    const items = await res.json();
+
+    const notice = `<div style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.3);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.8rem;font-size:0.78rem;color:var(--text-secondary);line-height:1.6;">
+      以上符图影印自《道藏》第30册（正统道藏涵芬楼本），形制为古籍原样。道门传统认为符箓须授箓道士手书方具法效，此处仅供研习形制。
+    </div>`;
+
+    const grid = items.map(item => safeHTML`
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;transition:transform 0.2s;" onclick="openZhenFuLightbox('${item.file}', '${item.name}', '${item.desc}')">
+        <div style="background:#f9f3e3;padding:0.5rem;display:flex;align-items:center;justify-content:center;min-height:100px;">
+          <img src="${item.file}" alt="${item.name}" style="max-width:100%;max-height:120px;object-fit:contain;filter:sepia(0.15) contrast(1.05);" loading="lazy" onerror="this.style.display='none'"/>
+        </div>
+        <div style="padding:0.5rem;">
+          <div style="font-size:0.85rem;color:var(--accent-gold);font-weight:bold;margin-bottom:0.2rem;">${item.name}</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">${item.desc}</div>
+        </div>
+      </div>
+    `).join('');
+
+    container.innerHTML = safeHTML`
+      ${safeHTML.raw(notice)}
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.6rem;">${safeHTML.raw(grid)}</div>
+    `;
+  } catch (e) {
+    console.warn('[DF] 古籍真符加载失败:', e);
+    container.style.display = 'none';
+  }
+}
+
+function openZhenFuLightbox(file, name, desc) {
+  let overlay = document.getElementById('zhenFuLightbox');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'zhenFuLightbox';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1rem;';
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = safeHTML`
+    <div style="max-width:90vw;max-height:80vh;overflow:auto;">
+      <img src="${file}" alt="${name}" style="max-width:92vw;max-height:70vh;object-fit:contain;width:auto;height:auto;display:block;margin:0 auto;filter:sepia(0.1) contrast(1.08);border:2px solid rgba(201,168,76,0.4);border-radius:4px;"/>
+    </div>
+    <div style="text-align:center;margin-top:0.8rem;max-width:600px;">
+      <div style="font-size:1.1rem;color:var(--accent-gold);font-weight:bold;">${name}</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.3rem;">${desc}</div>
+    </div>
+    <button onclick="document.getElementById('zhenFuLightbox')?.remove()" style="margin-top:0.8rem;padding:0.4rem 1.2rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;cursor:pointer;font-size:0.85rem;">关闭</button>
+  `;
+}
+
 
 // ========== 暴露到 window 供 HTML 调用 ==========
 // v3.0.5: daofobuddhism.js 是 ES module 作用域，必须显式挂到 window 才能在 HTML onclick 中使用
@@ -539,4 +598,4 @@ window.renderFuSvg = renderFuSvg;
 window.renderJueList = renderJueList;
 window.doAiHuaJie = doAiHuaJie;
 
-window.getQianData=getQianData;window.renderFuList=renderFuList;window.renderJueList=renderJueList;window.renderZhouList=renderZhouList;
+window.getQianData=getQianData;window.renderFuList=renderFuList;window.renderJueList=renderJueList;window.renderZhouList=renderZhouList;window.renderZhenFuGallery=renderZhenFuGallery;window.openZhenFuLightbox=openZhenFuLightbox;

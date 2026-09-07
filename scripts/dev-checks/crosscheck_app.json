@@ -1,0 +1,452 @@
+[
+ {
+  "label": "今天",
+  "dt": "2026-9-7 10:30",
+  "siZhu": {
+   "year": "丙午",
+   "month": "丙申",
+   "day": "甲申",
+   "hour": "己巳"
+  },
+  "yueJiang": {
+   "zhi": "巳",
+   "name": "太乙",
+   "zhongqi": "处暑"
+  },
+  "hourZhi": "巳",
+  "dayGZ": "甲申",
+  "sanChuan": "寅巳申",
+  "zongmen": "伏吟法",
+  "lunarText": "二〇二六年七月廿六",
+  "lunarMD": [
+   7,
+   26
+  ],
+  "jieqi": "白露"
+ },
+ {
+  "label": "晚子时边界",
+  "dt": "2026-9-7 23:30",
+  "siZhu": {
+   "year": "丙午",
+   "month": "丁酉",
+   "day": "甲申",
+   "hour": "丙子"
+  },
+  "yueJiang": {
+   "zhi": "巳",
+   "name": "太乙",
+   "zhongqi": "处暑"
+  },
+  "hourZhi": "子",
+  "dayGZ": "甲申",
+  "sanChuan": "子巳戌",
+  "zongmen": "比用法",
+  "lunarText": "二〇二六年七月廿六",
+  "lunarMD": [
+   7,
+   26
+  ],
+  "jieqi": "白露"
+ },
+ {
+  "label": "跨日后",
+  "dt": "2026-9-8 0:30",
+  "siZhu": {
+   "year": "丙午",
+   "month": "丁酉",
+   "day": "乙酉",
+   "hour": "丙子"
+  },
+  "yueJiang": {
+   "zhi": "巳",
+   "name": "太乙",
+   "zhongqi": "处暑"
+  },
+  "hourZhi": "子",
+  "dayGZ": "乙酉",
+  "sanChuan": "未子巳",
+  "zongmen": "比用法",
+  "lunarText": "二〇二六年七月廿七",
+  "lunarMD": [
+   7,
+   27
+  ],
+  "jieqi": ""
+ },
+ {
+  "label": "立春当天(16:27立春)",
+  "dt": "2024-2-4 16:30",
+  "siZhu": {
+   "year": "甲辰",
+   "month": "丙寅",
+   "day": "戊戌",
+   "hour": "庚申"
+  },
+  "yueJiang": {
+   "zhi": "子",
+   "name": "神后",
+   "zhongqi": "大寒"
+  },
+  "hourZhi": "申",
+  "dayGZ": "戊戌",
+  "sanChuan": "寅午戌",
+  "zongmen": "贼克法",
+  "lunarText": "二〇二三年腊月廿五",
+  "lunarMD": [
+   12,
+   25
+  ],
+  "jieqi": "立春"
+ },
+ {
+  "label": "立春后",
+  "dt": "2024-2-4 17:30",
+  "siZhu": {
+   "year": "甲辰",
+   "month": "丙寅",
+   "day": "戊戌",
+   "hour": "辛酉"
+  },
+  "yueJiang": {
+   "zhi": "子",
+   "name": "神后",
+   "zhongqi": "大寒"
+  },
+  "hourZhi": "酉",
+  "dayGZ": "戊戌",
+  "sanChuan": "亥寅巳",
+  "zongmen": "遥克法",
+  "lunarText": "二〇二三年腊月廿五",
+  "lunarMD": [
+   12,
+   25
+  ],
+  "jieqi": "立春"
+ },
+ {
+  "label": "闰二月初一",
+  "dt": "2023-3-22 12:30",
+  "siZhu": {
+   "year": "癸卯",
+   "month": "乙卯",
+   "day": "己卯",
+   "hour": "庚午"
+  },
+  "yueJiang": {
+   "zhi": "戌",
+   "name": "河魁",
+   "zhongqi": "春分"
+  },
+  "hourZhi": "午",
+  "dayGZ": "己卯",
+  "sanChuan": "亥卯未",
+  "zongmen": "涉害法",
+  "lunarText": "二〇二三年闰二月初一",
+  "lunarMD": [
+   -2,
+   1
+  ],
+  "jieqi": ""
+ },
+ {
+  "label": "二月初一",
+  "dt": "2023-2-20 12:30",
+  "siZhu": {
+   "year": "癸卯",
+   "month": "甲寅",
+   "day": "己酉",
+   "hour": "庚午"
+  },
+  "yueJiang": {
+   "zhi": "亥",
+   "name": "登明",
+   "zhongqi": "雨水"
+  },
+  "hourZhi": "午",
+  "dayGZ": "己酉",
+  "sanChuan": "未子巳",
+  "zongmen": "涉害法",
+  "lunarText": "二〇二三年二月初一",
+  "lunarMD": [
+   2,
+   1
+  ],
+  "jieqi": ""
+ },
+ {
+  "label": "处暑当天(月将换巳)",
+  "dt": "2026-8-23 4:30",
+  "siZhu": {
+   "year": "丙午",
+   "month": "丙申",
+   "day": "己巳",
+   "hour": "丙寅"
+  },
+  "yueJiang": {
+   "zhi": "午",
+   "name": "胜光",
+   "zhongqi": "大暑"
+  },
+  "hourZhi": "寅",
+  "dayGZ": "己巳",
+  "sanChuan": "酉丑巳",
+  "zongmen": "涉害法",
+  "lunarText": "二〇二六年七月十一",
+  "lunarMD": [
+   7,
+   11
+  ],
+  "jieqi": "处暑"
+ },
+ {
+  "label": "处暑当天午后",
+  "dt": "2026-8-23 12:30",
+  "siZhu": {
+   "year": "丙午",
+   "month": "丙申",
+   "day": "己巳",
+   "hour": "庚午"
+  },
+  "yueJiang": {
+   "zhi": "巳",
+   "name": "太乙",
+   "zhongqi": "处暑"
+  },
+  "hourZhi": "午",
+  "dayGZ": "己巳",
+  "sanChuan": "卯寅丑",
+  "zongmen": "贼克法",
+  "lunarText": "二〇二六年七月十一",
+  "lunarMD": [
+   7,
+   11
+  ],
+  "jieqi": "处暑"
+ },
+ {
+  "label": "雨水当天附近",
+  "dt": "2026-2-19 12:30",
+  "siZhu": {
+   "year": "丙午",
+   "month": "庚寅",
+   "day": "甲子",
+   "hour": "庚午"
+  },
+  "yueJiang": {
+   "zhi": "亥",
+   "name": "登明",
+   "zhongqi": "雨水"
+  },
+  "hourZhi": "午",
+  "dayGZ": "甲子",
+  "sanChuan": "子巳戌",
+  "zongmen": "比用法",
+  "lunarText": "二〇二六年正月初三",
+  "lunarMD": [
+   1,
+   3
+  ],
+  "jieqi": ""
+ },
+ {
+  "label": "冬至附近",
+  "dt": "2026-12-22 12:30",
+  "siZhu": {
+   "year": "丙午",
+   "month": "庚子",
+   "day": "庚午",
+   "hour": "壬午"
+  },
+  "yueJiang": {
+   "zhi": "寅",
+   "name": "功曹",
+   "zhongqi": "小雪"
+  },
+  "hourZhi": "午",
+  "dayGZ": "庚午",
+  "sanChuan": "子申辰",
+  "zongmen": "涉害法",
+  "lunarText": "二〇二六年冬月十四",
+  "lunarMD": [
+   11,
+   14
+  ],
+  "jieqi": "冬至"
+ },
+ {
+  "label": "大寒附近",
+  "dt": "2026-1-20 12:30",
+  "siZhu": {
+   "year": "乙巳",
+   "month": "己丑",
+   "day": "甲午",
+   "hour": "庚午"
+  },
+  "yueJiang": {
+   "zhi": "子",
+   "name": "神后",
+   "zhongqi": "大寒"
+  },
+  "hourZhi": "午",
+  "dayGZ": "甲午",
+  "sanChuan": "寅申寅",
+  "zongmen": "返吟法",
+  "lunarText": "二〇二五年腊月初二",
+  "lunarMD": [
+   12,
+   2
+  ],
+  "jieqi": "大寒"
+ },
+ {
+  "label": "千禧",
+  "dt": "2000-1-1 6:30",
+  "siZhu": {
+   "year": "己卯",
+   "month": "丙子",
+   "day": "戊午",
+   "hour": "乙卯"
+  },
+  "yueJiang": {
+   "zhi": "丑",
+   "name": "大吉",
+   "zhongqi": "冬至"
+  },
+  "hourZhi": "卯",
+  "dayGZ": "戊午",
+  "sanChuan": "丑亥酉",
+  "zongmen": "贼克法",
+  "lunarText": "一九九九年冬月廿五",
+  "lunarMD": [
+   11,
+   25
+  ],
+  "jieqi": ""
+ },
+ {
+  "label": "旧历",
+  "dt": "1990-6-15 18:30",
+  "siZhu": {
+   "year": "庚午",
+   "month": "壬午",
+   "day": "辛亥",
+   "hour": "丁酉"
+  },
+  "yueJiang": {
+   "zhi": "申",
+   "name": "传送",
+   "zhongqi": "小满"
+  },
+  "hourZhi": "酉",
+  "dayGZ": "辛亥",
+  "sanChuan": "戌酉申",
+  "zongmen": "贼克法",
+  "lunarText": "一九九〇年五月廿三",
+  "lunarMD": [
+   5,
+   23
+  ],
+  "jieqi": ""
+ },
+ {
+  "label": "远期",
+  "dt": "2050-12-31 20:30",
+  "siZhu": {
+   "year": "庚午",
+   "month": "戊子",
+   "day": "乙酉",
+   "hour": "丙戌"
+  },
+  "yueJiang": {
+   "zhi": "寅",
+   "name": "功曹",
+   "zhongqi": "小雪"
+  },
+  "hourZhi": "戌",
+  "dayGZ": "乙酉",
+  "sanChuan": "申子辰",
+  "zongmen": "贼克法",
+  "lunarText": "二〇五〇年冬月十八",
+  "lunarMD": [
+   11,
+   18
+  ],
+  "jieqi": ""
+ },
+ {
+  "label": "夏至当天附近",
+  "dt": "2025-6-21 12:30",
+  "siZhu": {
+   "year": "乙巳",
+   "month": "壬午",
+   "day": "辛酉",
+   "hour": "甲午"
+  },
+  "yueJiang": {
+   "zhi": "未",
+   "name": "小吉",
+   "zhongqi": "夏至"
+  },
+  "hourZhi": "午",
+  "dayGZ": "辛酉",
+  "sanChuan": "亥子丑",
+  "zongmen": "贼克法",
+  "lunarText": "二〇二五年五月廿六",
+  "lunarMD": [
+   5,
+   26
+  ],
+  "jieqi": "夏至"
+ },
+ {
+  "label": "凌晨丑时",
+  "dt": "2025-7-25 1:30",
+  "siZhu": {
+   "year": "乙巳",
+   "month": "癸未",
+   "day": "乙未",
+   "hour": "丁丑"
+  },
+  "yueJiang": {
+   "zhi": "午",
+   "name": "胜光",
+   "zhongqi": "大暑"
+  },
+  "hourZhi": "丑",
+  "dayGZ": "乙未",
+  "sanChuan": "巳戌卯",
+  "zongmen": "比用法",
+  "lunarText": "二〇二五年闰六月初一",
+  "lunarMD": [
+   -6,
+   1
+  ],
+  "jieqi": ""
+ },
+ {
+  "label": "晚子时",
+  "dt": "2025-7-25 23:30",
+  "siZhu": {
+   "year": "乙巳",
+   "month": "癸未",
+   "day": "乙未",
+   "hour": "戊子"
+  },
+  "yueJiang": {
+   "zhi": "午",
+   "name": "胜光",
+   "zhongqi": "大暑"
+  },
+  "hourZhi": "子",
+  "dayGZ": "乙未",
+  "sanChuan": "戌辰戌",
+  "zongmen": "返吟法",
+  "lunarText": "二〇二五年闰六月初一",
+  "lunarMD": [
+   -6,
+   1
+  ],
+  "jieqi": ""
+ }
+]

@@ -137,6 +137,7 @@
     'deepseek-v4':        { input: 1, output: 2, label: 'DeepSeek-V4' },
     'deepseek-v4-flash':  { input: 1, output: 2, label: 'DeepSeek-V4-Flash(快)' },
     'deepseek-v4-pro':    { input: 3, output: 6, label: 'DeepSeek-V4-Pro(强推理)' },
+    'deepseek-v4-flash-vision-exp': { input: 1, output: 2, label: 'DeepSeek-V4-Flash-Vision(识图)' },
     'deepseek-chat':      { input: 1, output: 2, label: 'DeepSeek-V3(旧)' },
     'deepseek-reasoner':  { input: 4, output: 16, label: 'DeepSeek-R1' },
     'gpt-4o':            { input: 18, output: 72, label: 'GPT-4o' },

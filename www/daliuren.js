@@ -114,23 +114,48 @@ function dlrGetEightChar() {
   return null;
 }
 
-// 月将: 过中气换将 [S2]。取 dt 所在 lunar 的节气表(含上年冬至, 已验证), 找最近已过的中气
+// 中气名称集合(用于判定是否命中)
+var DLR_ZHONGQI_NAMES = {};
+DLR_ZHONGQI.forEach(function(item) { DLR_ZHONGQI_NAMES[item[0]] = true; });
+
+// 月将: 过中气换将 [S2]。用 getPrevJieQi() 链式回溯，精确到时刻，
+// 避免 getJieQiTable() 在年底缺当年冬至的问题。
 function dlrYueJiangFromDate(dt) {
   var Solar = dlrGetSolarEngine(dt);
   var lunar = Solar.fromYmdHms(dt.getFullYear(), dt.getMonth() + 1, dt.getDate(), dt.getHours(), dt.getMinutes(), dt.getSeconds() || 0).getLunar();
-  var table = lunar.getJieQiTable();
-  var best = null, bestName = null, bestZhi = null;
-  for (var i = 0; i < DLR_ZHONGQI.length; i++) {
-    var name = DLR_ZHONGQI[i][0];
-    var s = table[name];
-    if (!s) continue;
-    var d2 = new Date(s.getYear(), s.getMonth() - 1, s.getDay(), s.getHour(), s.getMinute(), s.getSecond());
-    if (d2.getTime() <= dt.getTime() && (!best || d2.getTime() > best.getTime())) {
-      best = d2; bestName = name; bestZhi = DLR_ZHONGQI[i][1];
+  // 用 getPrevJieQi 链式回溯：中气名在 DLR_ZHONGQI_NAMES 中则命中
+  var zhui = lunar;
+  var bestSolar = null, bestName = null, bestZhi = null;
+  for (var attempt = 0; attempt < 20; attempt++) {
+    var prev = zhui.getPrevJieQi();
+    if (!prev) break;
+    var name = prev.name || (typeof prev.getName === 'function' ? prev.getName() : null);
+    if (!name) break;
+    if (DLR_ZHONGQI_NAMES[name]) {
+      // 命中中气，取该节气 solar 作为 since
+      var s = prev.solar || (typeof prev.getSolar === 'function' ? prev.getSolar() : null);
+      if (s) {
+        bestSolar = new Date(s.getYear(), s.getMonth() - 1, s.getDay(), s.getHour(), s.getMinute(), s.getSecond());
+        if (bestSolar.getTime() <= dt.getTime()) {
+          bestName = name;
+          for (var i = 0; i < DLR_ZHONGQI.length; i++) {
+            if (DLR_ZHONGQI[i][0] === name) { bestZhi = DLR_ZHONGQI[i][1]; break; }
+          }
+          break;
+        }
+      }
     }
+    // 未命中中气：往前 1 秒再造 Lunar 继续回溯
+    var prevSolar = prev.solar || (typeof prev.getSolar === 'function' ? prev.getSolar() : null);
+    if (!prevSolar) break;
+    var back1s = new Date(prevSolar.getYear(), prevSolar.getMonth() - 1, prevSolar.getDay(),
+                          prevSolar.getHour(), prevSolar.getMinute(), prevSolar.getSecond() - 1);
+    if (back1s.getTime() < 0) break;
+    zhui = Solar.fromYmdHms(back1s.getFullYear(), back1s.getMonth() + 1, back1s.getDate(),
+                             back1s.getHours(), back1s.getMinutes(), back1s.getSeconds()).getLunar();
   }
-  if (!best) throw new Error('无法确定月将：节气表中找不到有效中气');
-  return { zhi: bestZhi, name: DLR_YUEJIANG_NAME[bestZhi], zhongqi: bestName, since: best };
+  if (!bestSolar) throw new Error('无法确定月将：节气链回溯找不到有效中气');
+  return { zhi: bestZhi, name: DLR_YUEJIANG_NAME[bestZhi], zhongqi: bestName, since: bestSolar };
 }
 
 // ---------- 基础校验 ----------
@@ -440,8 +465,15 @@ function paiKe(method, params) {
     var EC = dlrGetEightChar();
     if (!EC) throw new Error('八字引擎(EightChar)未加载，无法排四柱');
     var ec = EC.fromLunar(lunar);
-    // 日柱按子初(23:00)换日, 与八字一致; 六壬有派按早子初/夜子初另论, 改时核对
-    siZhu = { year: ec.getYear(), month: ec.getMonth(), day: ec.getDay(), hour: ec.getTime() };
+    // EightChar 默认 sect=2: 日柱子正换日(00:00切), 时柱在 23:00-23:59 有偏差。
+    // 按五鼠遁正确时柱 = getHourGZ(日干, dt.hour)。修正 23:00-23:59 边界。
+    var rawHour = ec.getTime();
+    if (dt.getHours() >= 23) {
+      var dayGanForHour = ec.getDay().charAt(0);
+      var correctHour = (typeof getHourGZ === 'function' ? getHourGZ(dayGanForHour, dt.getHours()) : rawHour);
+      rawHour = correctHour;
+    }
+    siZhu = { year: ec.getYear(), month: ec.getMonth(), day: ec.getDay(), hour: rawHour };
     dayGZ = siZhu.day;
     hourZhi = siZhu.hour.charAt(1);
     yueJiangInfo = dlrYueJiangFromDate(dt);
@@ -502,6 +534,15 @@ function paiKe(method, params) {
   var getXunKong = (typeof window !== 'undefined' && window.getXunKong) || (typeof globalThis !== 'undefined' && globalThis.getXunKong);
   var xunKong = typeof getXunKong === 'function' ? getXunKong(dayGZ) : '';
 
+  // 农历文本(与大六壬 prompt/展示共用格式)
+  var lunarText = '';
+  if (method === 'time' && lunar) {
+    var yrCN = lunar.getYearInChinese();
+    var moCN = lunar.getMonthInChinese();
+    var dyCN = lunar.getDayInChinese();
+    lunarText = yrCN + '年' + (lunar.getMonth() < 0 ? '闰' : '') + moCN + '月' + dyCN + ' ' + hourZhi + '时';
+  }
+
   return {
     method: method,
     methodLabel: method === 'time' ? '时间起课' : '手动起课',
@@ -510,6 +551,7 @@ function paiKe(method, params) {
     siZhu: siZhu,
     dayGZ: dayGZ, dayGan: dayGan, dayZhi: dayZhi, hourZhi: hourZhi,
     yueJiang: { zhi: yueJiangZhi, name: DLR_YUEJIANG_NAME[yueJiangZhi], zhongqi: yueJiangInfo.zhongqi },
+    lunarText: lunarText,
     tianPan: tianPan,
     siKe: siKe,
     sanChuan: sanChuan,
@@ -526,6 +568,7 @@ function formatDaliurenPrompt(pan, question) {
   var text = '【大六壬起课·' + pan.methodLabel + '】\n';
   if (pan.siZhu) {
     text += '四柱：' + pan.siZhu.year + '年 ' + pan.siZhu.month + '月 ' + pan.siZhu.day + '日 ' + pan.siZhu.hour + '时\n';
+    if (pan.lunarText) text += '农历：' + pan.lunarText + '\n';
   } else {
     text += '日干支：' + pan.dayGZ + '  占时：' + pan.hourZhi + '时\n';
   }

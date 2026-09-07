@@ -115,7 +115,8 @@ function getSolarEngine(dt) {
 
 function getLunarContext(dt) {
   requireValidDate(dt);
-  var lunar = getSolarEngine(dt).fromDate(dt).getLunar();
+  var solarEngine = getSolarEngine(dt);
+  var lunar = solarEngine.fromDate(dt).getLunar();
   var eightChar = typeof lunar.getEightChar === 'function' ? lunar.getEightChar() : null;
   if (!eightChar) throw new Error('农历引擎缺少八字接口，无法排盘');
   return {
@@ -126,7 +127,8 @@ function getLunarContext(dt) {
       isLeapMonth: lunar.getMonth() < 0,
       day: lunar.getDay(),
       hourZhi: lunar.getTimeZhi(),
-      hourZhiNumber: lunar.getTimeZhiIndex() + 1
+      hourZhiNumber: lunar.getTimeZhiIndex() + 1,
+      lunarText: lunar.getYearInChinese() + '年' + (lunar.getMonth() < 0 ? '闰' : '') + lunar.getMonthInChinese() + '月' + lunar.getDayInChinese()
     },
     timeGanzhi: {
       year: eightChar.getYear(),
@@ -138,6 +140,10 @@ function getLunarContext(dt) {
 }
 
 // 经典梅花年月日时法：年支数+农历月+农历日定上卦，再加时支数定下卦和动爻。
+/**
+ * qiGuaByTime / qiGuaByNumber: 梅花易数专用正法入口（六爻页已不暴露）。
+ * 以下两函数为 meihua.js:paiGua() 调用，保留勿删。
+ */
 function qiGuaByTime(dt, lunarContext) {
   dt = requireValidDate(dt || new Date());
   var context = lunarContext || getLunarContext(dt);
@@ -154,6 +160,7 @@ function qiGuaByTime(dt, lunarContext) {
   };
 }
 
+// 梅花专用数字起卦（六爻页已不暴露此入口）
 function qiGuaByNumber(num1, num2, num3) {
   var n1 = integerValue(num1, '上卦数');
   var n2 = integerValue(num2, '下卦数');
@@ -168,18 +175,7 @@ function qiGuaByNumber(num1, num2, num3) {
   };
 }
 
-function randomOneBased(max) {
-  return Math.min(max, Math.floor(Math.random() * max) + 1);
-}
-
-function qiGuaByRandom() {
-  return {
-    method: '随机起卦',
-    upper: randomOneBased(8),
-    lower: randomOneBased(8),
-    dong: randomOneBased(6)
-  };
-}
+// panGua 的 time/number 分支仅供 meihua.js 内部调用；六爻页公开入口仅限 coin。
 
 function getGuaNumFromTopLines(lines) {
   for (var n = 1; n <= 8; n++) {
@@ -232,62 +228,6 @@ function qiGuaByCoin() {
   };
 }
 
-// === 大衍筮法(揲蓍): 《系辞传》"大衍之数五十,其用四十有九" ===
-// 一变: 49策分二、挂一、揲四、归奇,归奇非 5 即 9;二/三变归奇非 4 即 8。
-// 三变余策 24/28/32/36,除四得 6/7/8/9 = 老阴/少阳/少阴/老阳。六爻共十八变。
-function yarrowOneChange(stalks) {
-  // 分二: 随机分为左右两堆(至少各 1)
-  var left = 1 + Math.floor(Math.random() * (stalks - 1));
-  var right = stalks - left;
-  // 挂一: 从右堆取一
-  right -= 1;
-  // 揲四归奇: 整除归 4
-  var lRem = left % 4 || 4;
-  var rRem = right % 4 || 4;
-  var guiki = 1 + lRem + rRem;
-  return { remain: stalks - guiki, guiki: guiki };
-}
-
-function qiGuaByYarrow() {
-  var YAO_VALUE = {
-    6: { yao: 0, isDong: true,  label: '老阴', desc: '交(阴动)' },
-    7: { yao: 1, isDong: false, label: '少阳', desc: '单' },
-    8: { yao: 0, isDong: false, label: '少阴', desc: '拆' },
-    9: { yao: 1, isDong: true,  label: '老阳', desc: '重(阳动)' }
-  };
-  var linesFromBottom = [];
-  var dongYaoList = [];
-  var stalkResults = [];
-  for (var y = 0; y < 6; y++) {
-    var stalks = 49;
-    var changes = [];
-    for (var c = 0; c < 3; c++) {
-      var r = yarrowOneChange(stalks);
-      changes.push(r.guiki);
-      stalks = r.remain;
-    }
-    var value = stalks / 4;
-    var info = YAO_VALUE[value];
-    linesFromBottom.push(info.yao);
-    if (info.isDong) dongYaoList.push(y + 1);
-    stalkResults.push({
-      value: value,
-      changes: changes,
-      yao: info.yao,
-      isDong: info.isDong,
-      label: info.label,
-      desc: '归奇' + changes.join('/') + '→余策' + stalks
-    });
-  }
-  return {
-    method: '大衍筮法',
-    upper: getGuaNumFromBottomLines(linesFromBottom.slice(3, 6)),
-    lower: getGuaNumFromBottomLines(linesFromBottom.slice(0, 3)),
-    dongYaoList: dongYaoList,
-    stalkResults: stalkResults,
-    lines: linesFromBottom
-  };
-}
 
 function normalizeDongYaoList(dongYaoList) {
   if (!Array.isArray(dongYaoList)) return [];
@@ -428,23 +368,23 @@ function panGua(method, params) {
   var lunarContext = getLunarContext(dt);
   var qigua;
 
-  if (method === 'time') {
-    qigua = qiGuaByTime(dt, lunarContext);
-    qigua.dongYaoList = [qigua.dong];
-  } else if (method === 'number') {
-    var num1 = params.num1 === undefined || params.num1 === '' ? 1 : params.num1;
-    var num2 = params.num2 === undefined || params.num2 === '' ? 1 : params.num2;
-    qigua = qiGuaByNumber(num1, num2, params.num3);
-    qigua.dongYaoList = [qigua.dong];
-  } else if (method === 'coin') {
+  if (method === 'coin') {
     qigua = qiGuaByCoin();
-  } else if (method === 'yarrow') {
-    qigua = qiGuaByYarrow();
-  } else if (method === 'random') {
-    qigua = qiGuaByRandom();
-    qigua.dongYaoList = [qigua.dong];
+  } else if (params._internal) {
+    // 仅供内部测试 / 工具调用，六爻 UI 不暴露这些入口。
+    if (method === 'time') {
+      qigua = qiGuaByTime(dt, lunarContext);
+      qigua.dongYaoList = [qigua.dong];
+    } else if (method === 'number') {
+      var num1 = params.num1 === undefined || params.num1 === '' ? 1 : params.num1;
+      var num2 = params.num2 === undefined || params.num2 === '' ? 1 : params.num2;
+      qigua = qiGuaByNumber(num1, num2, params.num3);
+      qigua.dongYaoList = [qigua.dong];
+    } else {
+      throw new Error('不支持的起卦方式：' + method);
+    }
   } else {
-    throw new Error('不支持的起卦方式：' + method);
+    throw new Error('六爻已仅支持铜钱摇卦');
   }
 
   var guaInfo = getGuaImage(qigua.upper, qigua.lower, qigua.dongYaoList);
@@ -484,6 +424,7 @@ function panGua(method, params) {
     method: qigua.method,
     datetime: dt.getFullYear() + '年' + (dt.getMonth()+1) + '月' + dt.getDate() + '日 ' + dt.getHours() + ':' + String(dt.getMinutes()).padStart(2, '0'),
     lunarDate: qigua.lunar || lunarContext.lunar,
+    lunarText: lunarContext.lunar.lunarText,
     timeGanzhi: lunarContext.timeGanzhi,
     xunKong: xunKong,
     gua: {
@@ -562,11 +503,9 @@ function formatLiuyaoPrompt(pan, question) {
 window.liuyao = {
   panGua: panGua,
   formatLiuyaoPrompt: formatLiuyaoPrompt,
-  qiGuaByTime: qiGuaByTime,
-  qiGuaByNumber: qiGuaByNumber,
-  qiGuaByRandom: qiGuaByRandom,
+  qiGuaByTime: qiGuaByTime,   // 梅花专用
+  qiGuaByNumber: qiGuaByNumber, // 梅花专用
   qiGuaByCoin: qiGuaByCoin,
-  qiGuaByYarrow: qiGuaByYarrow,
   tossCoin: tossCoin,
   getGuaImage: getGuaImage,
   getGuaMeta: getGuaMeta

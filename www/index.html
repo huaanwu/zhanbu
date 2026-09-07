@@ -9,8 +9,8 @@
 <title>AI占卜大师</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
-
-  <script type="module" crossorigin src="/assets/index-BkSen9pK.js"></script>
+
+  <script type="module" crossorigin src="/assets/index-7VcVADIG.js"></script>
   <link rel="stylesheet" crossorigin href="/styles.css">
 </head>
 <body>
@@ -72,16 +72,11 @@
         </div>
       </div>
       <div class="setting-item">
-        <div>
-          <div class="setting-label">识图 API Key (阿里云百炼)</div>
-          <input type="password" class="api-input" id="visionKeyInput" placeholder="sk-... (用于看手相/上传图片)">
-        </div>
-      </div>
-      <div class="setting-item">
-        <div class="setting-label">识图模型</div>
+        <div class="setting-label">云端识图模型</div>
         <select id="visionModelSelect" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem;border-radius:6px;">
-          <option value="qwen-vl-plus">qwen-vl-plus (性价比高)</option>
-          <option value="qwen-vl-max">qwen-vl-max (质量更好)</option>
+          <option value="deepseek-v4-flash-vision-exp" selected>deepseek-v4-flash-vision-exp (DeepSeek 视觉·实验)</option>
+          <option value="qwen-vl-plus">qwen-vl-plus (百炼·已废弃)</option>
+          <option value="qwen-vl-max">qwen-vl-max (百炼·已废弃)</option>
         </select>
       </div>
       <button class="save-btn" onclick="saveSettings()" style="width:100%;margin-top:0.8rem;">保存设置</button>
@@ -143,7 +138,7 @@
     </div>
   </div>
 
-  <!-- ============ 命理分组页(八字/紫微/奇门) ============ -->
+  <!-- ============ 命理分组页(八字/紫微/称骨) ============ -->
   <div class="page" id="pageMingli">
     <div class="header"><h1 data-seal="命">命理</h1><div class="subtitle">命由天定 · 运在人为</div></div>
     <div class="group-cards">
@@ -157,11 +152,6 @@
         <span><div class="gc-name">紫微斗数</div><div class="gc-desc">命盘十二宫 · 星曜四化</div></span>
         <span class="gc-arrow">›</span>
       </div>
-      <div class="group-card" onclick="switchPage('qimen')">
-        <span class="gc-icon">🔮</span>
-        <span><div class="gc-name">奇门遁甲</div><div class="gc-desc">遁甲运筹 · 趋吉避凶</div></span>
-        <span class="gc-arrow">›</span>
-      </div>
       <div class="group-card" onclick="switchPage('chenggu')">
         <span class="gc-icon">⚖️</span>
         <span><div class="gc-name">称骨</div><div class="gc-desc">骨重论命 · 一生荣枯</div></span>
@@ -170,7 +160,7 @@
     </div>
   </div>
 
-  <!-- ============ 占卦分组页(六爻/小六壬/梅花) ============ -->
+  <!-- ============ 占卦分组页(六爻/小六壬/梅花/大六壬/奇门/灵签) ============ -->
   <div class="page" id="pageZhangua">
     <div class="header"><h1 data-seal="占">占卦</h1><div class="subtitle">一事一占 · 心诚则灵</div></div>
     <div class="group-cards">
@@ -192,6 +182,11 @@
       <div class="group-card" onclick="switchPage('daliuren')">
         <span class="gc-icon">🐉</span>
         <span><div class="gc-name">大六壬</div><div class="gc-desc">三式之首 · 四课三传</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+      <div class="group-card" onclick="switchPage('qimen')">
+        <span class="gc-icon">🔮</span>
+        <span><div class="gc-name">奇门遁甲</div><div class="gc-desc">遁甲运筹 · 趋吉避凶</div></span>
         <span class="gc-arrow">›</span>
       </div>
       <div class="group-card" onclick="switchPage('lingqian')">
@@ -318,17 +313,6 @@
   <div class="page" id="pageLiuyao">
     <div class="header"><h1 data-seal="卦">六爻占卜</h1><div class="subtitle">问天问地 · 吉凶自知</div></div>
     <div class="input-section">
-      <div class="input-row">
-        <div class="input-group"><label>起卦方式</label>
-          <div class="btn-row-grid" style="--btn-count:5;">
-            <button class="toggle-btn active" data-method="time" onclick="selLiuyaoMethod(this)">时间</button>
-            <button class="toggle-btn" data-method="number" onclick="selLiuyaoMethod(this)">数字</button>
-            <button class="toggle-btn" data-method="coin" onclick="selLiuyaoMethod(this)">🪙 铜钱</button>
-            <button class="toggle-btn" data-method="yarrow" onclick="selLiuyaoMethod(this)">🌿 大衍</button>
-            <button class="toggle-btn" data-method="random" onclick="selLiuyaoMethod(this)">随机</button>
-          </div>
-        </div>
-      </div>
       <!-- 模式切换 -->
       <div class="input-row">
         <div class="input-group" style="grid-column:span 2;"><label>占卜模式</label>
@@ -337,11 +321,6 @@
             <button class="toggle-btn" data-mode="xunwu" onclick="selLiuyaoMode(this)">寻物占</button>
           </div>
         </div>
-      </div>
-      <div class="input-row" id="liuyaoNumberRow" style="display:none;">
-        <div class="input-group"><label>上卦数</label><input type="number" id="lyNum1" value="1" min="1"></div>
-        <div class="input-group"><label>下卦数</label><input type="number" id="lyNum2" value="2" min="1"></div>
-        <div class="input-group"><label>动爻数（可选）</label><input type="number" id="lyNum3" placeholder="空则自动"></div>
       </div>
       <div class="input-row">
         <div class="input-group" style="grid-column:span 2;"><label id="lyQuestionLabel">所问之事（可选）</label><input type="text" id="lyQuestion" placeholder="例如：明日出行是否顺利？"></div>
@@ -1170,6 +1149,7 @@
       <button class="df-tab-btn" data-tab="fu" onclick="switchDfTab('fu')" style="flex:1;padding:0.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;font-size:0.85rem;cursor:pointer;">🪄 符箓</button>
       <button class="df-tab-btn" data-tab="jue" onclick="switchDfTab('jue')" style="flex:1;padding:0.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;font-size:0.85rem;cursor:pointer;">🖐️ 手诀</button>
       <button class="df-tab-btn" data-tab="zhou" onclick="switchDfTab('zhou')" style="flex:1;padding:0.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;font-size:0.85rem;cursor:pointer;">📿 咒语</button>
+      <button class="df-tab-btn" data-tab="zhen" onclick="switchDfTab('zhen')" style="flex:1;padding:0.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;font-size:0.85rem;cursor:pointer;">📜 真符</button>
       <button class="df-tab-btn" data-tab="ai" onclick="switchDfTab('ai')" style="flex:1;padding:0.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;font-size:0.85rem;cursor:pointer;">🤖 AI化解</button>
     </div>
 
@@ -1232,6 +1212,11 @@
         <div id="aiHuaJieResult" style="display:none;margin-top:0.8rem;"></div>
       </div>
     </div>
+
+    <!-- Tab 6: 古籍真符（道藏影印） -->
+    <div class="df-tab-content" id="dfTabZhen" style="display:none;">
+      <div id="zhenFuGallery"></div>
+    </div>
   </div>
 
   <!-- 底部导航 -->
@@ -1260,8 +1245,8 @@
 <script src="rag/rerank.js?v=310"></script>
 <script src="expert/tables.js?v=310"></script>
 <script src="expert/bazi.js?v=310"></script>
-<script src="expert/liuyao.js?v=310"></script>
-<script src="expert/qimen.js?v=310"></script>
+<script src="expert/liuyao.js?v=312"></script>
+<script src="expert/qimen.js?v=311"></script>
 <script src="expert/ziwei.js?v=310"></script>
 <script src="expert/chain.js?v=310"></script>
 <script src="lib/iztro.bundle.js?v=310"></script>
@@ -1290,13 +1275,13 @@
 </script>
 
 <!-- 六爻、奇门、姓名学算法 -->
-<script src="liuyao.js?v=310"></script>
+<script src="liuyao.js?v=312"></script>
 <script src="xiaoliuren.js?v=310"></script>
 <script src="meihua.js?v=310"></script>
-<script src="daliuren.js?v=310"></script>
+<script src="daliuren.js?v=311"></script>
 <script src="chenggu.js?v=310"></script>
 <script src="lingqian.js?v=310"></script>
-<script src="qimen.js?v=310"></script>
+<script src="qimen.js?v=313"></script>
 <script src="xingshi.js?v=310"></script>
 <!-- v3.0.10 风水算盘层(独立加载,app/fengshui.js 调用 window.fengshui.*) -->
 <script src="fengshui.js?v=310"></script>
@@ -1320,11 +1305,11 @@
 <script src="core/toast.js?v=310"></script>
 <script src="core/router.js?v=310"></script>
 <script src="core/stream.js?v=310"></script>
-<script src="core/ai-service.js?v=310"></script>
+<script src="core/ai-service.js?v=312"></script>
 <script src="core/kb.js?v=310"></script>
 <script src="core/result.js?v=310"></script>
 <script src="core/history-ui.js?v=310"></script>
-<script src="core/settings.js?v=310"></script>
+<script src="core/settings.js?v=312"></script>
 <script src="core/theme.js?v=310"></script>
 
 <!-- v2.0.1: 主应用逻辑 (core) -->
@@ -1332,22 +1317,22 @@
 <!-- v3.0.3: 按域代码分割 -->
 <script src="app/bazi.js?v=310"></script>
 <script src="app/ziwei.js?v=310"></script>
-<script src="app/liuyao.js?v=310"></script>
+<script src="app/liuyao.js?v=312"></script>
 <script src="app/xiaoliuren.js?v=310"></script>
 <script src="app/meihua.js?v=310"></script>
-<script src="app/daliuren.js?v=310"></script>
+<script src="app/daliuren.js?v=311"></script>
 <script src="app/chenggu.js?v=310"></script>
 <script src="app/lingqian.js?v=310"></script>
-<script src="app/qimen.js?v=310"></script>
-<script src="app/shouxiang.js?v=310"></script>
+<script src="app/qimen.js?v=313"></script>
+<script src="app/shouxiang.js?v=312"></script>
 <script src="app/shouxiang-mp.js?v=311"></script>
 <!-- MediaPipe Hands (ES Module, 跳过 vite HMR, 直接走 CDN) -->
 
-<script src="app/mianxiang.js?v=311"></script>
+<script src="app/mianxiang.js?v=312"></script>
 <script src="app/xingshi.js?v=310"></script>
 <script src="app/cross.js?v=310"></script>
 <script src="app/fengshui.js?v=310"></script>
-<script src="app/daofobuddhism.js?v=310"></script>
+<script src="app/daofobuddhism.js?v=313"></script>
 
 <!-- v3.0.1: PWA Service Worker 注册与安装提示 -->
 <script>

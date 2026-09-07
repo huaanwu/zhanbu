@@ -3,11 +3,13 @@ const TR=require('./test_comprehensive.js');
 const runner=new TR();
 
 globalThis.window={};
+// 加载 lunar 引擎（先于 ganzhi.js，让 getYearGZEx 能找到 LunarLib）
+const vm=require('vm');const s={};vm.runInNewContext(fs.readFileSync('lib/lunar.bundle.js','utf8'),s);
+globalThis.window=s.LunarLib; globalThis.LunarLib=s.LunarLib; // 双挂:qimen 四柱链路查 window.Solar + globalThis.LunarLib.EightChar
+
 function load(p){eval(fs.readFileSync(p,'utf8'))}
 load('lib/ganzhi.js');load('expert/tables.js');
 load('liuyao.js');load('qimen.js');
-const vm=require('vm');const s={};vm.runInNewContext(fs.readFileSync('lib/lunar.bundle.js','utf8'),s);
-globalThis.window.Solar=s.LunarLib.Solar;globalThis.window.Lunar=s.LunarLib.Lunar;globalThis.window.LunarYear=s.LunarLib.LunarYear;globalThis.window.LunarMonth=s.LunarLib.LunarMonth;
 
 runner.module('多模块排盘全功能审计');
 
@@ -58,7 +60,7 @@ runner.test('姓名学：五格计算结果符合康熙笔画', function() {
 });
 
 runner.test('六爻：时间起卦每天内动爻数合理', function() {
-  const pan=window.liuyao.panGua('time',{dt:new Date(2026,6,19,6,30)});
+  const pan=window.liuyao.panGua('time',{_internal:true,dt:new Date(2026,6,19,6,30)});
   runner.assert(pan.gua.dongYaoList.length===1,'单动爻');
   runner.assertEq(pan.timeGanzhi.day,'甲午','day=甲午');
 });

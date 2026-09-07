@@ -8,7 +8,7 @@
   window.state = {
     bazi: { cal: 'solar', leap: false, gender: 'male' },
     zw:   { cal: 'solar', leap: false, gender: 'male' },
-    liuyao: { method: 'time', mode: 'normal' },
+    liuyao: { method: 'coin', mode: 'normal' },
     xiaoliuren: { method: 'time' },
     meihua: { method: 'time' },
     daliuren: {},

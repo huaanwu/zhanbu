@@ -1,14 +1,7 @@
 function buildLiuyaoPrompt(pan, question) {
   return window.liuyao ? window.liuyao.formatLiuyaoPrompt(pan, question) : "";
 }
-// ========== 六爻 ==========
-function selLiuyaoMethod(btn) {
-  document.querySelectorAll('#pageLiuyao [data-method]').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  state.liuyao.method = btn.dataset.method;
-  document.getElementById('liuyaoNumberRow').style.display = btn.dataset.method === 'number' ? 'grid' : 'none';
-}
-window.selLiuyaoMethod = selLiuyaoMethod;
+// 六爻仅支持铜钱摇卦，无需方式切换。
 
 function selLiuyaoMode(btn) {
   document.querySelectorAll('#pageLiuyao [data-mode]').forEach(b => b.classList.remove('active'));
@@ -36,7 +29,6 @@ async function doLiuyao() {
   const btn = document.getElementById('lyBtn');
   btn.disabled = true; btn.textContent = '排盘中...';
   try {
-    const method = state.liuyao.method;
     const mode = state.liuyao.mode || 'normal';
     const question = document.getElementById('lyQuestion').value;
     let enhancedQuestion = question;
@@ -54,25 +46,7 @@ async function doLiuyao() {
       }
       if (question) enhancedQuestion += `。原描述：${question}`;
     }
-    let pan;
-    if (method === 'time') {
-      pan = window.liuyao.panGua('time', { dt: new Date() });
-    } else if (method === 'number') {
-      const n1Raw = document.getElementById('lyNum1').value;
-      const n2Raw = document.getElementById('lyNum2').value;
-      const n3Raw = document.getElementById('lyNum3').value;
-      pan = window.liuyao.panGua('number', {
-        num1: n1Raw === '' ? 1 : Number(n1Raw),
-        num2: n2Raw === '' ? 1 : Number(n2Raw),
-        num3: n3Raw === '' ? null : Number(n3Raw),
-      });
-    } else if (method === 'coin') {
-      pan = window.liuyao.panGua('coin', { dt: new Date() });
-    } else if (method === 'yarrow') {
-      pan = window.liuyao.panGua('yarrow', { dt: new Date() });
-    } else {
-      pan = window.liuyao.panGua('random', {});
-    }
+    const pan = window.liuyao.panGua('coin', { dt: new Date() });
     currentLy = pan;
     renderLiuyao(pan);
     currentLyPrompt = window.liuyao.formatLiuyaoPrompt(pan, enhancedQuestion);
@@ -98,6 +72,7 @@ function renderLiuyao(pan) {
   let html = '<div class="result-title">六爻排盘结果</div>';
   html += `<div class="gua-info">`;
   html += `<span>本卦：<strong>${pan.gua.name}</strong></span>`;
+  if (pan.lunarText) html += `<span>农历：<strong>${pan.lunarText}</strong></span>`;
   html += `<span>卦宫：<strong>${pan.gua.palace}宫（${pan.gua.palaceWuxing}）·${pan.gua.palaceType}</strong></span>`;
   html += `<span>世应：<strong>世${pan.gua.shiYao} · 应${pan.gua.yingYao}</strong></span>`;
   html += `<span>旬空：<strong>${pan.xunKong?.length ? pan.xunKong.join('、') : '无'}</strong></span>`;

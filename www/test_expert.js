@@ -51,14 +51,14 @@ runner.test('liuyao function exists', function() {
 });
 
 runner.test('六爻专家使用排盘层正确变卦和阴阳，不再重复错误线序', function() {
-  var pan = liuyao.panGua('number', { num1:1, num2:1, num3:2, dt:new Date(2026,5,28,14,30) });
+  var pan = liuyao.panGua('number', { _internal:true, num1:1, num2:1, num3:2, dt:new Date(2026,5,28,14,30) });
   var facts = Expert.liuyao(pan);
   runner.assert(facts.indexOf('乾为天 → 变卦天火同人') >= 0, '应输出正确变卦天火同人');
   runner.assert(facts.indexOf('二爻阳甲寅(妻财) → 阴己丑(父母)') >= 0, '应输出阳变阴及正确变爻六亲');
 });
 
 runner.test('六爻月令旺相休囚死五态方向正确', function() {
-  var pan = liuyao.panGua('number', { num1:1, num2:1, num3:2, dt:new Date(2026,5,28,14,30) });
+  var pan = liuyao.panGua('number', { _internal:true, num1:1, num2:1, num3:2, dt:new Date(2026,5,28,14,30) });
   var facts = Expert.liuyao(pan);
   [
     '官鬼爻五行火：月令旺',
@@ -70,7 +70,7 @@ runner.test('六爻月令旺相休囚死五态方向正确', function() {
 });
 
 runner.test('六爻专家输出伏神与旬空事实', function() {
-  var pan = liuyao.panGua('number', { num1:1, num2:2, num3:1, dt:new Date(2026,5,28,14,30) });
+  var pan = liuyao.panGua('number', { _internal:true, num1:1, num2:2, num3:1, dt:new Date(2026,5,28,14,30) });
   var facts = Expert.liuyao(pan);
   runner.assert(facts.indexOf('五爻下伏丙子(妻财)') >= 0, '履卦应输出妻财伏神');
   runner.assert(facts.indexOf('旬空') >= 0, '应输出旬空旺衰');

@@ -382,11 +382,27 @@ function panQimen(year, month, day, hour, minute) {
   const jq = getJieQiInfo(year, month, day, hour, minute);
 
   const dt = new Date(year, month - 1, day, hour, minute);
-  const yearGZ = getYearGZ(year);
-  const monthGZ = getMonthGZ(yearGZ[0], month);
-  const dayGZ = getDayGZ(dt);
-  const hourGZ = getHourGZ(dayGZ[0], hour);
-  const bazi = [yearGZ, monthGZ, dayGZ, hourGZ];
+  // 高精度四柱: 先触发 ganzhi.js 引擎加载链(getYearGZEx 会设 globalThis.Solar),
+  // 再取 Solar.fromYmdHms().getLunar().getEightChar() (与 liuyao.js 同款路径)。
+  // 不走 getYearGZ 粗算法 (不按立春换年/公历月换月)。
+  getYearGZEx(year, month, day); // 触发引擎加载 + 设 globalThis.Solar (ganzhi.js 暴露)
+  var Solar = (typeof window !== 'undefined' && window.Solar) || globalThis.Solar;
+  var EC = (typeof window !== 'undefined' && window.LunarLib && window.LunarLib.EightChar) || (globalThis.LunarLib && globalThis.LunarLib.EightChar);
+  if (!Solar || !EC) throw new Error('农历引擎未加载，无法排四柱');
+  var solar2 = Solar.fromYmdHms(year, month, day, hour, minute, 0);
+  var lunar = solar2.getLunar();
+  var ec = EC.fromLunar(lunar);
+  var yearGZ = ec.getYear();
+  var monthGZ = ec.getMonth();
+  var dayGZ = ec.getDay();
+  var hourGZ = getHourGZ(dayGZ[0], hour);
+  var bazi = [yearGZ, monthGZ, dayGZ, hourGZ];
+
+  // 农历文本: 年月日 + 时支, 与 daliuren.js 格式一致
+  var lunarText = lunar.getYearInChinese() + '年'
+    + (lunar.getMonth() < 0 ? '闰' : '')
+    + lunar.getMonthInChinese() + '月'
+    + lunar.getDayInChinese() + ' ' + hourGZ[1] + '时';
 
   const { isYang, jushu } = getJushu(jq.name, dayGZ);
   const yuanInfo = getYuanByDayGz(dayGZ);
@@ -436,6 +452,7 @@ function panQimen(year, month, day, hour, minute) {
     futou: yuanInfo.futou,            // 本元符头(甲/己日干支)
     dingju: '拆补法',
     bazi: bazi,
+    lunarText: lunarText,
     gong9: gong9,
     xunshou: pp.shichenXunshou(),
     shichen: pp.shichen,
@@ -452,6 +469,7 @@ function formatQimenPrompt(pan, question) {
   s += `定局：拆补法,符头${pan.futou}为${pan.yuan}\n`;
   s += `局数：${pan.jushu_text}\n`;
   s += `四柱：${pan.bazi.join(' ')}\n`;
+  if (pan.lunarText) s += `农历：${pan.lunarText}\n`;
   s += `旬首：${pan.xunshou}\n\n九宫格：\n`;
   for (const g of pan.gong9) {
     const zf = g.is_dipan_zhifu ? ' ★直符' : '';

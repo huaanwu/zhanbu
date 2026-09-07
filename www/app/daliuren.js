@@ -36,6 +36,7 @@ function renderDaliuren(pan) {
 
   html += '<div class="gua-info">';
   if (pan.siZhu) html += `<span>四柱：<strong>${pan.siZhu.year} ${pan.siZhu.month} ${pan.siZhu.day} ${pan.siZhu.hour}</strong></span>`;
+  if (pan.lunarText) html += `<span>农历：<strong>${pan.lunarText}</strong></span>`;
   html += `<span>月将：<strong>${pan.yueJiang.zhi}将${pan.yueJiang.name}${pan.yueJiang.zhongqi ? '（' + pan.yueJiang.zhongqi + '后）' : ''}</strong></span>`;
   html += `<span>占时：<strong>${pan.hourZhi}时</strong></span>`;
   html += `<span>旬空：<strong>${pan.xunKong || '—'}</strong></span>`;

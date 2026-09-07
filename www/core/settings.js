@@ -18,15 +18,13 @@
     const key = localStorage.getItem('ds_api_key') || '';
     const model = localStorage.getItem('ds_model') || 'deepseek-chat';
     const useLocal = localStorage.getItem('use_local_model') === '1';
-    const vKey = localStorage.getItem('vision_api_key') || '';
-    const vModel = localStorage.getItem('vision_model') || 'qwen-vl-plus';
+    const vModel = localStorage.getItem('vision_model') || 'deepseek-v4-flash-vision-exp';
     const savedIp = localStorage.getItem('local_server_ip');
     const savedPort = localStorage.getItem('local_server_port');
     const defaultIp = savedIp || '192.168.1.12';
     document.getElementById('apiKeyInput').value = key;
     document.getElementById('modelSelect').value = model;
     document.getElementById('localModelCheck').checked = useLocal;
-    document.getElementById('visionKeyInput').value = vKey;
     document.getElementById('visionModelSelect').value = vModel;
     document.getElementById('localServerIpInput').value = defaultIp;
     document.getElementById('localServerPortInput').value = savedPort || '8082';
@@ -64,7 +62,6 @@
     const key = document.getElementById('apiKeyInput').value.trim();
     const model = document.getElementById('modelSelect').value;
     const useLocal = document.getElementById('localModelCheck').checked;
-    const vKey = document.getElementById('visionKeyInput').value.trim();
     const vModel = document.getElementById('visionModelSelect').value;
     const localIp = document.getElementById('localServerIpInput').value.trim() || '192.168.1.12';
     const localPort = document.getElementById('localServerPortInput').value.trim() || '8082';
@@ -72,7 +69,6 @@
     localStorage.setItem('ds_api_key', key);
     localStorage.setItem('ds_model', model);
     localStorage.setItem('use_local_model', useLocal ? '1' : '0');
-    localStorage.setItem('vision_api_key', vKey);
     localStorage.setItem('vision_model', vModel);
     localStorage.setItem('local_server_ip', localIp);
     localStorage.setItem('local_server_port', localPort);

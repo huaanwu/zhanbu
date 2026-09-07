@@ -2,6 +2,10 @@
 const _store=new Map();
 globalThis.localStorage={getItem:k=>_store.has(k)?_store.get(k):null,setItem:(k,v)=>_store.set(k,String(v)),removeItem:k=>_store.delete(k)};
 globalThis.window={};
+// 加载 lunar 引擎（先于 ganzhi.js，让 getYearGZEx 能找到 LunarLib）
+const vm=require('vm');const s={};vm.runInNewContext(fs.readFileSync('lib/lunar.bundle.js','utf8'),s);
+globalThis.window=s.LunarLib; globalThis.LunarLib=s.LunarLib; // 双挂:qimen 四柱链路查 window.Solar + globalThis.LunarLib.EightChar
+
 function load(p){eval(fs.readFileSync(p,'utf8'))}
 load('lib/ganzhi.js');load('expert/tables.js');
 load('liuyao.js');load('qimen.js');
@@ -15,9 +19,6 @@ load('fengshui.js');
 
 const TR=require('./test_comprehensive.js');
 const runner=new TR();
-
-const vm=require('vm');const s={};vm.runInNewContext(fs.readFileSync('lib/lunar.bundle.js','utf8'),s);
-globalThis.window.Solar=s.LunarLib.Solar;globalThis.window.Lunar=s.LunarLib.Lunar;globalThis.window.LunarYear=s.LunarLib.LunarYear;globalThis.window.LunarMonth=s.LunarLib.LunarMonth;
 
 runner.module('全功能排盘 · 排盘入口与算法');
 runner.test('奇门: 时辰过夏至后度过天数应随小时变化', function() {
@@ -55,7 +56,7 @@ runner.test('八字: 农历闰月(2020闰5)能排盘不抛错', function() {
   runner.assertEq(pan.year,'庚子','闰5 转化为公历应仍为庚子年');
 });
 runner.test('六爻: 时间起卦每天内动爻数合理', function() {
-  const pan=window.liuyao.panGua('time',{dt:new Date(2026,6,19,6,30)});
+  const pan=window.liuyao.panGua('time',{_internal:true,dt:new Date(2026,6,19,6,30)});
   runner.assert(pan.gua.dongYaoList.length===1,'单动爻');
   runner.assertEq(pan.timeGanzhi.day,'甲午','day=甲午');
 });
