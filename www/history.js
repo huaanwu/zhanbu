@@ -9,6 +9,35 @@ const History = {
   KEY: 'divination_history_v1',
   MAX: 200,
 
+  // 异步解密一条记录的敏感字段(signal/output/panSnapshot)
+  // 同步读取(load/search)用 _peekItem 拿密文,展示前再 decryptItem
+  async decryptItem(item) {
+    if (!item || !window.Crypto) return item;
+    try {
+      const [signal, output, panSnapshot] = await Promise.all([
+        this._decryptField(item.signal),
+        this._decryptField(item.output),
+        this._decryptField(item.panSnapshot)
+      ]);
+      return { ...item, signal, output, panSnapshot };
+    } catch (e) {
+      console.warn('[History.decryptItem] 解密失败:', e.message);
+      return item;
+    }
+  },
+
+  async _decryptField(v) {
+    if (typeof v !== 'string') return v;
+    if (!v.startsWith('enc:v1:')) return v;
+    return await window.Crypto.decrypt(v);
+  },
+
+  // 批量解密(异步,fire-and-forget 不阻塞读路径)
+  async decryptAll(items) {
+    if (!items || !window.Crypto) return items;
+    return await Promise.all(items.map(i => this.decryptItem(i)));
+  },
+
   load() {
     try { return JSON.parse(localStorage.getItem(this.KEY) || '[]'); }
     catch (e) { return []; }
@@ -80,9 +109,9 @@ const History = {
     return inter / Math.sqrt(ta.size * tb.size);
   },
 
-  // 找相似历史
-  findSimilar(domain, signal, question, topK = 3) {
-    const items = this.load().filter(i => i.domain === domain && i.feedback);
+  // 找相似历史(异步,解密后匹配)
+  async findSimilar(domain, signal, question, topK = 3) {
+    const items = (await this.decryptAll(this.load())).filter(i => i.domain === domain && i.feedback);
     if (items.length === 0) return [];
     const query = [domain, signal, question].join(' ');
     const scored = items.map(i => ({
@@ -92,6 +121,20 @@ const History = {
       .sort((a, b) => b.score - a.score)
       .slice(0, topK);
     return scored;
+  },
+
+  // 异步格式化(供 RAG 提示词注入)
+  async formatSimilarForPrompt(domain, signal, question, topK = 3) {
+    const similar = await this.findSimilar(domain, signal, question, topK);
+    if (similar.length === 0) return '';
+    const lines = ['【历史校准·用户反馈】'];
+    for (const s of similar) {
+      const fb = s.item.feedback === 'good' ? '✓准确' : s.item.feedback === 'partial' ? '≈部分准' : '✗不准';
+      const outputText = s.item.output || '';
+      const summary = outputText.slice(0, 200).replace(/\n/g, ' ');
+      lines.push(`- [${fb}] ${s.item.signal} ${s.item.question || ''}\n  解读摘要：${summary}...`);
+    }
+    return lines.join('\n') + '\n';
   },
 
   // 格式化为可注入 prompt 的内容
@@ -108,6 +151,7 @@ const History = {
 
   // 搜索/筛选历史记录
   // filters: { domain?: string, days?: number|'all', keyword?: string, feedback?: string }
+  // 返回密文(异步场景调 decryptAll),展示层负责解密
   search(filters = {}) {
     let items = this.load();
     const now = Date.now();
@@ -123,17 +167,17 @@ const History = {
       items = items.filter(i => now - i.ts < dayMs);
     }
 
-    // 按关键词搜索（问题+解读内容）
+    // 按关键词搜索(明文匹配,密文不会命中但不影响其他字段)
     if (filters.keyword) {
       const kw = filters.keyword.toLowerCase();
       items = items.filter(i =>
         (i.question || '').toLowerCase().includes(kw) ||
-        (i.output || '').toLowerCase().includes(kw) ||
-        (i.signal || '').toLowerCase().includes(kw)
+        this._matchesCipher(i.output, kw) ||
+        this._matchesCipher(i.signal, kw)
       );
     }
 
-    // 按反馈筛选（v1.2.16 支持 'none' = 未反馈）
+    // 按反馈筛选
     if (filters.feedback) {
       if (filters.feedback === 'none') {
         items = items.filter(i => !i.feedback);
@@ -142,8 +186,15 @@ const History = {
       }
     }
 
-    // 默认按时间倒序
     return items.sort((a, b) => b.ts - a.ts);
+  },
+
+  // 密文字段对关键词的匹配:同步层只命中 question(明文)和 signal/output 解密后命中的内容
+  // 由于这里是同步 API,密文本身无法匹配 — 用户搜索建议在异步 decryptAll 之后再做
+  _matchesCipher(v, kw) {
+    if (!v || typeof v !== 'string') return false;
+    if (v.startsWith('enc:v1:')) return false; // 密文同步无法匹配,展示层异步二次过滤
+    return v.toLowerCase().includes(kw);
   },
 
   // 删除单条记录
@@ -170,6 +221,22 @@ const History = {
       else feedbacks.none++;
     }
     return { total: items.length, domains, feedbacks };
+  },
+
+  // 异步搜索(解密后返回,供 UI 展示/关键词搜索)
+  // 关键词在解密后的 output/signal 上命中
+  async searchDecrypted(filters = {}) {
+    const raw = this.search(filters);
+    const decrypted = await this.decryptAll(raw);
+    if (filters.keyword) {
+      const kw = filters.keyword.toLowerCase();
+      return decrypted.filter(i =>
+        (i.question || '').toLowerCase().includes(kw) ||
+        (typeof i.output === 'string' && i.output.toLowerCase().includes(kw)) ||
+        (typeof i.signal === 'string' && i.signal.toLowerCase().includes(kw))
+      );
+    }
+    return decrypted;
   }
 };
 

@@ -29,6 +29,8 @@
  * @property {Object} gua         - 卦象
  * @property {Array<Yao>} yaoList  - 6 爻
  * @property {Array<Yao>|null} bianYaoList - 变卦六爻
+ * @property {Array<Yao>} fuShenList - 本卦缺失六亲对应的伏神
+ * @property {string[]} xunKong - 日柱旬空地支
  * @property {string|null} huGua
  */
 
@@ -37,12 +39,17 @@
  * @typedef {Object} Yao
  * @property {number} yao          - 1-6
  * @property {string} name         - '初爻'..'上爻'
+ * @property {'阴'|'阳'} yinYang
  * @property {string} gan
  * @property {string} zhi
  * @property {string} wuxing
  * @property {string} liuqin
  * @property {string} liushen
  * @property {boolean} isDong
+ * @property {boolean} isShi
+ * @property {boolean} isYing
+ * @property {boolean} isXunKong
+ * @property {Yao|null} fuShen
  */
 
 /**

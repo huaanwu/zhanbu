@@ -1,11 +1,17 @@
-﻿process.chdir(__dirname);
+process.chdir(__dirname);
 var TR = require("./test_comprehensive.js");
 var runner = new TR();
 var fs0 = require("fs");
 
 globalThis.window = {};
+eval(fs0.readFileSync('lib/ganzhi.js', 'utf-8'));
+eval(fs0.readFileSync('expert/tables.js', 'utf-8'));
+eval(fs0.readFileSync('expert/bazi.js', 'utf-8'));
+eval(fs0.readFileSync('expert/liuyao.js', 'utf-8'));
+eval(fs0.readFileSync('expert/qimen.js', 'utf-8'));
+eval(fs0.readFileSync('expert/ziwei.js', 'utf-8'));
+eval(fs0.readFileSync('expert/chain.js', 'utf-8'));
 eval(fs0.readFileSync('liuyao.js', 'utf-8'));
-eval(fs0.readFileSync('expert.js', 'utf-8'));
 eval(fs0.readFileSync('xingshi.js', 'utf-8'));
 eval(fs0.readFileSync('qimen.js', 'utf-8'));
 
@@ -89,6 +95,14 @@ runner.test('月柱：戊年三月 = 丙辰', function() {
 
 
 runner.module('第一层·日柱（内部一致性）');
+
+runner.test('日柱基准：1900-01-31 = 甲辰（不是甲子）', function() {
+  runner.assertEq(getDayGZ(new Date(1900, 0, 31)), '甲辰');
+});
+
+runner.test('日柱负偏移：1899-12-31 = 癸酉', function() {
+  runner.assertEq(getDayGZ(new Date(1899, 11, 31)), '癸酉');
+});
 
 runner.test('日柱：相邻两天干支连续', function() {
   (function(){
@@ -413,29 +427,29 @@ runner.test('每个日干12时辰不重复', function() {
 
 runner.module('第五层·经典命例');
 
-runner.test('今例：2026-06-28 14:30 = 丙午 乙未 癸巳 己未', function() {
+runner.test('今例：2026-06-28 14:30 = 丙午 乙未 癸酉 己未', function() {
   (function(){
   runner.assertEq(getYearGZ(2026), '丙午');
   runner.assertEq(getMonthGZ('丙', 6), '乙未');
-  runner.assertEq(getDayGZ(new Date(2026, 5, 28)), '癸巳');
+  runner.assertEq(getDayGZ(new Date(2026, 5, 28)), '癸酉');
   runner.assertEq(getHourGZ('癸', 14), '己未');
 })();
 });
 
-runner.test('今例：2000-01-01 00:00 = 庚辰 丙子 戊寅 壬子', function() {
+runner.test('今例：2000-01-01 00:00 = 庚辰 丙子 戊午 壬子', function() {
   (function(){
   runner.assertEq(getYearGZ(2000), '庚辰');
   runner.assertEq(getMonthGZ('己', 1), '丙寅');
-  runner.assertEq(getDayGZ(new Date(2000, 0, 1)), '戊寅');
+  runner.assertEq(getDayGZ(new Date(2000, 0, 1)), '戊午');
   runner.assertEq(getHourGZ('戊', 0), '壬子');
 })();
 });
 
-runner.test('今例：2024-10-01 10:00 = 甲辰 乙亥 戊午 丁巳', function() {
+runner.test('今例：2024-10-01 10:00 = 甲辰 乙亥 戊戌 丁巳', function() {
   (function(){
   runner.assertEq(getYearGZ(2024), '甲辰');
   runner.assertEq(getMonthGZ('甲', 10), '乙亥');
-  runner.assertEq(getDayGZ(new Date(2024, 9, 1)), '戊午');
+  runner.assertEq(getDayGZ(new Date(2024, 9, 1)), '戊戌');
   runner.assertEq(getHourGZ('戊', 10), '丁巳');
 })();
 });
@@ -444,15 +458,15 @@ runner.test('今例：2024-10-01 10:00 = 甲辰 乙亥 戊午 丁巳', function(
 runner.module('第五层·排盘一致性');
 
 runner.test('panGua 完整结构', function() {
-  var dt = new Date(2026, 5, 28, 14, 30); var pan = liuyao.panGua("time", { dt: dt }); runner.assertHasKeys(pan, ["method","datetime","timeGanzhi","gua","yaoList"]); runner.assertEq(pan.yaoList.length, 6);
+  var dt = new Date(2026, 5, 28, 14, 30); var pan = liuyao.panGua("coin", { dt: dt }); runner.assertHasKeys(pan, ["method","datetime","timeGanzhi","gua","yaoList"]); runner.assertEq(pan.yaoList.length, 6);
 });
 
 runner.test('六爻六亲全部有值', function() {
-  var pan = liuyao.panGua("number", { num1: 1, num2: 2, num3: 3, dt: new Date(2024, 0, 1, 12, 0) }); for (var i = 0; i < pan.yaoList.length; i++) { var y = pan.yaoList[i]; runner.assertHasKeys(y, ["yao","name","gan","zhi","wuxing","liuqin","liushen","isDong"]); runner.assert(y.liuqin !== "未知"); }
+  var pan = liuyao.panGua("number", { _internal: true, num1: 1, num2: 2, num3: 3, dt: new Date(2024, 0, 1, 12, 0) }); for (var i = 0; i < pan.yaoList.length; i++) { var y = pan.yaoList[i]; runner.assertHasKeys(y, ["yao","name","gan","zhi","wuxing","liuqin","liushen","isDong"]); runner.assert(y.liuqin !== "未知"); }
 });
 
 runner.test('有动爻必有变卦', function() {
-  var pan = liuyao.panGua("number", { num1: 22, num2: 77, num3: 45, dt: new Date(2026, 5, 28, 14, 30) }); runner.assert(pan.gua.dongYaoList.length > 0); runner.assert(pan.gua.bianUpperGua !== null); runner.assert(pan.gua.bianLowerGua !== null);
+  var pan = liuyao.panGua("number", { _internal: true, num1: 22, num2: 77, num3: 45, dt: new Date(2026, 5, 28, 14, 30) }); runner.assert(pan.gua.dongYaoList.length > 0); runner.assert(pan.gua.bianUpperGua !== null); runner.assert(pan.gua.bianLowerGua !== null);
 });
 
 
@@ -491,8 +505,10 @@ runner.test('年柱：2026立春前(2/3)=乙巳', function() {
 runner.test('年柱：2026立春(2/4)在农历年前=乙巳', function() {
   runner.assertEq(window.getYearGZEx(2026,2,4), "乙巳");
 });
-runner.test('年柱：2026立春后(2/5)农历年前=乙巳', function() {
-  runner.assertEq(window.getYearGZEx(2026,2,5), "乙巳");
+runner.test('年柱：2026立春后(2/5)=丙午', function() {
+  // 2026 立春是 2/4 22:46, 2/5 0:00 起已属丙午年(按八字标准: 立春换年)
+  // 旧期望乙巳是按春节换年算的, 与八字规则不符, 已修正
+  runner.assertEq(window.getYearGZEx(2026,2,5), "丙午");
 });
 runner.test('年柱：2000立春前(2/3)=己卯', function() {
   runner.assertEq(window.getYearGZEx(2000,2,3), "己卯");
@@ -505,8 +521,10 @@ runner.module('高精度引擎·节气月');
 runner.test('月柱：2026立春前(2/3)=己丑', function() {
   runner.assertEq(window.getMonthGZEx(2026,2,3,"乙"), "己丑");
 });
-runner.test('月柱：2026立春后(2/4)=庚寅', function() {
-  runner.assertEq(window.getMonthGZEx(2026,2,4,"乙"), "庚寅");
+runner.test('月柱：2026立春当日(2/4 0时)=己丑', function() {
+  // 2026 立春是 2/4 22:46, 0:00 仍在己丑月; 22:46 后才进庚寅月
+  // 旧期望庚寅是把 2/4 整天当作立春后, 与节气实际时刻不符, 已修正
+  runner.assertEq(window.getMonthGZEx(2026,2,4,"乙"), "己丑");
 });
 runner.test('月柱：2026夏至后6/28=甲午', function() {
   runner.assertEq(window.getMonthGZEx(2026,6,28,"丙"), "甲午");

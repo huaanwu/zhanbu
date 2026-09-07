@@ -9,15 +9,19 @@
 <title>AI占卜大师</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <link rel="stylesheet" crossorigin href="/assets/index-DST3duQe.css">
+
+  <script type="module" crossorigin src="/assets/index-7VcVADIG.js"></script>
+  <link rel="stylesheet" crossorigin href="/styles.css">
 </head>
 <body>
 <div class="container">
 
+<button class="night-toggle" onclick="toggleNightMode()" title="切换夜间模式" id="nightToggleBtn">🌙</button>
+
   <!-- ============ 设置页 ============ -->
   <div class="page active" id="pageSettings">
     <div class="header">
-      <h1>设置</h1>
+      <h1 data-seal="设">设置</h1>
       <div class="subtitle">API 配置与偏好</div>
     </div>
     <div class="input-section">
@@ -38,8 +42,10 @@
       <div class="setting-item">
         <div class="setting-label">模型选择</div>
         <select id="modelSelect" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem;border-radius:6px;">
-          <option value="deepseek-chat">deepseek-chat</option>
-          <option value="deepseek-reasoner">deepseek-reasoner</option>
+          <option value="deepseek-v4-flash">deepseek-v4-flash (快)</option>
+          <option value="deepseek-v4-pro">deepseek-v4-pro (强推理)</option>
+          <option value="deepseek-chat">deepseek-chat (V3)</option>
+          <option value="deepseek-reasoner">deepseek-reasoner (R1)</option>
         </select>
       </div>
       <div class="setting-item">
@@ -51,27 +57,26 @@
       <div class="setting-item">
         <div>
           <div class="setting-label">本地服务器IP（同WiFi下电脑IP）</div>
-          <div style="display:flex;gap:0.4rem;">
-            <input type="text" class="api-input" id="localServerIpInput" placeholder="192.168.1.3" value="192.168.1.3" style="flex:1;">
-            <input type="number" class="api-input" id="localServerPortInput" placeholder="8082" value="8082" style="width:80px;text-align:center;">
-            <button onclick="autoDiscoverServer()" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer;font-size:0.8rem;white-space:nowrap;">🔍 自动发现</button>
-            <button onclick="testLocalModel()" style="background:var(--bg-card);border:1px solid var(--border);color:var(--accent-green);padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer;font-size:0.8rem;white-space:nowrap;">🔗 测试连接</button>
+          <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+            <input type="text" class="api-input" id="localServerIpInput" placeholder="192.168.1.3" value="192.168.1.3" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="flex:3;min-width:140px;">
+            <input type="number" class="api-input" id="localServerPortInput" placeholder="8082" value="8082" inputmode="numeric" style="flex:1;min-width:70px;text-align:center;">
+            <button onclick="autoDiscoverServer()" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:0.4rem 0.6rem;border-radius:6px;cursor:pointer;font-size:0.75rem;white-space:nowrap;">🔍 自动发现</button>
+            <button onclick="testLocalModel()" style="background:var(--bg-card);border:1px solid var(--border);color:var(--accent-green);padding:0.4rem 0.6rem;border-radius:6px;cursor:pointer;font-size:0.75rem;white-space:nowrap;">🔗 测试连接</button>
+          </div>
+                    <div style="margin-top:0.4rem;">
+            <div class="setting-label">本地模型名</div>
+            <input type="text" class="api-input" id="localModelNameInput" placeholder="模型名(如 qwen2.5:7b 或 default)" value="default" style="width:100%;">
           </div>
           <div id="discoverStatus" style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;"></div>
-          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem;">llama.cpp用户: 如果测试连接报CORS错误，请在电脑运行 <code style="background:var(--bg-inner);padding:2px 4px;border-radius:4px;">python3 cors_proxy.py</code> 然后端口填 8083</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem;">llama.cpp用户: 如果测试连接报CORS错误，请在电脑运行 <code style="background:var(--bg-inner);padding:2px 4px;border-radius:4px;">python3 cors_proxy.py</code> 然后端口填 8082</div>
         </div>
       </div>
       <div class="setting-item">
-        <div>
-          <div class="setting-label">识图 API Key (阿里云百炼)</div>
-          <input type="password" class="api-input" id="visionKeyInput" placeholder="sk-... (用于看手相/上传图片)">
-        </div>
-      </div>
-      <div class="setting-item">
-        <div class="setting-label">识图模型</div>
+        <div class="setting-label">云端识图模型</div>
         <select id="visionModelSelect" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem;border-radius:6px;">
-          <option value="qwen-vl-plus">qwen-vl-plus (性价比高)</option>
-          <option value="qwen-vl-max">qwen-vl-max (质量更好)</option>
+          <option value="deepseek-v4-flash-vision-exp" selected>deepseek-v4-flash-vision-exp (DeepSeek 视觉·实验)</option>
+          <option value="qwen-vl-plus">qwen-vl-plus (百炼·已废弃)</option>
+          <option value="qwen-vl-max">qwen-vl-max (百炼·已废弃)</option>
         </select>
       </div>
       <button class="save-btn" onclick="saveSettings()" style="width:100%;margin-top:0.8rem;">保存设置</button>
@@ -111,6 +116,7 @@
             <option value="xingshi">姓名学</option>
             <option value="cross">三术同参</option>
             <option value="fengshui">风水</option>
+            <option value="mianxiang">面相</option>
           </select>
           <select id="historyFilterDays" onchange="renderHistory()" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.3rem 0.5rem;border-radius:6px;font-size:0.8rem;">
             <option value="all">全部时间</option>
@@ -132,10 +138,70 @@
     </div>
   </div>
 
+  <!-- ============ 命理分组页(八字/紫微/称骨) ============ -->
+  <div class="page" id="pageMingli">
+    <div class="header"><h1 data-seal="命">命理</h1><div class="subtitle">命由天定 · 运在人为</div></div>
+    <div class="group-cards">
+      <div class="group-card" onclick="switchPage('bazi')">
+        <span class="gc-icon">📅</span>
+        <span><div class="gc-name">八字</div><div class="gc-desc">四柱推命 · 格局喜忌 · 大运流年</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+      <div class="group-card" onclick="switchPage('ziwei')">
+        <span class="gc-icon">⭐</span>
+        <span><div class="gc-name">紫微斗数</div><div class="gc-desc">命盘十二宫 · 星曜四化</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+      <div class="group-card" onclick="switchPage('chenggu')">
+        <span class="gc-icon">⚖️</span>
+        <span><div class="gc-name">称骨</div><div class="gc-desc">骨重论命 · 一生荣枯</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 占卦分组页(六爻/小六壬/梅花/大六壬/奇门/灵签) ============ -->
+  <div class="page" id="pageZhangua">
+    <div class="header"><h1 data-seal="占">占卦</h1><div class="subtitle">一事一占 · 心诚则灵</div></div>
+    <div class="group-cards">
+      <div class="group-card" onclick="switchPage('liuyao')">
+        <span class="gc-icon">🪙</span>
+        <span><div class="gc-name">六爻</div><div class="gc-desc">纳甲装卦 · 六亲六神 · 寻物占</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+      <div class="group-card" onclick="switchPage('xiaoliuren')">
+        <span class="gc-icon">🤏</span>
+        <span><div class="gc-name">小六壬</div><div class="gc-desc">掐指一算 · 快占吉凶</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+      <div class="group-card" onclick="switchPage('meihua')">
+        <span class="gc-icon">🌸</span>
+        <span><div class="gc-name">梅花易数</div><div class="gc-desc">触机起卦 · 体用生克</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+      <div class="group-card" onclick="switchPage('daliuren')">
+        <span class="gc-icon">🐉</span>
+        <span><div class="gc-name">大六壬</div><div class="gc-desc">三式之首 · 四课三传</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+      <div class="group-card" onclick="switchPage('qimen')">
+        <span class="gc-icon">🔮</span>
+        <span><div class="gc-name">奇门遁甲</div><div class="gc-desc">遁甲运筹 · 趋吉避凶</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+      <div class="group-card" onclick="switchPage('lingqian')">
+        <span class="gc-icon">🔖</span>
+        <span><div class="gc-name">灵签</div><div class="gc-desc">观音百签 · 关帝百签</div></span>
+        <span class="gc-arrow">›</span>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ============ 八字页 ============ -->
   <div class="page" id="pageBazi">
     <div class="header">
-      <h1>八字命理</h1>
+      <h1 data-seal="命">八字命理</h1>
       <div class="subtitle">四柱排盘 · 十神解析</div>
     </div>
     <div class="input-section">
@@ -187,7 +253,7 @@
   <!-- ============ 紫微页 ============ -->
   <div class="page" id="pageZiwei">
     <div class="header">
-      <h1>紫微斗数</h1>
+      <h1 data-seal="紫">紫微斗数</h1>
       <div class="subtitle">命盘解析 · 星曜推演</div>
     </div>
     <div class="input-section">
@@ -245,18 +311,8 @@
 
   <!-- ============ 六爻页 ============ -->
   <div class="page" id="pageLiuyao">
-    <div class="header"><h1>六爻占卜</h1><div class="subtitle">问天问地 · 吉凶自知</div></div>
+    <div class="header"><h1 data-seal="卦">六爻占卜</h1><div class="subtitle">问天问地 · 吉凶自知</div></div>
     <div class="input-section">
-      <div class="input-row">
-        <div class="input-group"><label>起卦方式</label>
-          <div class="btn-row">
-            <button class="toggle-btn active" data-method="time" onclick="selLiuyaoMethod(this)">时间</button>
-            <button class="toggle-btn" data-method="number" onclick="selLiuyaoMethod(this)">数字</button>
-            <button class="toggle-btn" data-method="coin" onclick="selLiuyaoMethod(this)">🪙 铜钱</button>
-            <button class="toggle-btn" data-method="random" onclick="selLiuyaoMethod(this)">随机</button>
-          </div>
-        </div>
-      </div>
       <!-- 模式切换 -->
       <div class="input-row">
         <div class="input-group" style="grid-column:span 2;"><label>占卜模式</label>
@@ -265,11 +321,6 @@
             <button class="toggle-btn" data-mode="xunwu" onclick="selLiuyaoMode(this)">寻物占</button>
           </div>
         </div>
-      </div>
-      <div class="input-row" id="liuyaoNumberRow" style="display:none;">
-        <div class="input-group"><label>上卦数</label><input type="number" id="lyNum1" value="1" min="1"></div>
-        <div class="input-group"><label>下卦数</label><input type="number" id="lyNum2" value="2" min="1"></div>
-        <div class="input-group"><label>动爻数（可选）</label><input type="number" id="lyNum3" placeholder="空则自动"></div>
       </div>
       <div class="input-row">
         <div class="input-group" style="grid-column:span 2;"><label id="lyQuestionLabel">所问之事（可选）</label><input type="text" id="lyQuestion" placeholder="例如：明日出行是否顺利？"></div>
@@ -301,9 +352,225 @@
     </div>
   </div>
 
+  <!-- ============ 小六壬页 ============ -->
+  <div class="page" id="pageXiaoliuren">
+    <div class="header"><h1 data-seal="壬">小六壬</h1><div class="subtitle">掐指一算 · 快占吉凶</div></div>
+    <div class="input-section">
+      <div class="input-row">
+        <div class="input-group"><label>起课方式</label>
+          <div class="btn-row-grid" style="--btn-count:3;">
+            <button class="toggle-btn active" data-xlr-method="time" onclick="selXlrMethod(this)">时间</button>
+            <button class="toggle-btn" data-xlr-method="lunar" onclick="selXlrMethod(this)">农历</button>
+            <button class="toggle-btn" data-xlr-method="number" onclick="selXlrMethod(this)">报数</button>
+          </div>
+        </div>
+      </div>
+      <div class="input-row" id="xlrLunarRow" style="display:none;">
+        <div class="input-group"><label>农历月</label><input type="number" id="xlrMonth" value="1" min="1" max="12"></div>
+        <div class="input-group"><label>农历日</label><input type="number" id="xlrDay" value="1" min="1" max="30"></div>
+        <div class="input-group"><label>时辰</label>
+          <select id="xlrHour">
+            <option value="1">子(23-1)</option><option value="2">丑(1-3)</option>
+            <option value="3">寅(3-5)</option><option value="4">卯(5-7)</option>
+            <option value="5">辰(7-9)</option><option value="6">巳(9-11)</option>
+            <option value="7">午(11-13)</option><option value="8">未(13-15)</option>
+            <option value="9">申(15-17)</option><option value="10">酉(17-19)</option>
+            <option value="11">戌(19-21)</option><option value="12">亥(21-23)</option>
+          </select>
+        </div>
+      </div>
+      <div class="input-row" id="xlrNumberRow" style="display:none;">
+        <div class="input-group"><label>第一个数</label><input type="number" id="xlrNum1" value="1" min="1"></div>
+        <div class="input-group"><label>第二个数</label><input type="number" id="xlrNum2" value="2" min="1"></div>
+        <div class="input-group"><label>第三个数</label><input type="number" id="xlrNum3" value="3" min="1"></div>
+      </div>
+      <div class="input-row">
+        <div class="input-group" style="grid-column:span 2;"><label>所问之事(可选)</label><input type="text" id="xlrQuestion" placeholder="例如:现在出发顺利吗?"></div>
+      </div>
+      <button class="divine-btn" id="xlrBtn" onclick="doXiaoliuren()">掐指起课</button>
+    </div>
+    <div class="result-section" id="xlrResult"></div>
+    <div class="ai-section" id="xlrAI" style="display:none">
+      <div class="result-title">AI 小六壬解读</div>
+      <div class="ai-content" id="xlrAIContent"></div>
+      <div class="ai-actions" id="xlrAIActions">
+        <button onclick="copyResult('xlrAIContent')">📋 复制文本</button>
+        <button onclick="saveResult('xlrAIContent','小六壬解读')">💾 保存为txt</button>
+      </div>
+      <button class="divine-btn" style="margin-top:0.8rem;" id="xlrAIBtn" onclick="doAIXiaoliuren()">AI 解读</button>
+    </div>
+  </div>
+
+  <!-- ============ 梅花易数页 ============ -->
+  <div class="page" id="pageMeihua">
+    <div class="header"><h1 data-seal="梅">梅花易数</h1><div class="subtitle">触机起卦 · 体用生克</div></div>
+    <div class="input-section">
+      <div class="input-row">
+        <div class="input-group"><label>起卦方式</label>
+          <div class="btn-row-grid" style="--btn-count:2;">
+            <button class="toggle-btn active" data-mh-method="time" onclick="selMhMethod(this)">时间</button>
+            <button class="toggle-btn" data-mh-method="number" onclick="selMhMethod(this)">数字</button>
+          </div>
+        </div>
+      </div>
+      <div class="input-row" id="mhNumberRow" style="display:none;">
+        <div class="input-group"><label>上卦数</label><input type="number" id="mhNum1" value="1" min="1"></div>
+        <div class="input-group"><label>下卦数</label><input type="number" id="mhNum2" value="2" min="1"></div>
+        <div class="input-group"><label>动爻数(可选)</label><input type="number" id="mhNum3" placeholder="空则取两数和"></div>
+      </div>
+      <div class="input-row">
+        <div class="input-group" style="grid-column:span 2;"><label>所问之事(可选)</label><input type="text" id="mhQuestion" placeholder="例如:这笔生意能成吗?"></div>
+      </div>
+      <button class="divine-btn" id="mhBtn" onclick="doMeihua()">起卦</button>
+    </div>
+    <div class="result-section" id="mhResult"></div>
+    <div class="ai-section" id="mhAI" style="display:none">
+      <div class="result-title">AI 梅花解读</div>
+      <div class="ai-content" id="mhAIContent"></div>
+      <div class="ai-actions" id="mhAIActions">
+        <button onclick="copyResult('mhAIContent')">📋 复制文本</button>
+        <button onclick="saveResult('mhAIContent','梅花易数解读')">💾 保存为txt</button>
+      </div>
+      <button class="divine-btn" style="margin-top:0.8rem;" id="mhAIBtn" onclick="doAIMeihua()">AI 解读</button>
+    </div>
+  </div>
+
+  <!-- ============ 大六壬页 ============ -->
+  <div class="page" id="pageDaliuren">
+    <div class="header"><h1 data-seal="壬">大六壬</h1><div class="subtitle">月将加时 · 四课三传</div></div>
+    <div class="input-section">
+      <div class="input-row">
+        <div class="input-group"><label>年</label><input type="number" id="dlrYear" value="2026"></div>
+        <div class="input-group"><label>月</label><input type="number" id="dlrMonth" value="7"></div>
+        <div class="input-group"><label>日</label><input type="number" id="dlrDay" value="25"></div>
+        <div class="input-group"><label>时</label><input type="number" id="dlrHour" value="14"></div>
+      </div>
+      <div class="input-row">
+        <div class="input-group" style="grid-column:span 2;"><label>所问之事(可选)</label><input type="text" id="dlrQuestion" placeholder="例如:这次合作能成吗?"></div>
+      </div>
+      <button class="divine-btn" id="dlrBtn" onclick="doDaliuren()">起课</button>
+    </div>
+    <div class="result-section" id="dlrResult"></div>
+    <div class="ai-section" id="dlrAI" style="display:none">
+      <div class="result-title">AI 大六壬解读</div>
+      <div class="ai-content" id="dlrAIContent"></div>
+      <div class="ai-actions" id="dlrAIActions">
+        <button onclick="copyResult('dlrAIContent')">📋 复制文本</button>
+        <button onclick="saveResult('dlrAIContent','大六壬解读')">💾 保存为txt</button>
+      </div>
+      <button class="divine-btn" style="margin-top:0.8rem;" id="dlrAIBtn" onclick="doAIDaliuren()">AI 解读</button>
+    </div>
+  </div>
+
+  <!-- ============ 称骨算命页 ============ -->
+  <div class="page" id="pageChenggu">
+    <div class="header"><h1 data-seal="骨">称骨算命</h1><div class="subtitle">袁天罡称骨 · 骨重知命</div></div>
+    <div class="input-section">
+      <!-- 历法 + 性别 -->
+      <div class="input-row">
+        <div class="input-group">
+          <label>历法</label>
+          <div class="btn-row">
+            <button class="toggle-btn active" data-cg-cal="solar" onclick="selCgCal(this)">阳历</button>
+            <button class="toggle-btn" data-cg-cal="lunar" onclick="selCgCal(this)">阴历</button>
+          </div>
+        </div>
+        <div class="input-group">
+          <label>性别（断语分男女）</label>
+          <div class="btn-row">
+            <button class="toggle-btn active" data-cg-gender="male" onclick="selCgGender(this)">男</button>
+            <button class="toggle-btn" data-cg-gender="female" onclick="selCgGender(this)">女</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 阳历路径 -->
+      <div class="input-row" id="cgSolarRow">
+        <div class="input-group"><label>年(阳历)</label><input type="number" id="cgYear" value="1990"></div>
+        <div class="input-group"><label>月</label><input type="number" id="cgMonth" value="3"></div>
+        <div class="input-group"><label>日</label><input type="number" id="cgDay" value="15"></div>
+        <div class="input-group"><label>时</label><input type="number" id="cgHour" value="10" min="0" max="23"></div>
+      </div>
+
+      <!-- 阴历路径(直接输入农历月日时,无需公转农) -->
+      <div class="input-row" id="cgLunarRow" style="display:none;">
+        <div class="input-group">
+          <label>年干支</label>
+          <select id="cgYearGZ" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem;border-radius:6px;font-size:0.9rem;">
+            <option>甲子</option><option>乙丑</option><option>丙寅</option><option>丁卯</option><option>戊辰</option>
+            <option>己巳</option><option>庚午</option><option>辛未</option><option>壬申</option><option>癸酉</option>
+            <option>甲戌</option><option>乙亥</option><option>丙子</option><option>丁丑</option><option>戊寅</option>
+            <option>己卯</option><option>庚辰</option><option>辛巳</option><option>壬午</option><option>癸未</option>
+            <option>甲申</option><option>乙酉</option><option>丙戌</option><option>丁亥</option><option>戊子</option>
+            <option>己丑</option><option>庚寅</option><option>辛卯</option><option>壬辰</option><option>癸巳</option>
+            <option>甲午</option><option>乙未</option><option>丙申</option><option>丁酉</option><option>戊戌</option>
+            <option>己亥</option><option>庚子</option><option>辛丑</option><option>壬寅</option><option>癸卯</option>
+            <option>甲辰</option><option>乙巳</option><option>丙午</option><option>丁未</option><option>戊申</option>
+            <option>己酉</option><option>庚戌</option><option>辛亥</option><option>壬子</option><option>癸丑</option>
+            <option>甲寅</option><option>乙卯</option><option>丙辰</option><option>丁巳</option><option>戊午</option>
+            <option>己未</option><option>庚申</option><option>辛酉</option><option>壬戌</option><option>癸亥</option>
+          </select>
+        </div>
+        <div class="input-group"><label>农历月</label><input type="number" id="cgLunarMonth" value="3" min="1" max="12"></div>
+        <div class="input-group"><label>农历日</label><input type="number" id="cgLunarDay" value="15" min="1" max="30"></div>
+        <div class="input-group">
+          <label>时支</label>
+          <select id="cgHourZhi" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem;border-radius:6px;font-size:0.9rem;">
+            <option>子</option><option>丑</option><option>寅</option><option>卯</option><option>辰</option><option>巳</option>
+            <option>午</option><option>未</option><option>申</option><option>酉</option><option>戌</option><option>亥</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="input-group" style="grid-column:span 2;"><label>所问之事(可选)</label><input type="text" id="cgQuestion" placeholder="例如:我一生事业运如何?"></div>
+      </div>
+      <button class="divine-btn" id="cgBtn" onclick="doChenggu()">开始称骨</button>
+    </div>
+    <div class="result-section" id="cgResult"></div>
+    <div class="ai-section" id="cgAI" style="display:none">
+      <div class="result-title">AI 称骨解读</div>
+      <div class="ai-content" id="cgAIContent"></div>
+      <div class="ai-actions" id="cgAIActions">
+        <button onclick="copyResult('cgAIContent')">📋 复制文本</button>
+        <button onclick="saveResult('cgAIContent','称骨算命解读')">💾 保存为txt</button>
+      </div>
+      <button class="divine-btn" style="margin-top:0.8rem;" id="cgAIBtn" onclick="doAIChenggu()">AI 解读</button>
+    </div>
+  </div>
+
+  <!-- ============ 灵签页 ============ -->
+  <div class="page" id="pageLingqian">
+    <div class="header"><h1 data-seal="签">灵签</h1><div class="subtitle">心诚则灵 · 有求必应</div></div>
+    <div class="input-section">
+      <div class="input-row">
+        <div class="input-group"><label>签种</label>
+          <div class="btn-row-grid" style="--btn-count:2;">
+            <button class="toggle-btn active" data-lq-kind="guanyin" onclick="selLqKind(this)">观音灵签</button>
+            <button class="toggle-btn" data-lq-kind="guandi" onclick="selLqKind(this)">关帝灵签</button>
+          </div>
+        </div>
+      </div>
+      <div class="input-row">
+        <div class="input-group" style="grid-column:span 2;"><label>所问之事(可选)</label><input type="text" id="lqQuestion" placeholder="例如:这次换工作顺利吗?"></div>
+      </div>
+      <button class="divine-btn" id="lqBtn" onclick="doLingqian()">虔诚抽签</button>
+    </div>
+    <div class="result-section" id="lqResult"></div>
+    <div class="ai-section" id="lqAI" style="display:none">
+      <div class="result-title">AI 解签</div>
+      <div class="ai-content" id="lqAIContent"></div>
+      <div class="ai-actions" id="lqAIActions">
+        <button onclick="copyResult('lqAIContent')">📋 复制文本</button>
+        <button onclick="saveResult('lqAIContent','灵签解签')">💾 保存为txt</button>
+      </div>
+      <button class="divine-btn" style="margin-top:0.8rem;" id="lqAIBtn" onclick="doAILingqian()">AI 解签</button>
+    </div>
+  </div>
+
   <!-- ============ 奇门页 ============ -->
   <div class="page" id="pageQimen">
-    <div class="header"><h1>奇门遁甲</h1><div class="subtitle">运筹帷幄 · 决胜千里</div></div>
+    <div class="header"><h1 data-seal="奇">奇门遁甲</h1><div class="subtitle">运筹帷幄 · 决胜千里</div></div>
     <div class="input-section">
       <div class="input-row">
         <div class="input-group"><label>年</label><input type="number" id="qmYear" value="2026"></div>
@@ -328,13 +595,22 @@
     </div>
   </div>
 
-  <!-- ============ 看手相页 ============ -->
+  <!-- ============ 看手相页(v3.0.8:手相+面相合并入口,tab 切换) ============ -->
   <div class="page" id="pageShouxiang">
     <div class="header">
-      <h1>看手相</h1>
-      <div class="subtitle">上传掌纹 · AI 解读 · 双手对比</div>
+      <h1 data-seal="相">人相 · AI 识图</h1>
+      <div class="subtitle">双手掌纹 / 面部三庭五官 · 共享一套上传</div>
     </div>
-    <div class="input-section">
+
+    <!-- Tab 切换 -->
+    <div class="tab-bar" style="display:flex;gap:0.3rem;margin-bottom:1rem;">
+      <button id="renxiangTabHand" onclick="switchRenxiangTab('hand')" style="flex:1;padding:0.55rem;background:var(--bg-card);border:1px solid var(--accent-gold);color:var(--accent-gold);border-radius:6px;font-size:0.85rem;cursor:pointer;font-weight:600;">✋ 看手相</button>
+      <button id="renxiangTabFace" onclick="switchRenxiangTab('face')" style="flex:1;padding:0.55rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);border-radius:6px;font-size:0.85rem;cursor:pointer;">👤 看面相</button>
+    </div>
+
+    <!-- 手相内容 -->
+    <div id="renxiangPaneHand" class="renxiang-pane">
+      <div class="input-section">
       <!-- 性别选择 -->
       <div class="input-group" style="margin-bottom:1.2rem;">
         <label style="display:block;color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.5rem;letter-spacing:0.05em;">📌 性别（影响左右手解读方向）</label>
@@ -347,54 +623,235 @@
         </div>
       </div>
 
-      <!-- 左右手上传 -->
+      <!-- 左右手上传 (每手掌心+手背 2 张, 共 4 张) -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <!-- 左手 -->
         <div>
           <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.3rem;text-align:center;">
             左手 · <span id="sxLeftLabel">先天命格</span>
           </div>
-          <div id="sxUploadAreaLeft" style="border:2px dashed var(--border);border-radius:12px;padding:1.5rem;text-align:center;cursor:pointer;transition:border-color 0.2s;" onclick="document.getElementById('sxFileInputLeft').click()">
-            <div style="font-size:1.5rem;margin-bottom:0.3rem;">✋</div>
-            <div style="color:var(--text-secondary);font-size:0.8rem;">点击上传左手照片</div>
-            <input type="file" id="sxFileInputLeft" accept="image/*" style="display:none;" onchange="onSxFileSelect(event, 'left')">
-          </div>
-          <div id="sxPreviewWrapLeft" style="display:none;margin-top:0.5rem;text-align:center;">
-            <img id="sxPreviewLeft" style="max-width:100%;max-height:150px;border-radius:8px;border:1px solid var(--border);">
-            <div style="margin-top:0.3rem;">
-              <button onclick="sxFlipImage('left')" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-secondary);padding:0.3rem 0.8rem;border-radius:4px;font-size:0.75rem;cursor:pointer;">↔️ 镜像翻转</button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;">
+            <div>
+              <div style="font-size:0.7rem;color:var(--text-muted);text-align:center;margin-bottom:0.2rem;">掌心</div>
+              <div id="sxUploadAreaLeftPalm" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('sxFileInputLeftPalm').click()">
+                <div style="font-size:1.2rem;">🤚</div>
+                <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
+                <input type="file" id="sxFileInputLeftPalm" accept="image/*" style="display:none;" onchange="onSxFileSelect(event, 'left', 'palm')">
+              </div>
+              <div id="sxPreviewWrapLeftPalm" style="display:none;margin-top:0.3rem;text-align:center;">
+                <img id="sxPreviewLeftPalm" style="max-width:100%;max-height:90px;border-radius:6px;border:1px solid var(--border);">
+              </div>
+            </div>
+            <div>
+              <div style="font-size:0.7rem;color:var(--text-muted);text-align:center;margin-bottom:0.2rem;">手背</div>
+              <div id="sxUploadAreaLeftBack" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('sxFileInputLeftBack').click()">
+                <div style="font-size:1.2rem;">✋</div>
+                <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
+                <input type="file" id="sxFileInputLeftBack" accept="image/*" style="display:none;" onchange="onSxFileSelect(event, 'left', 'back')">
+              </div>
+              <div id="sxPreviewWrapLeftBack" style="display:none;margin-top:0.3rem;text-align:center;">
+                <img id="sxPreviewLeftBack" style="max-width:100%;max-height:90px;border-radius:6px;border:1px solid var(--border);">
+              </div>
             </div>
           </div>
+          <div style="display:flex;gap:0.3rem;justify-content:center;margin-top:0.3rem;">
+            <button onclick="sxFlipImage('left','palm')" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-secondary);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.7rem;cursor:pointer;">↔️ 掌心翻转</button>
+            <button onclick="sxFlipImage('left','back')" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-secondary);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.7rem;cursor:pointer;">↔️ 手背翻转</button>
+          </div>
         </div>
+
+        <!-- 右手 -->
         <div>
           <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.3rem;text-align:center;">
             右手 · <span id="sxRightLabel">后天运势</span>
           </div>
-          <div id="sxUploadAreaRight" style="border:2px dashed var(--border);border-radius:12px;padding:1.5rem;text-align:center;cursor:pointer;transition:border-color 0.2s;" onclick="document.getElementById('sxFileInputRight').click()">
-            <div style="font-size:1.5rem;margin-bottom:0.3rem;">✋</div>
-            <div style="color:var(--text-secondary);font-size:0.8rem;">点击上传右手照片</div>
-            <input type="file" id="sxFileInputRight" accept="image/*" style="display:none;" onchange="onSxFileSelect(event, 'right')">
-          </div>
-          <div id="sxPreviewWrapRight" style="display:none;margin-top:0.5rem;text-align:center;">
-            <img id="sxPreviewRight" style="max-width:100%;max-height:150px;border-radius:8px;border:1px solid var(--border);">
-            <div style="margin-top:0.3rem;">
-              <button onclick="sxFlipImage('right')" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-secondary);padding:0.3rem 0.8rem;border-radius:4px;font-size:0.75rem;cursor:pointer;">↔️ 镜像翻转</button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;">
+            <div>
+              <div style="font-size:0.7rem;color:var(--text-muted);text-align:center;margin-bottom:0.2rem;">掌心</div>
+              <div id="sxUploadAreaRightPalm" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('sxFileInputRightPalm').click()">
+                <div style="font-size:1.2rem;">🤚</div>
+                <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
+                <input type="file" id="sxFileInputRightPalm" accept="image/*" style="display:none;" onchange="onSxFileSelect(event, 'right', 'palm')">
+              </div>
+              <div id="sxPreviewWrapRightPalm" style="display:none;margin-top:0.3rem;text-align:center;">
+                <img id="sxPreviewRightPalm" style="max-width:100%;max-height:90px;border-radius:6px;border:1px solid var(--border);">
+              </div>
+            </div>
+            <div>
+              <div style="font-size:0.7rem;color:var(--text-muted);text-align:center;margin-bottom:0.2rem;">手背</div>
+              <div id="sxUploadAreaRightBack" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('sxFileInputRightBack').click()">
+                <div style="font-size:1.2rem;">✋</div>
+                <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
+                <input type="file" id="sxFileInputRightBack" accept="image/*" style="display:none;" onchange="onSxFileSelect(event, 'right', 'back')">
+              </div>
+              <div id="sxPreviewWrapRightBack" style="display:none;margin-top:0.3rem;text-align:center;">
+                <img id="sxPreviewRightBack" style="max-width:100%;max-height:90px;border-radius:6px;border:1px solid var(--border);">
+              </div>
             </div>
           </div>
+          <div style="display:flex;gap:0.3rem;justify-content:center;margin-top:0.3rem;">
+            <button onclick="sxFlipImage('right','palm')" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-secondary);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.7rem;cursor:pointer;">↔️ 掌心翻转</button>
+            <button onclick="sxFlipImage('right','back')" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-secondary);padding:0.2rem 0.5rem;border-radius:4px;font-size:0.7rem;cursor:pointer;">↔️ 手背翻转</button>
+          </div>
         </div>
+      </div>
+
+      <!-- 拍照提示 -->
+      <div style="font-size:0.75rem;color:var(--text-muted);background:var(--bg-inner);padding:0.5rem 0.8rem;border-radius:6px;margin-bottom:0.6rem;line-height:1.6;">
+        💡 <b>拍照建议</b>:掌心照手指自然张开、掌心朝上、光线均匀;手背照使指甲/关节可见。双手共 4 张图,AI 可交叉识别主线弧度、长短、分叉、岛纹等。
+      </div>
+
+      <!-- MediaPipe 关键点检测 (Tier 3) -->
+      <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.6rem;padding:0.4rem 0.6rem;background:var(--bg-card);border:1px solid var(--accent-gold);border-radius:6px;font-size:0.75rem;">
+        <span style="color:var(--accent-gold);font-weight:bold;">📐 AI 量化分析</span>
+        <span style="color:var(--text-secondary);flex:1;">
+          自动检测 21 个手部关键点,计算主线弧长/手指比例/手型 (纯本地,首次约 5-8MB 加载,缓存后秒级)
+        </span>
+        <button id="sxMPToggleBtn" onclick="sxToggleMediaPipe()" style="background:var(--accent-gold);color:#1a1612;border:none;padding:0.3rem 0.7rem;border-radius:4px;font-size:0.7rem;cursor:pointer;white-space:nowrap;">
+          启用关键点
+        </button>
+        <span id="sxMPStatus" style="color:var(--text-muted);font-size:0.7rem;min-width:60px;text-align:right;">未启用</span>
       </div>
 
       <div id="sxActionArea" style="display:none;text-align:center;margin-bottom:0.5rem;">
         <button class="divine-btn" onclick="doShouxiang()">AI 解读手相（双手对比）</button>
         <button class="divine-btn" style="background:var(--bg-secondary);color:var(--text-secondary);margin-left:0.5rem;" onclick="clearShouxiang()">重新上传</button>
       </div>
+      <!-- 诊断:永远显示当前本地服务器配置,方便排查endpoint问题 -->
+      <div id="sxLocalDebug" style="text-align:center;font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem;"></div>
+      <script>
+        (function(){
+          function paintSxDebug(){
+            var el = document.getElementById('sxLocalDebug');
+            if (!el) return;
+            var ip = (localStorage.getItem('local_server_ip') || '127.0.0.1');
+            var port = (localStorage.getItem('local_server_port') || '8082');
+            el.textContent = '本地服务器: ' + ip + ':' + port + ' | 模型: ' + (localStorage.getItem('local_model_name') || '(未设置)');
+          }
+          paintSxDebug();
+          setInterval(paintSxDebug, 2000);
+        })();
+      </script>
       <div id="sxResult" class="result-card" style="display:none;margin-top:1rem;"></div>
+      </div>
+    </div>
+
+    <script>
+      // v3.0.8:tab 切换 '看手相 / 看面相' — 默认 hand,从 URL hash 读取初始值
+      (function () {
+        function paint(tab) {
+          var handPane = document.getElementById('renxiangPaneHand');
+          var facePane = document.getElementById('renxiangPaneFace');
+          var handTab = document.getElementById('renxiangTabHand');
+          var faceTab = document.getElementById('renxiangTabFace');
+          if (!handPane || !facePane) return;
+          var isHand = tab === 'hand';
+          handPane.style.display = isHand ? 'block' : 'none';
+          facePane.style.display = isHand ? 'none' : 'block';
+          if (handTab) {
+            handTab.style.borderColor = isHand ? 'var(--accent-gold)' : 'var(--border)';
+            handTab.style.color = isHand ? 'var(--accent-gold)' : 'var(--text-secondary)';
+            handTab.style.fontWeight = isHand ? '600' : '400';
+          }
+          if (faceTab) {
+            faceTab.style.borderColor = !isHand ? 'var(--accent-gold)' : 'var(--border)';
+            faceTab.style.color = !isHand ? 'var(--accent-gold)' : 'var(--text-secondary)';
+            faceTab.style.fontWeight = !isHand ? '600' : '400';
+          }
+        }
+        window.switchRenxiangTab = paint;
+        // 初始 paint + 监听 hash 变化(允许从别的页跳过来)
+        function init() {
+          var h = (location.hash || '').replace('#', '');
+          paint(h === 'face' ? 'face' : 'hand');
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', init);
+        } else { init(); }
+        window.addEventListener('hashchange', init);
+      })();
+    </script>
+
+    <!-- 面相内容(原本是独立 pageMianxiang,v3.0.8 合并进来作为 tab target) -->
+    <div id="renxiangPaneFace" class="renxiang-pane" style="display:none;">
+      <div class="input-section">
+        <!-- 性别选择 -->
+        <div class="input-group" style="margin-bottom:1.2rem;">
+          <label style="display:block;color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.5rem;letter-spacing:0.05em;">📌 性别（影响十二宫吉凶判读）</label>
+          <div style="display:flex;gap:0.6rem;">
+            <button id="mxGenderMale" onclick="setMxGender('male')" style="flex:1;background:var(--bg-primary);border:2px solid var(--accent-gold);color:var(--accent-gold);padding:0.7rem;border-radius:8px;cursor:pointer;font-size:1rem;font-weight:600;">👨 男</button>
+            <button id="mxGenderFemale" onclick="setMxGender('female')" style="flex:1;background:var(--bg-primary);border:2px solid var(--border);color:var(--text-secondary);padding:0.7rem;border-radius:8px;cursor:pointer;font-size:1rem;font-weight:600;">👩 女</button>
+          </div>
+        </div>
+
+        <!-- 年龄段 -->
+        <div class="input-row" style="margin-bottom:0.8rem;">
+          <div class="input-group" style="grid-column:span 2;">
+            <label>年龄段</label>
+            <select id="mxAgeBucket" onchange="mxAgeBucket=this.value" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem;border-radius:6px;font-size:0.9rem;width:100%;">
+              <option value="<18">&lt; 18（未成年）</option>
+              <option value="18-30">18-30（青年）</option>
+              <option value="30-45" selected>30-45（壮年）</option>
+              <option value="45-60">45-60（中年）</option>
+              <option value="60+">60+（中老年）</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 3 张图上传(正面 / 左 45° / 右 45°) -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;margin-bottom:0.8rem;">
+          <div>
+            <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.3rem;text-align:center;">正面</div>
+            <div id="mxUploadAreaFront" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('mxFileInputFront').click()">
+              <div style="font-size:1.4rem;">😊</div>
+              <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
+              <input type="file" id="mxFileInputFront" accept="image/*" style="display:none;" onchange="onMxFileSelect(event, 'front')">
+            </div>
+            <div id="mxPreviewWrapFront" style="display:none;margin-top:0.3rem;text-align:center;">
+              <img id="mxPreviewFront" style="max-width:100%;max-height:120px;border-radius:6px;border:1px solid var(--border);">
+            </div>
+          </div>
+          <div>
+            <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.3rem;text-align:center;">左 45°</div>
+            <div id="mxUploadAreaLeft45" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('mxFileInputLeft45').click()">
+              <div style="font-size:1.4rem;">👈</div>
+              <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
+              <input type="file" id="mxFileInputLeft45" accept="image/*" style="display:none;" onchange="onMxFileSelect(event, 'left45')">
+            </div>
+            <div id="mxPreviewWrapLeft45" style="display:none;margin-top:0.3rem;text-align:center;">
+              <img id="mxPreviewLeft45" style="max-width:100%;max-height:120px;border-radius:6px;border:1px solid var(--border);">
+            </div>
+          </div>
+          <div>
+            <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.3rem;text-align:center;">右 45°</div>
+            <div id="mxUploadAreaRight45" style="border:2px dashed var(--border);border-radius:12px;padding:0.6rem;text-align:center;cursor:pointer;background:var(--bg-card);" onclick="document.getElementById('mxFileInputRight45').click()">
+              <div style="font-size:1.4rem;">👉</div>
+              <div style="color:var(--text-muted);font-size:0.7rem;">点击上传</div>
+              <input type="file" id="mxFileInputRight45" accept="image/*" style="display:none;" onchange="onMxFileSelect(event, 'right45')">
+            </div>
+            <div id="mxPreviewWrapRight45" style="display:none;margin-top:0.3rem;text-align:center;">
+              <img id="mxPreviewRight45" style="max-width:100%;max-height:120px;border-radius:6px;border:1px solid var(--border);">
+            </div>
+          </div>
+        </div>
+
+        <!-- 拍照提示 -->
+        <div style="font-size:0.75rem;color:var(--text-muted);background:var(--bg-inner);padding:0.5rem 0.8rem;border-radius:6px;margin-bottom:0.6rem;line-height:1.6;">
+          💡 <b>拍照建议</b>:正面照表情自然、光线均匀,左右 45° 侧照露出额头/鼻梁/下颌立体度。单张也能解读,但 3 张交叉验证精度更高。
+        </div>
+
+        <div id="mxActionArea" style="display:none;text-align:center;margin-bottom:0.5rem;">
+          <button class="divine-btn" onclick="doMianxiang()">AI 识图解读面相</button>
+        </div>
+        <div id="mxResult" class="result-card" style="display:none;margin-top:1rem;"></div>
+      </div>
     </div>
   </div>
 
   <!-- ============ 姓名学页 ============ -->
   <div class="page" id="pageXingshi">
     <div class="header">
-      <h1>姓名学</h1>
+      <h1 data-seal="名">姓名学</h1>
       <div class="subtitle">五格剖象 · 三才配置 · AI 解读</div>
     </div>
     <div class="input-section">
@@ -439,7 +896,7 @@
   <!-- ============ 三术同参页 ============ -->
   <div class="page" id="pageCross">
     <div class="header">
-      <h1>三术同参</h1>
+      <h1 data-seal="参">三术同参</h1>
       <div class="subtitle">八字 + 紫微 + 六爻 · 交叉验证</div>
     </div>
     <div class="input-section">
@@ -509,9 +966,18 @@
   <!-- ============ 风水罗盘页 ============ -->
   <div class="page" id="pageFengshui">
     <div class="header">
-      <h1>风水罗盘</h1>
+      <h1 data-seal="风">风水罗盘</h1>
       <div class="subtitle">八宅风水 · 玄空飞星 · 24山向</div>
     </div>
+
+    <!-- v3.0.11 八宅/玄空 tab 切换 -->
+    <div class="tab-bar" style="display:flex;gap:0.3rem;margin-bottom:1rem;">
+      <button id="fsTab8zhai" data-fs-tab="8zhai" onclick="selFsTab(this)" style="flex:1;padding:0.55rem;background:var(--bg-card);border:1px solid var(--accent-gold);color:var(--accent-gold);border-radius:6px;font-size:0.85rem;cursor:pointer;font-weight:600;">🧭 八宅风水</button>
+      <button id="fsTabXuankong" data-fs-tab="xuankong" onclick="selFsTab(this)" style="flex:1;padding:0.55rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);border-radius:6px;font-size:0.85rem;cursor:pointer;">🌌 玄空飞星</button>
+    </div>
+
+    <!-- 八宅 pane(v3.0.10 现有内容) -->
+    <div id="fsPane8zhai" class="fs-pane">
     <div class="input-section">
       <div class="input-group">
         <label>户型</label>
@@ -535,8 +1001,11 @@
       </div>
       <div class="input-row">
         <div class="input-group">
-          <label>出生年（用于命卦计算）</label>
-          <input type="number" id="fsBirthYear" placeholder="如：1990" value="1990">
+          <label>历法（出生年）</label>
+          <div class="btn-row">
+            <button class="toggle-btn active" data-fs-cal="solar" onclick="selFsCal(this)">阳历</button>
+            <button class="toggle-btn" data-fs-cal="lunar" onclick="selFsCal(this)">阴历</button>
+          </div>
         </div>
         <div class="input-group">
           <label>性别</label>
@@ -546,7 +1015,46 @@
           </div>
         </div>
       </div>
-      <button class="divine-btn" onclick="doFengshui()">排盘测算</button>
+      <div class="input-row" id="fsSolarRow">
+        <div class="input-group" style="grid-column:span 2;">
+          <label>出生年（阳历公历，用于命卦计算）</label>
+          <input type="number" id="fsBirthYear" placeholder="如：1990" value="1990">
+        </div>
+      </div>
+      <div class="input-row" id="fsLunarRow" style="display:none;">
+        <div class="input-group" style="grid-column:span 2;">
+          <label>出生年（阴历六十甲子）</label>
+          <select id="fsYearGZ" style="background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem;border-radius:6px;font-size:0.9rem;width:100%;">
+            <option>甲子</option><option>乙丑</option><option>丙寅</option><option>丁卯</option><option>戊辰</option>
+            <option>己巳</option><option>庚午</option><option>辛未</option><option>壬申</option><option>癸酉</option>
+            <option>甲戌</option><option>乙亥</option><option>丙子</option><option>丁丑</option><option>戊寅</option>
+            <option>己卯</option><option>庚辰</option><option>辛巳</option><option>壬午</option><option>癸未</option>
+            <option>甲申</option><option>乙酉</option><option>丙戌</option><option>丁亥</option><option>戊子</option>
+            <option>己丑</option><option>庚寅</option><option>辛卯</option><option>壬辰</option><option>癸巳</option>
+            <option>甲午</option><option>乙未</option><option>丙申</option><option>丁酉</option><option>戊戌</option>
+            <option>己亥</option><option>庚子</option><option>辛丑</option><option>壬寅</option><option>癸卯</option>
+            <option>甲辰</option><option>乙巳</option><option>丙午</option><option>丁未</option><option>戊申</option>
+            <option>己酉</option><option>庚戌</option><option>辛亥</option><option>壬子</option><option>癸丑</option>
+            <option>甲寅</option><option>乙卯</option><option>丙辰</option><option>丁巳</option><option>戊午</option>
+            <option>己未</option><option>庚申</option><option>辛酉</option><option>壬戌</option><option>癸亥</option>
+          </select>
+        </div>
+      </div>
+      <div class="input-group" style="margin-top:0.8rem;">
+        <label>主卧朝向（影响主卧吉凶判定）</label>
+        <div class="btn-row">
+          <button class="toggle-btn active" data-main-room="北" onclick="selFsMainRoom(this)">北</button>
+          <button class="toggle-btn" data-main-room="东北" onclick="selFsMainRoom(this)">东北</button>
+          <button class="toggle-btn" data-main-room="东" onclick="selFsMainRoom(this)">东</button>
+          <button class="toggle-btn" data-main-room="东南" onclick="selFsMainRoom(this)">东南</button>
+          <button class="toggle-btn" data-main-room="南" onclick="selFsMainRoom(this)">南</button>
+          <button class="toggle-btn" data-main-room="西南" onclick="selFsMainRoom(this)">西南</button>
+          <button class="toggle-btn" data-main-room="西" onclick="selFsMainRoom(this)">西</button>
+          <button class="toggle-btn" data-main-room="西北" onclick="selFsMainRoom(this)">西北</button>
+        </div>
+      </div>
+      <div id="fsError" class="result-card" style="display:none;background:rgba(220,80,80,0.1);border:1px solid var(--accent-red);color:var(--accent-red);margin-top:0.8rem;font-size:0.85rem;"></div>
+      <button class="divine-btn" onclick="doFengshui()" style="margin-top:0.8rem;">排盘测算</button>
     </div>
 
     <div class="result-card" id="fsResult" style="display:none;"></div>
@@ -563,12 +1071,76 @@
       </div>
       <button class="divine-btn" style="margin-top:0.8rem;display:none;" id="fsAIBtn" onclick="doAIFengshui()">AI 解读</button>
     </div>
+    </div>
+
+    <!-- 玄空飞星 pane(v3.0.11 新增) -->
+    <div id="fsPaneXuankong" class="fs-pane" style="display:none;">
+      <div class="input-section">
+        <div class="input-row">
+          <div class="input-group" style="grid-column:span 2;">
+            <label>排盘年份（用于确定三元九运）</label>
+            <input type="number" id="xkYear" value="2026" min="1864" max="2099">
+          </div>
+        </div>
+        <div class="input-group" style="margin-top:0.8rem;">
+          <label>坐方（坐山朝向，从屋外看屋内）</label>
+          <div class="btn-row">
+            <button class="toggle-btn" data-xk-sit="北" onclick="selXkSit(this)">北</button>
+            <button class="toggle-btn" data-xk-sit="东北" onclick="selXkSit(this)">东北</button>
+            <button class="toggle-btn" data-xk-sit="东" onclick="selXkSit(this)">东</button>
+            <button class="toggle-btn" data-xk-sit="东南" onclick="selXkSit(this)">东南</button>
+            <button class="toggle-btn active" data-xk-sit="南" onclick="selXkSit(this)">南</button>
+            <button class="toggle-btn" data-xk-sit="西南" onclick="selXkSit(this)">西南</button>
+            <button class="toggle-btn" data-xk-sit="西" onclick="selXkSit(this)">西</button>
+            <button class="toggle-btn" data-xk-sit="西北" onclick="selXkSit(this)">西北</button>
+          </div>
+        </div>
+        <div class="input-group" style="margin-top:0.8rem;">
+          <label>向方（大门朝向，从屋内看屋外）</label>
+          <div class="btn-row">
+            <button class="toggle-btn active" data-xk-face="北" onclick="selXkFace(this)">北</button>
+            <button class="toggle-btn" data-xk-face="东北" onclick="selXkFace(this)">东北</button>
+            <button class="toggle-btn" data-xk-face="东" onclick="selXkFace(this)">东</button>
+            <button class="toggle-btn" data-xk-face="东南" onclick="selXkFace(this)">东南</button>
+            <button class="toggle-btn" data-xk-face="南" onclick="selXkFace(this)">南</button>
+            <button class="toggle-btn" data-xk-face="西南" onclick="selXkFace(this)">西南</button>
+            <button class="toggle-btn" data-xk-face="西" onclick="selXkFace(this)">西</button>
+            <button class="toggle-btn" data-xk-face="西北" onclick="selXkFace(this)">西北</button>
+          </div>
+        </div>
+        <div class="input-group" style="margin-top:0.8rem;">
+          <label>山向飞星起法（v3.0.16）</label>
+          <div class="btn-row">
+            <button class="toggle-btn" data-xk-tigua="false" onclick="selXkTiGua(this)">元旦盘(基础)</button>
+            <button class="toggle-btn active" data-xk-tigua="true" onclick="selXkTiGua(this)">替卦(标准)</button>
+          </div>
+        </div>
+        <div id="xkError" class="result-card" style="display:none;background:rgba(220,80,80,0.1);border:1px solid var(--accent-red);color:var(--accent-red);margin-top:0.8rem;font-size:0.85rem;"></div>
+        <button class="divine-btn" onclick="doXuankong()" style="margin-top:0.8rem;">玄空飞星排盘</button>
+        <!-- v3.1.7: 大六壬功能已移到独立 pageDaliuren(v3.0.7 接入), 此处引导跳转 -->
+        <button class="divine-btn" onclick="switchPage('daliuren')" style="margin-top:0.5rem;background:var(--bg-secondary);color:var(--accent-gold);">🐉 → 大六壬排盘(独立页)</button>
+      </div>
+      <div class="result-card" id="xkResult" style="display:none;"></div>
+      <div class="result-card" id="xkAI" style="display:none;">
+        <h3 style="color:var(--accent-gold);">🤖 AI 玄空飞星大师</h3>
+        <div class="loading" id="xkAILoading">
+          <div class="spinner"></div>
+          <p style="margin-top:0.5rem;color:var(--text-secondary)">AI 正在排盘解读...</p>
+        </div>
+        <div id="xkAIText" style="display:none;white-space:pre-wrap;line-height:1.7;"></div>
+        <div class="ai-actions" id="xkAIActions" style="margin-top:0.6rem;">
+          <button onclick="copyResult('xkAIText')">📋 复制文本</button>
+          <button onclick="saveResult('xkAIText','玄空飞星解读')">💾 保存为txt</button>
+        </div>
+        <button class="divine-btn" style="margin-top:0.8rem;display:none;" id="xkAIBtn" onclick="doAIXuankong()">AI 解读</button>
+      </div>
+    </div>
   </div>
 
   <!-- ============ 道佛化解页（v1.2.17）============ -->
   <div class="page" id="pageDaofobuddhism">
     <div class="header">
-      <h1>🙏 道佛化解</h1>
+      <h1 data-seal="解">🙏 道佛化解</h1>
       <div class="subtitle">灵签 · 符箓 · 手诀 · AI化解</div>
     </div>
 
@@ -576,6 +1148,8 @@
       <button class="df-tab-btn active" data-tab="qian" onclick="switchDfTab('qian')" style="flex:1;padding:0.5rem;background:var(--bg-card);border:1px solid var(--accent-gold);color:var(--accent-gold);border-radius:6px;font-size:0.85rem;cursor:pointer;">🎴 灵签</button>
       <button class="df-tab-btn" data-tab="fu" onclick="switchDfTab('fu')" style="flex:1;padding:0.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;font-size:0.85rem;cursor:pointer;">🪄 符箓</button>
       <button class="df-tab-btn" data-tab="jue" onclick="switchDfTab('jue')" style="flex:1;padding:0.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;font-size:0.85rem;cursor:pointer;">🖐️ 手诀</button>
+      <button class="df-tab-btn" data-tab="zhou" onclick="switchDfTab('zhou')" style="flex:1;padding:0.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;font-size:0.85rem;cursor:pointer;">📿 咒语</button>
+      <button class="df-tab-btn" data-tab="zhen" onclick="switchDfTab('zhen')" style="flex:1;padding:0.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;font-size:0.85rem;cursor:pointer;">📜 真符</button>
       <button class="df-tab-btn" data-tab="ai" onclick="switchDfTab('ai')" style="flex:1;padding:0.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;font-size:0.85rem;cursor:pointer;">🤖 AI化解</button>
     </div>
 
@@ -618,7 +1192,17 @@
       </div>
     </div>
 
-    <!-- Tab 4: AI 化解 -->
+    <!-- Tab 4: 咒语速查 -->
+    <div class="df-tab-content" id="dfTabZhou" style="display:none;">
+      <div class="result-card">
+        <h3 style="color:var(--accent-gold);">📿 咒语速查</h3>
+        <input type="text" id="zhouSearch" placeholder="🔍 搜索咒名/用途..." oninput="renderZhouList()" style="width:100%;background:var(--bg-primary);border:1px solid var(--border);color:var(--text-primary);padding:0.4rem 0.6rem;border-radius:6px;font-size:0.85rem;margin-bottom:0.6rem;">
+        <div id="zhouCategoryBar" style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-bottom:0.6rem;"></div>
+        <div id="zhouList" style="max-height:60vh;overflow-y:auto;"></div>
+      </div>
+    </div>
+
+    <!-- Tab 5: AI 化解 -->
     <div class="df-tab-content" id="dfTabAi" style="display:none;">
       <div class="result-card">
         <h3 style="color:var(--accent-gold);">🤖 AI 道佛化解</h3>
@@ -628,15 +1212,18 @@
         <div id="aiHuaJieResult" style="display:none;margin-top:0.8rem;"></div>
       </div>
     </div>
+
+    <!-- Tab 6: 古籍真符（道藏影印） -->
+    <div class="df-tab-content" id="dfTabZhen" style="display:none;">
+      <div id="zhenFuGallery"></div>
+    </div>
   </div>
 
   <!-- 底部导航 -->
   <nav class="bottom-nav">
-    <button onclick="switchPage('bazi')" id="navBazi"><span class="icon">📅</span>八字</button>
-    <button onclick="switchPage('ziwei')" id="navZiwei"><span class="icon">⭐</span>紫微</button>
-    <button onclick="switchPage('liuyao')" id="navLiuyao"><span class="icon">☯</span>六爻</button>
-    <button onclick="switchPage('qimen')" id="navQimen"><span class="icon">🔮</span>奇门</button>
-    <button onclick="switchPage('shouxiang')" id="navShouxiang"><span class="icon">✋</span>手相</button>
+    <button onclick="switchPage('mingli')" id="navMingli"><span class="icon">📜</span>命理</button>
+    <button onclick="switchPage('zhangua')" id="navZhangua"><span class="icon">☯</span>占卦</button>
+    <button onclick="switchPage('shouxiang')" id="navShouxiang"><span class="icon">👁</span>人相</button>
     <button onclick="switchPage('xingshi')" id="navXingshi"><span class="icon">👤</span>姓名</button>
     <button onclick="switchPage('cross')" id="navCross"><span class="icon">🔀</span>三术</button>
     <button onclick="switchPage('fengshui')" id="navFengshui"><span class="icon">🧭</span>风水</button>
@@ -647,12 +1234,31 @@
 </div>
 
 <!-- 八字、紫微本地依赖（离线可用） -->
-<script src="lib/lunar.bundle.js?v=301"></script>
-<script src="lib/iztro.bundle.js?v=301"></script>
+<script src="lib/lunar.bundle.js?v=310"></script>
+<script src="lib/ganzhi.js?v=310"></script>
+<script src="rag/tokenizer.js?v=310"></script>
+<script src="rag/bm25.js?v=310"></script>
+<script src="rag/vector.js?v=310"></script>
+<script src="rag/rrf.js?v=310"></script>
+<script src="rag/index.js?v=310"></script>
+<script src="rag/rewrite.js?v=310"></script>
+<script src="rag/rerank.js?v=310"></script>
+<script src="expert/tables.js?v=310"></script>
+<script src="expert/bazi.js?v=310"></script>
+<script src="expert/liuyao.js?v=312"></script>
+<script src="expert/qimen.js?v=311"></script>
+<script src="expert/ziwei.js?v=310"></script>
+<script src="expert/chain.js?v=310"></script>
+<script src="lib/iztro.bundle.js?v=310"></script>
+  <script>
+    // 把 lunar-javascript 的 LunarYear/LunarMonth 暴露到 window,以便 app 模块支持闰月输入
+    if (window.LunarLib) {
+      window.LunarYear = window.LunarLib.LunarYear;
+      window.LunarMonth = window.LunarLib.LunarMonth;
+    }
+  </script>
 <!-- kb_embedded.js 已移除 (2026-06-22) - 知识库改用fetch按需加载 -->
-<script src="expert.js?v=301"></script>
-<script src="vector-cache.js?v=301"></script>
-<script src="rag.js?v=301"></script>
+<script src="vector-cache.js?v=310"></script>
 <script>
   // lunar.bundle.js 暴露 LunarLib 全局
   if (window.LunarLib) {
@@ -669,40 +1275,64 @@
 </script>
 
 <!-- 六爻、奇门、姓名学算法 -->
-<script src="liuyao.js?v=301"></script>
-<script src="qimen.js?v=301"></script>
-<script src="xingshi.js?v=301"></script>
-<script src="history.js?v=301"></script>
-<script src="feedback.js?v=301"></script>
-<script src="feedback-loop.js?v=301"></script>
-<script src="visual.js?v=301"></script>
-<script src="cache.js?v=301"></script>
-<script src="ab_test.js?v=301"></script>
-<script src="crypto.js?v=301"></script>
-<script src="chat.js?v=301"></script>
+<script src="liuyao.js?v=312"></script>
+<script src="xiaoliuren.js?v=310"></script>
+<script src="meihua.js?v=310"></script>
+<script src="daliuren.js?v=311"></script>
+<script src="chenggu.js?v=310"></script>
+<script src="lingqian.js?v=310"></script>
+<script src="qimen.js?v=313"></script>
+<script src="xingshi.js?v=310"></script>
+<!-- v3.0.10 风水算盘层(独立加载,app/fengshui.js 调用 window.fengshui.*) -->
+<script src="fengshui.js?v=310"></script>
+<!-- v3.0.12 风水 SVG 可视化(罗盘/户型图/九宫格) -->
+<script src="fengshui-visual.js?v=312"></script>
+<!-- v3.0.11 玄空飞星算盘层 -->
+<script src="xuankong.js?v=311"></script>
+<script src="history.js?v=310"></script>
+<script src="feedback.js?v=310"></script>
+<script src="feedback-loop.js?v=310"></script>
+<script src="visual.js?v=310"></script>
+<script src="cache.js?v=310"></script>
+<script src="ab_test.js?v=310"></script>
+<script src="crypto.js?v=310"></script>
+<script src="chat.js?v=310"></script>
 
 <!-- v3.0.5: Core 模块(无依赖顺序) -->
-<script src="core/event-bus.js?v=301"></script>
-<script src="core/state.js?v=301"></script>
-<script src="core/util.js?v=301"></script>
-<script src="core/toast.js?v=301"></script>
-<script src="core/router.js?v=301"></script>
-<script src="core/stream.js?v=301"></script>
-<script src="core/ai-service.js?v=301"></script>
-<script src="core/kb.js?v=301"></script>
+<script src="core/event-bus.js?v=310"></script>
+<script src="core/state.js?v=310"></script>
+<script src="core/util.js?v=310"></script>
+<script src="core/toast.js?v=310"></script>
+<script src="core/router.js?v=310"></script>
+<script src="core/stream.js?v=310"></script>
+<script src="core/ai-service.js?v=312"></script>
+<script src="core/kb.js?v=310"></script>
+<script src="core/result.js?v=310"></script>
+<script src="core/history-ui.js?v=310"></script>
+<script src="core/settings.js?v=312"></script>
+<script src="core/theme.js?v=310"></script>
 
 <!-- v2.0.1: 主应用逻辑 (core) -->
-<script src="app.js?v=301"></script>
+<script src="app.js?v=310"></script>
 <!-- v3.0.3: 按域代码分割 -->
-<script src="app/bazi.js?v=301"></script>
-<script src="app/ziwei.js?v=301"></script>
-<script src="app/liuyao.js?v=301"></script>
-<script src="app/qimen.js?v=301"></script>
-<script src="app/shouxiang.js?v=301"></script>
-<script src="app/xingshi.js?v=301"></script>
-<script src="app/cross.js?v=301"></script>
-<script src="app/fengshui.js?v=301"></script>
-<script src="app/daofobuddhism.js?v=301"></script>
+<script src="app/bazi.js?v=310"></script>
+<script src="app/ziwei.js?v=310"></script>
+<script src="app/liuyao.js?v=312"></script>
+<script src="app/xiaoliuren.js?v=310"></script>
+<script src="app/meihua.js?v=310"></script>
+<script src="app/daliuren.js?v=311"></script>
+<script src="app/chenggu.js?v=310"></script>
+<script src="app/lingqian.js?v=310"></script>
+<script src="app/qimen.js?v=313"></script>
+<script src="app/shouxiang.js?v=312"></script>
+<script src="app/shouxiang-mp.js?v=311"></script>
+<!-- MediaPipe Hands (ES Module, 跳过 vite HMR, 直接走 CDN) -->
+
+<script src="app/mianxiang.js?v=312"></script>
+<script src="app/xingshi.js?v=310"></script>
+<script src="app/cross.js?v=310"></script>
+<script src="app/fengshui.js?v=310"></script>
+<script src="app/daofobuddhism.js?v=313"></script>
 
 <!-- v3.0.1: PWA Service Worker 注册与安装提示 -->
 <script>

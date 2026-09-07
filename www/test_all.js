@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Master test runner - runs all module tests
  */
 var cp = require('child_process');
@@ -7,6 +7,14 @@ var dir = __dirname;
 
 var tests = [
   'test_liuyao.js',
+  'test_xiaoliuren.js',
+  'test_meihua.js',
+  'test_chenggu.js',
+  'test_daliuren.js',
+  'test_mianxiang.js',
+  'test_fengshui.js',
+  'test_xuankong.js',
+  'test_fengshui_visual.js',
   'test_qimen.js',
   'test_xingshi.js',
   'test_expert.js',
@@ -16,6 +24,10 @@ var tests = [
   'test_rag_embedding.js',
   'test_ai_interpret.js',
   'test_ts_demo.js',
+  'test_rag.js',
+  'test_abtest_wiring.js',
+  'test_audit.cjs',
+  'test_audit_panorama.cjs',
   'test_accuracy.js'
 ];
 

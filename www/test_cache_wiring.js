@@ -61,6 +61,8 @@ console.log('[Cache]   makeKey returns unique keys per domain');
   assert.ok(qimenKey.startsWith('qimen|'), 'qimen key starts with qimen');
   assert.ok(ziweiKey.startsWith('ziwei|'), 'ziwei key starts with ziwei');
   assert.ok(crossKey.startsWith('cross|'), 'cross key starts with cross');
+  assert.ok(liuyaoKey.includes('|jingfang-v2|'), 'liuyao key isolates corrected algorithm cache');
+  assert.ok(crossKey.includes('|jingfang-v2|'), 'cross key isolates corrected liuyao algorithm cache');
 
   // 5 个 key 互不相同
   const keys = new Set([baziKey, liuyaoKey, qimenKey, ziweiKey, crossKey]);
@@ -115,31 +117,12 @@ console.log('[Cache]   LRU eviction at MAX_ENTRIES');
   assert.strictEqual(stats.max, 50, 'MAX_ENTRIES is 50');
 }
 
-// ============= Case 5: index.html 5 处 Cache 接入 =============
-console.log('[index]   5 doAI* wired with Cache');
+// ============= Case 5: 统一 AI 入口接入 Cache =============
+console.log('[Core.AI] unified interpret path wired with Cache');
 {
-  const indexSrc = fs.readFileSync('index.html', 'utf-8');
-
-  // 5 个 doAI* 都有 Cache.get
-  const getCount = (indexSrc.match(/window\.Cache\.get\(['"][a-z]+['"]/g) || []).length;
-  assert.ok(getCount >= 5, `expected ≥ 5 Cache.get call sites, got ${getCount}`);
-
-  // 5 个 doAI* 都有 Cache.set
-  const setCount = (indexSrc.match(/window\.Cache\.set\(['"][a-z]+['"]/g) || []).length;
-  assert.ok(setCount >= 5, `expected ≥ 5 Cache.set call sites, got ${setCount}`);
-
-  // 缓存命中时 early return(避免重复 AI 调用)
-  // 简化检查: 5 个 doAI* 都包含 "if (cached) {" + "return;" 模式
-  const cachedPattern = /if \(cached\) \{[\s\S]{0,500}return;/g;
-  const earlyReturnCount = (indexSrc.match(cachedPattern) || []).length;
-  assert.ok(earlyReturnCount >= 5,
-    `expected ≥ 5 "if (cached) { ... return; }" blocks, got ${earlyReturnCount}`);
-
-  // Cache 异常不中断 AI 调用(try/catch 包裹)
-  // 简化: 5 个 Cache.set 都被 try/catch 包
-  const trySetPattern = /try\s*\{\s*window\.Cache\.set\(/g;
-  const trySetCount = (indexSrc.match(trySetPattern) || []).length;
-  assert.ok(trySetCount >= 5, `expected ≥ 5 try{Cache.set, got ${trySetCount}`);
+  const aiSrc = fs.readFileSync('core/ai-service.js', 'utf-8');
+  assert.ok(/Cache\.get\(domain,/.test(aiSrc), 'Core.AI.interpret calls Cache.get');
+  assert.ok(/Cache\.set\(domain,/.test(aiSrc), 'Core.AI.interpret calls Cache.set');
 }
 
 console.log('\nCache wiring tests passed.');

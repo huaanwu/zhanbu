@@ -1,10 +1,6 @@
 // ========== 八字 ==========
-
-var DI_ZHI_CANG_GAN = {
-  '子': ['癸'], '丑': ['己','癸','辛'], '寅': ['甲','丙','戊'], '卯': ['乙'],
-  '辰': ['戊','乙','癸'], '巳': ['丙','庚','戊'], '午': ['丁','己'], '未': ['己','丁','乙'],
-  '申': ['庚','壬','戊'], '酉': ['辛'], '戌': ['戊','辛','丁'], '亥': ['壬','甲']
-};
+// 地支藏干表来自 Expert.BRANCH_HIDE_GAN 单一来源 (expert/tables.js)
+// 通过 window.Expert.BRANCH_HIDE_GAN 访问,加载顺序: tables.js → app/bazi.js
 
 function getBaziPan(solar, gender) {
   const ec = solar.getLunar().getEightChar();
@@ -48,10 +44,26 @@ async function doBazi() {
 
     let solar;
     if (state.bazi.cal === 'lunar') {
-      const lunar = Lunar.fromYmd(year, month, day);
-      solar = lunar.getSolar();
+      // lunar-javascript 的 Lunar.fromYmd 不支持负数闰月参数: 当月数为负,先按本年闰月拿真实 LunarMonth
+      const leapMonth = window.LunarYear ? window.LunarYear.fromYear(year).getLeapMonth() : 0;
+      if (month < 0 && leapMonth === -month) {
+        const lm = (window.LunarMonth ? window.LunarMonth.fromYm(year, leapMonth) : null);
+        if (lm) {
+          const dayCount = lm.getDayCount();
+          if (day > dayCount) {
+            // 闰月日数不够,落到下一月
+            solar = (window.LunarMonth ? window.LunarMonth.fromYm(year, leapMonth + 1) : lm).next(-(day - dayCount)).toSolar();
+          } else {
+            solar = Lunar.fromYmd(year, leapMonth, day).getSolar();
+          }
+        } else {
+          solar = Lunar.fromYmd(year, leapMonth, day).getSolar();
+        }
+      } else {
+        solar = Lunar.fromYmd(year, Math.abs(month), day).getSolar();
+      }
     } else {
-      solar = Solar.fromYmd(year, month, day);
+      solar = Solar.fromYmdHms(year, month, day, hour, 0, 0);
     }
 
     const gz = getBaziPan(solar, gender);
@@ -82,7 +94,7 @@ function calcTenGods(dayGan, gz) {
   for (const k of ['year','month','day','hour']) {
     r[k + '_gan'] = tenGodRelation(dayGan, gz[k][0]);
     const zhi = gz[k][1];
-    const cangGan = DI_ZHI_CANG_GAN[zhi] || [];
+    const cangGan = (window.Expert && window.Expert.BRANCH_HIDE_GAN && window.Expert.BRANCH_HIDE_GAN[zhi]) || [];
     r[k + '_zhi'] = cangGan.map(g => `${g}(${tenGodRelation(dayGan, g)})`).join('、');
   }
   return r;
@@ -128,12 +140,6 @@ function renderBazi(pan) {
   }
 
   document.getElementById('baziResult').innerHTML = html;
-}
-
-function getYearGZ(year) {
-  const gan = ["庚","辛","壬","癸","甲","乙","丙","丁","戊","己"];
-  const zhi = ["申","酉","戌","亥","子","丑","寅","卯","辰","巳","午","未"];
-  return gan[year % 10] + zhi[year % 12];
 }
 
 function buildBaziPrompt(pan) {
@@ -190,7 +196,7 @@ async function doAIBazi() {
   let fullText = '';
   try {
     // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
-    const system = Core.AI.buildSystemPrompt({ domain: 'bazi', pan: currentBazi, question: currentBazi.question });
+    const system = await Core.AI.buildSystemPrompt({ domain: 'bazi', pan: currentBazi, question: currentBazi.question });
     // v3.0.5: 统一 AI 入口(任务 #19)— 缓存查询 + 流式输出 + 事件派发 + abort 由 Core.AI.interpret() 接管
     const { finalText } = await Core.AI.interpret({
       domain: 'bazi',

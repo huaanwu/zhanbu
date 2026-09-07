@@ -12,7 +12,7 @@ const QIAN_FALLBACK = [
 
 // 从 KB 提取 100 签（bdiv_09 之后为具体签文）
 function getQianFromKB() {
-  const k = _kb?.buddhism_divine;
+  const k = window._kb?.buddhism_divine;
   if (!k?.entries) return null;
   const qianEntries = k.entries.filter(e => e.id && e.id.startsWith('bdiv_') && e.poem);
   if (qianEntries.length === 0) return null;
@@ -41,9 +41,28 @@ function switchDfTab(name) {
   document.querySelectorAll('.df-tab-content').forEach(c => c.style.display = 'none');
   const target = document.getElementById('dfTab' + name[0].toUpperCase() + name.slice(1));
   if (target) target.style.display = 'block';
-  // 切换时按需渲染
-  if (name === 'fu') renderFuList();
-  if (name === 'jue') renderJueList();
+  // 切换时按需渲染；若 KB 未加载则先加载
+  if (name === 'fu') {
+    if (window._kb?.daoism_fuzhou) { renderFuList(); }
+    else if (window.loadKBGroups) {
+      window.loadKBGroups(['daofobuddhism']).then(() => renderFuList()).catch(e => console.warn('[DF] fu KB load fail:', e));
+    }
+  }
+  if (name === 'jue') {
+    if (window._kb?.daoism_shoujue) { renderJueList(); }
+    else if (window.loadKBGroups) {
+      window.loadKBGroups(['daofobuddhism']).then(() => renderJueList()).catch(e => console.warn('[DF] jue KB load fail:', e));
+    }
+  }
+  if (name === 'zhou') {
+    if (window._kb?.daoism_zhoushu) { renderZhouList(); }
+    else if (window.loadKBGroups) {
+      window.loadKBGroups(['daofobuddhism']).then(() => renderZhouList()).catch(e => console.warn('[DF] zhou KB load fail:', e));
+    }
+  }
+  if (name === 'zhen') {
+    renderZhenFuGallery();
+  }
 }
 
 // ========== 灵签抽签 ==========
@@ -54,12 +73,14 @@ function drawQian() {
   document.getElementById('qianResult').style.display = 'none';
   document.getElementById('qianAgain').style.display = 'none';
   setTimeout(() => {
+    try {
     const data = getQianData();
     const idx = Math.floor(Math.random() * data.length);
     const q = data[idx];
     const levelColor = q.level === '上上' ? 'var(--accent-gold)' : q.level === '上吉' ? 'var(--accent-green)' : q.level === '中吉' ? 'var(--accent-gold)' : q.level === '中平' ? 'var(--text-secondary)' : 'var(--accent-red)';
     const ctx = window._dfCurrentQuestion ? '\n\n【问事参考】' + window._dfCurrentQuestion : '';
-    document.getElementById('qianResult').innerHTML = `
+    const ctxDiv = ctx ? safeHTML`<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">${ctx}</div>` : '';
+    document.getElementById('qianResult').innerHTML = safeHTML`
       <div style="text-align:center;padding:1rem;background:var(--bg-inner);border-radius:8px;border:1px solid var(--accent-gold);">
         <div style="font-size:0.8rem;color:var(--text-muted);">第 ${q.num} 签 · 共 ${data.length} 签</div>
         <div style="font-size:1.5rem;font-weight:bold;color:${levelColor};margin:0.3rem 0;">${q.level}签</div>
@@ -67,12 +88,19 @@ function drawQian() {
         <div style="font-size:0.85rem;color:var(--text-secondary);font-style:italic;margin:0.3rem 0;line-height:1.5;">${q.poem}</div>
         <div style="font-size:0.9rem;color:var(--text-primary);margin:0.5rem 0;line-height:1.6;">${q.desc}</div>
         <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.5rem;padding-top:0.5rem;border-top:1px dashed var(--border);">💡 化解：${q.advice}</div>
-        ${ctx ? '<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">' + ctx + '</div>' : ''}
+        ${safeHTML.raw(ctxDiv)}
       </div>
     `;
     document.getElementById('qianResult').style.display = 'block';
     document.getElementById('qianAgain').style.display = 'inline-block';
     document.getElementById('qianShaking').style.display = 'none';
+    } catch (e) {
+      console.error('[DF] drawQian error:', e);
+      document.getElementById('qianShaking').style.display = 'none';
+      document.getElementById('qianResult').style.display = 'block';
+      document.getElementById('qianResult').innerHTML = '<div class=\"error\">抽签出错：' + escapeHtml(e.message) + '</div>';
+      document.getElementById('qianAgain').style.display = 'inline-block';
+    }
   }, 1500);
 }
 
@@ -80,17 +108,24 @@ function drawQian() {
 let _fuCategory = 'all';
 function renderFuList() {
   const kw = document.getElementById('fuSearch')?.value?.trim() || '';
-  const kb = (typeof _kb !== 'undefined' ? _kb : window._kb)?.daoism_fuzhou;
+  const kb = window._kb?.daoism_fuzhou;
   if (!kb?.entries) {
     document.getElementById('fuList').innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:1rem;">知识库加载中...</div>';
     return;
   }
   // 分类栏
   const cats = ['all', ...new Set(kb.entries.map(e => e.category))];
-  const catBar = cats.map(c =>
-    `<button onclick="_fuCategory='${c}';renderFuList();" style="padding:0.25rem 0.5rem;background:${_fuCategory===c?'var(--accent-gold)':'var(--bg-primary)'};color:${_fuCategory===c?'#1a1612':'var(--text-primary)'};border:1px solid var(--border);border-radius:4px;font-size:0.7rem;cursor:pointer;">${c==='all'?'全部':c}</button>`
-  ).join('');
-  document.getElementById('fuCategoryBar').innerHTML = catBar;
+const catBar = cats.map(c => {
+  const isActive = _fuCategory === c;
+  return safeHTML`<button data-cat="${c}" style="padding:0.25rem 0.5rem;background:${isActive?'var(--accent-gold)':'var(--bg-primary)'};color:${isActive?'#1a1612':'var(--text-primary)'};border:1px solid var(--border);border-radius:4px;font-size:0.7rem;cursor:pointer;">${c==='all'?'全部':c}</button>`;
+}).join('');
+document.getElementById('fuCategoryBar').innerHTML = catBar;
+document.querySelectorAll('#fuCategoryBar [data-cat]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    _fuCategory = btn.dataset.cat;
+    renderFuList();
+  });
+});
   // 列表
   let list = kb.entries;
   if (_fuCategory !== 'all') list = list.filter(e => e.category === _fuCategory);
@@ -103,7 +138,13 @@ function renderFuList() {
     return;
   }
   document.getElementById('fuList').innerHTML = list.map(e => {
-    const svgHtml = e.fuType ? renderFuSvg(e.fuType, e.title) : '';
+    // v3.1: 优先用 e.image 加载真实 SVG 图，否则用抽象 SVG 生成器
+    let svgHtml = '';
+    if (e.image) {
+      svgHtml = `<img src="images/fulu/${e.image}.svg" alt="${escapeHtml(e.title)}" style="width:120px;max-width:100%;display:block;margin:0.3rem auto;" loading="lazy"/>`;
+    } else if (e.fuType) {
+      svgHtml = renderFuSvg(e.fuType, e.title);
+    }
     return `
     <div style="border-bottom:1px solid var(--border);padding:0.5rem 0;">
       <div style="display:flex;align-items:center;gap:0.3rem;">
@@ -324,20 +365,33 @@ function renderFuSvg(fuType, title, opts = {}) {
 }
 
 function renderJueList() {
-  const kb = (typeof _kb !== 'undefined' ? _kb : window._kb)?.daoism_shoujue;
+  const kb = window._kb?.daoism_shoujue;
   if (!kb?.entries) {
     document.getElementById('jueList').innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:1rem;">知识库加载中...</div>';
     return;
   }
   const cats = ['all', ...new Set(kb.entries.map(e => e.category))];
-  const catBar = cats.map(c =>
-    `<button onclick="_jueCategory='${c}';renderJueList();" style="padding:0.25rem 0.5rem;background:${_jueCategory===c?'var(--accent-gold)':'var(--bg-primary)'};color:${_jueCategory===c?'#1a1612':'var(--text-primary)'};border:1px solid var(--border);border-radius:4px;font-size:0.7rem;cursor:pointer;">${c==='all'?'全部':c}</button>`
-  ).join('');
-  document.getElementById('jueCategoryBar').innerHTML = catBar;
+const catBar = cats.map(c => {
+  const isActive = _jueCategory === c;
+  return safeHTML`<button data-cat="${c}" style="padding:0.25rem 0.5rem;background:${isActive?'var(--accent-gold)':'var(--bg-primary)'};color:${isActive?'#1a1612':'var(--text-primary)'};border:1px solid var(--border);border-radius:4px;font-size:0.7rem;cursor:pointer;">${c==='all'?'全部':c}</button>`;
+}).join('');
+document.getElementById('jueCategoryBar').innerHTML = catBar;
+document.querySelectorAll('#jueCategoryBar [data-cat]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    _jueCategory = btn.dataset.cat;
+    renderJueList();
+  });
+});
   let list = kb.entries;
   if (_jueCategory !== 'all') list = list.filter(e => e.category === _jueCategory);
   document.getElementById('jueList').innerHTML = list.map(e => {
-    const svgHtml = e.handType ? renderHandSvg(e.fingers || [], { title: e.title, type: e.handType }) : '';
+    // v3.1: 优先用 e.image 加载真实 SVG 图，否则用抽象 SVG 生成器
+    let svgHtml = '';
+    if (e.image) {
+      svgHtml = `<img src="images/shoujue/${e.image}.svg" alt="${escapeHtml(e.title)}" style="width:140px;max-width:100%;display:block;margin:0.3rem auto;" loading="lazy"/>`;
+    } else if (e.handType) {
+      svgHtml = renderHandSvg(e.fingers || [], { title: e.title, type: e.handType });
+    }
     return `
     <div style="border-bottom:1px solid var(--border);padding:0.5rem 0;">
       <div style="display:flex;align-items:center;gap:0.3rem;">
@@ -359,6 +413,51 @@ function renderJueList() {
   `;}).join('');
 }
 
+// ========== 咒语速查 ==========
+let _zhouCategory = 'all';
+function renderZhouList() {
+  const kb = window._kb?.daoism_zhoushu;
+  if (!kb?.entries) {
+    document.getElementById('zhouList').innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:1rem;">知识库加载中...</div>';
+    return;
+  }
+  const kw = (document.getElementById('zhouSearch')?.value || '').trim().toLowerCase();
+  const cats = ['all', ...new Set(kb.entries.map(e => e.category))];
+  const catBar = cats.map(c => {
+    const isActive = _zhouCategory === c;
+    return safeHTML`<button data-cat="${c}" style="padding:0.25rem 0.5rem;background:${isActive?'var(--accent-gold)':'var(--bg-primary)'};color:${isActive?'#1a1612':'var(--text-primary)'};border:1px solid var(--border);border-radius:4px;font-size:0.7rem;cursor:pointer;">${c==='all'?'全部':c}</button>`;
+  }).join('');
+  document.getElementById('zhouCategoryBar').innerHTML = catBar;
+  document.querySelectorAll('#zhouCategoryBar [data-cat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _zhouCategory = btn.dataset.cat;
+      renderZhouList();
+    });
+  });
+
+  let list = kb.entries;
+  if (_zhouCategory !== 'all') list = list.filter(e => e.category === _zhouCategory);
+  if (kw) {
+    list = list.filter(e => (e.title||'').toLowerCase().includes(kw) || (e.content||'').toLowerCase().includes(kw) || (e.usage||'').toLowerCase().includes(kw));
+  }
+  if (list.length === 0) {
+    document.getElementById('zhouList').innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:1rem;">无匹配结果</div>';
+    return;
+  }
+  document.getElementById('zhouList').innerHTML = list.map(e => `
+    <div style="border-bottom:1px solid var(--border);padding:0.5rem 0;">
+      <div style="display:flex;align-items:center;gap:0.3rem;">
+        <span style="font-size:0.7rem;background:var(--bg-inner);color:var(--accent-gold);padding:0.1rem 0.4rem;border-radius:4px;">${escapeHtml(e.category)}</span>
+        <b style="color:var(--accent-gold);font-size:0.95rem;">${escapeHtml(e.title)}</b>
+      </div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.3rem;line-height:1.6;white-space:pre-wrap;">${escapeHtml(e.content)}</div>
+      <div style="font-size:0.75rem;color:var(--accent-green);margin-top:0.3rem;padding:0.3rem;background:var(--bg-inner);border-radius:4px;">
+        <b>诵法：</b>${escapeHtml(e.usage || '')}
+      </div>
+    </div>
+  `).join('');
+}
+
 // ========== AI 化解 ==========
 async function doAiHuaJie() {
   const input = document.getElementById('aiHuaJieInput')?.value?.trim();
@@ -372,7 +471,7 @@ async function doAiHuaJie() {
   // 构建 system prompt
   // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
     // daofobuddhism 特殊:全文传 extraSystem(KB 函数在 system 字符串内直接调用)
-    const system = Core.AI.buildSystemPrompt({ domain: 'daofobuddhism', pan: {}, question: input, extraSystem: `你是一位精通道教与佛教化解法门的导师。请根据用户描述的困扰，结合道佛知识库给出具体、可执行的化解方案。
+    const system = await Core.AI.buildSystemPrompt({ domain: 'daofobuddhism', pan: {}, question: input, extraSystem: `你是一位精通道教与佛教化解法门的导师。请根据用户描述的困扰，结合道佛知识库给出具体、可执行的化解方案。
 
 【优先使用：场景化解库（30 个标准场景方案）】
 ${kbDaoismJiuhuo()}
@@ -402,11 +501,101 @@ ${kbBuddhismDivine()}
       question: input,
       callOpts: { temperature: 0.3 },
     });
-    result.innerHTML = `<div style="background:var(--bg-inner);border-radius:8px;padding:0.8rem;line-height:1.7;font-size:0.9rem;white-space:pre-wrap;">${text}</div>
+    result.innerHTML = safeHTML`<div style="background:var(--bg-inner);border-radius:8px;padding:0.8rem;line-height:1.7;font-size:0.9rem;white-space:pre-wrap;">${text}</div>
       <div style="margin-top:0.5rem;display:flex;gap:0.4rem;justify-content:flex-end;">
-        <button onclick="navigator.clipboard.writeText(\`${text.replace(/`/g, '\\`').replace(/\\/g, '\\\\')}\`);showToast('已复制','success');" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:0.3rem 0.6rem;border-radius:4px;font-size:0.75rem;cursor:pointer;">📋 复制</button>
+        <button class="df-copy-btn" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:0.3rem 0.6rem;border-radius:4px;font-size:0.75rem;cursor:pointer;">📋 复制</button>
       </div>`;
+    const copyBtn = result.querySelector('.df-copy-btn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(text).then(() => showToast('已复制', 'success')).catch(() => showToast('复制失败', 'error'));
+      });
+    }
   } catch (e) {
     result.innerHTML = `<div class="error">化解生成失败：${escapeHtml(e.message)}</div>`;
   }
 }
+
+// 初始化：预加载道佛知识库，使符箓/手诀/灵签立即可用
+(async function initDaofobuddhism() {
+  if (window.loadKBGroups && window.PAGE_KB_GROUPS) {
+    try {
+      await window.loadKBGroups(window.PAGE_KB_GROUPS.daofobuddhism || ['daofobuddhism']);
+      console.log('[DF] 道佛知识库预加载完成');
+    } catch (e) {
+      console.warn('[DF] 道佛知识库预加载失败:', e);
+    }
+  }
+})();
+
+// ========== 古籍真符画廊（v3.1.4） ==========
+async function renderZhenFuGallery() {
+  const container = document.getElementById('zhenFuGallery');
+  if (!container) return;
+  try {
+    const res = await fetch('images/fulu-zhen/manifest.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('fetch failed');
+    const items = await res.json();
+
+    const notice = `<div style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.3);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.8rem;font-size:0.78rem;color:var(--text-secondary);line-height:1.6;">
+      以上符图影印自《道藏》第30册（正统道藏涵芬楼本），形制为古籍原样。道门传统认为符箓须授箓道士手书方具法效，此处仅供研习形制。
+    </div>`;
+
+    const grid = items.map(item => safeHTML`
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;transition:transform 0.2s;" onclick="openZhenFuLightbox('${item.file}', '${item.name}', '${item.desc}')">
+        <div style="background:#f9f3e3;padding:0.5rem;display:flex;align-items:center;justify-content:center;min-height:100px;">
+          <img src="${item.file}" alt="${item.name}" style="max-width:100%;max-height:120px;object-fit:contain;filter:sepia(0.15) contrast(1.05);" loading="lazy" onerror="this.style.display='none'"/>
+        </div>
+        <div style="padding:0.5rem;">
+          <div style="font-size:0.85rem;color:var(--accent-gold);font-weight:bold;margin-bottom:0.2rem;">${item.name}</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">${item.desc}</div>
+        </div>
+      </div>
+    `).join('');
+
+    container.innerHTML = safeHTML`
+      ${safeHTML.raw(notice)}
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.6rem;">${safeHTML.raw(grid)}</div>
+    `;
+  } catch (e) {
+    console.warn('[DF] 古籍真符加载失败:', e);
+    container.style.display = 'none';
+  }
+}
+
+function openZhenFuLightbox(file, name, desc) {
+  let overlay = document.getElementById('zhenFuLightbox');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'zhenFuLightbox';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1rem;';
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = safeHTML`
+    <div style="max-width:90vw;max-height:80vh;overflow:auto;">
+      <img src="${file}" alt="${name}" style="max-width:92vw;max-height:70vh;object-fit:contain;width:auto;height:auto;display:block;margin:0 auto;filter:sepia(0.1) contrast(1.08);border:2px solid rgba(201,168,76,0.4);border-radius:4px;"/>
+    </div>
+    <div style="text-align:center;margin-top:0.8rem;max-width:600px;">
+      <div style="font-size:1.1rem;color:var(--accent-gold);font-weight:bold;">${name}</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.3rem;">${desc}</div>
+    </div>
+    <button onclick="document.getElementById('zhenFuLightbox')?.remove()" style="margin-top:0.8rem;padding:0.4rem 1.2rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;cursor:pointer;font-size:0.85rem;">关闭</button>
+  `;
+}
+
+
+// ========== 暴露到 window 供 HTML 调用 ==========
+// v3.0.5: daofobuddhism.js 是 ES module 作用域，必须显式挂到 window 才能在 HTML onclick 中使用
+window.getQianFromKB = getQianFromKB;
+window.getQianData = getQianData;
+window.switchDfTab = switchDfTab;
+window.drawQian = drawQian;
+window.renderFuList = renderFuList;
+window.renderHandSvg = renderHandSvg;
+window.drawHandSVG = drawHandSVG;
+window.renderFuSvg = renderFuSvg;
+window.renderJueList = renderJueList;
+window.doAiHuaJie = doAiHuaJie;
+
+window.getQianData=getQianData;window.renderFuList=renderFuList;window.renderJueList=renderJueList;window.renderZhouList=renderZhouList;window.renderZhenFuGallery=renderZhenFuGallery;window.openZhenFuLightbox=openZhenFuLightbox;

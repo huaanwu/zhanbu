@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" width="240">
+  <defs>
+    <filter id="paper2"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="n"/><feDiffuseLighting in="n" lighting-color="#f4e4bc" surfaceScale="1.2"><feDistantLight azimuth="45" elevation="60"/></feDiffuseLighting></filter>
+    <linearGradient id="朱砂" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#c0392b"/>
+      <stop offset="100%" stop-color="#8b1a1a"/>
+    </linearGradient>
+  </defs>
+  <!-- 符纸 -->
+  <rect x="8" y="8" width="384" height="584" fill="#f4e4bc" stroke="#8b5a2b" stroke-width="3" filter="url(#paper2)"/>
+  <rect x="16" y="16" width="368" height="568" fill="none" stroke="#8b5a2b" stroke-width="1"/>
+
+  <!-- 敕令头(雷纹装饰) -->
+  <g fill="url(#朱砂)">
+    <rect x="120" y="28" width="160" height="48" rx="3"/>
+    <path d="M110,32 L120,40 L110,48 L120,56 L110,64" stroke="#c0392b" stroke-width="1.5" fill="none" opacity="0.6"/>
+    <path d="M290,32 L280,40 L290,48 L280,56 L290,64" stroke="#c0392b" stroke-width="1.5" fill="none" opacity="0.6"/>
+  </g>
+  <text x="200" y="60" text-anchor="middle" fill="#f4e4bc" font-size="30" font-family="'Noto Serif SC',serif" font-weight="bold" letter-spacing="4">敕令</text>
+
+  <!-- 北斗七星符头(招桃花符对应紫薇) -->
+  <g transform="translate(200, 120)" fill="#c0392b">
+    <circle cx="-60" cy="0" r="3.5"/>
+    <circle cx="-40" cy="-8" r="3.5"/>
+    <circle cx="-20" cy="-4" r="3.5"/>
+    <circle cx="0" cy="0" r="4"/>
+    <circle cx="20" cy="-4" r="3.5"/>
+    <circle cx="40" cy="-8" r="3.5"/>
+    <circle cx="60" cy="0" r="3.5"/>
+    <path d="M-60,0 L-40,-8 L-20,-4 L0,0 L20,-4 L40,-8 L60,0" fill="none" stroke="#c0392b" stroke-width="1" stroke-dasharray="3,2"/>
+  </g>
+
+  <!-- 主咒文(桃花和合咒) -->
+  <g fill="#c0392b" font-family="'Noto Serif SC',serif" font-weight="bold" text-anchor="middle">
+    <text x="200" y="200" font-size="26">天官赐福</text>
+    <text x="200" y="240" font-size="22">月老和合</text>
+    <text x="200" y="280" font-size="22">红鸾星动</text>
+    <text x="200" y="320" font-size="22">姻缘早成</text>
+    <text x="200" y="360" font-size="20">正缘时至</text>
+  </g>
+
+  <!-- 青龙白虎(两侧) -->
+  <g fill="none" stroke="#c0392b" stroke-width="2" opacity="0.55">
+    <path d="M40,180 Q50,200 40,220 Q30,240 40,260 Q50,280 40,300 Q30,320 40,340 Q50,360 40,380"/>
+    <path d="M60,190 Q70,210 60,230 Q50,250 60,270 Q70,290 60,310 Q50,330 60,350 Q70,370 60,390"/>
+    <path d="M360,180 Q350,200 360,220 Q370,240 360,260 Q350,280 360,300 Q370,320 360,340 Q350,360 360,380"/>
+    <path d="M340,190 Q330,210 340,230 Q350,250 340,270 Q330,290 340,310 Q350,330 340,350 Q330,370 340,390"/>
+  </g>
+
+  <!-- 五雷震位 -->
+  <g transform="translate(200, 440)" fill="none" stroke="#c0392b" stroke-width="2.5" opacity="0.7">
+    <path d="M-90,0 L-30,0 M30,0 L90,0 M0,-90 L0,-30 M0,30 L0,90"/>
+    <path d="M-60,-60 L-30,-30 M30,30 L60,60 M-60,60 L-30,30 M30,-30 L60,-60"/>
+    <circle cx="0" cy="0" r="55" stroke-dasharray="6,3"/>
+  </g>
+
+  <!-- 凤篆印章 -->
+  <rect x="160" y="500" width="80" height="80" fill="none" stroke="#c0392b" stroke-width="3"/>
+  <text x="200" y="535" text-anchor="middle" fill="#c0392b" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">和合</text>
+  <text x="200" y="565" text-anchor="middle" fill="#c0392b" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">仙子</text>
+
+  <!-- 符脚雷纹 -->
+  <g fill="none" stroke="#c0392b" stroke-width="1.5" opacity="0.4">
+    <path d="M25,25 L35,35 L25,45 L35,55"/>
+    <path d="M375,25 L365,35 L375,45 L365,55"/>
+    <path d="M25,575 L35,565 L25,555 L35,545"/>
+    <path d="M375,575 L365,565 L375,555 L365,545"/>
+  </g>
+
+  <!-- 古旧破损效果(右上角) -->
+  <g fill="#d4b896" opacity="0.3">
+    <circle cx="380" cy="30" r="4"/>
+    <circle cx="370" cy="40" r="3"/>
+    <circle cx="385" cy="45" r="2.5"/>
+    <circle cx="375" cy="20" r="2"/>
+  </g>
+</svg>

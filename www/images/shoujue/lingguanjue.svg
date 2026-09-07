@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" width="180">
+  <rect x="10" y="10" width="220" height="260" fill="#fffaf0" stroke="#8b5a2b" stroke-width="2" rx="8"/>
+
+  <path d="M 65 165 Q 60 155 60 170 L 60 215 Q 60 225 70 225 L 170 225 Q 180 225 180 215 L 180 170 Q 180 155 175 165 L 170 170 L 70 170 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/>
+  <path d="M 70 180 Q 120 185 170 180" fill="none" stroke="#dba77e" stroke-width="0.6"/>
+  <path d="M 75 200 Q 120 205 165 200" fill="none" stroke="#dba77e" stroke-width="0.6"/>
+
+  <!-- 灵官诀:食指伸直,中指弯曲,拇指扣小指无名指 -->
+  <!-- 食指(伸直) -->
+  <path d="M 71 45 Q 71 42 73 40 L 73 145 Q 73 150 71 152 L 89 152 Q 87 150 87 145 L 87 40 Q 87 42 89 45 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5"/>
+  <line x1="74" y1="85" x2="86" y2="85" stroke="#dba77e" stroke-width="0.8"/>
+  <line x1="74" y1="120" x2="86" y2="120" stroke="#dba77e" stroke-width="0.8"/>
+  <ellipse cx="80" cy="52" rx="5" ry="8" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/>
+
+  <!-- 中指(弯曲) -->
+  <path d="M 95 110 Q 95 130 100 145 Q 105 155 108 160 L 105 162 Q 100 165 95 162 L 115 162 Q 112 165 108 162 L 110 160 Q 113 155 115 145 Q 120 130 115 110 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5"/>
+  <ellipse cx="105" cy="120" rx="7" ry="6" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/>
+
+  <!-- 无名指(被扣) -->
+  <path d="M 125 125 Q 125 145 130 158 Q 135 168 138 172 L 135 174 Q 130 177 125 174 L 145 174 Q 142 177 138 174 L 140 172 Q 143 168 145 158 Q 150 145 145 125 Z" fill="#dba77e" stroke="#5a3a2a" stroke-width="1.5"/>
+
+  <!-- 小指(被扣) -->
+  <path d="M 150 135 Q 150 155 155 168 Q 160 178 163 182 L 160 184 Q 155 187 150 184 L 170 184 Q 167 187 163 184 L 165 182 Q 168 178 170 168 Q 175 155 170 135 Z" fill="#dba77e" stroke="#5a3a2a" stroke-width="1.5"/>
+
+  <!-- 拇指(扣住) -->
+  <path d="M 55 145 Q 50 140 45 145 L 35 175 Q 30 185 35 195 L 60 200 Q 90 205 120 200 Q 145 195 150 185 Q 155 175 145 170 L 60 155 Q 55 145 55 145 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5"/>
+  <ellipse cx="50" cy="160" rx="6" ry="5" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/>
+
+  <text x="120" y="250" text-anchor="middle" font-size="16" font-family="'Noto Serif SC',serif" font-weight="bold" fill="#5a3a2a">灵官诀</text>
+  <text x="120" y="268" text-anchor="middle" font-size="9" font-family="'Noto Serif SC',serif" fill="#8b6f2a">食指朝天，余指收拢，拇指扣压</text>
+</svg>

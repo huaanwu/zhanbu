@@ -1,115 +1,215 @@
-function buildFengshuiPrompt(pan, question) {
-  let s = "=== 风水咨询 ===\n";
-  if (pan.address) s += "地址/户型：" + pan.address + "\n";
-  if (pan.mingGua) s += "命卦：" + pan.mingGua + "\n";
-  if (pan.zhaiGua) s += "宅卦：" + pan.zhaiGua + "\n";
-  if (question) s += "\n所问之事：" + question + "\n";
-  return s;
+// ========== 风水罗盘(八宅 + 玄空飞星)v3.0.11 ==========
+// 算盘层: window.fengshui.mingGua/eightZhai/zhaiMingHe/mainRoomAssess + window.xuankong.*
+// 本文件只负责 UI 绑定 + 渲染 + AI 解读调用
+// v3.1.8: 删除 v3.1.2/4/5 大六壬 dead code(已迁到独立 pageDaliuren + app/daliuren.js)
+
+// v3.0.11:八宅/玄空 tab 切换
+function selFsTab(btn) {
+  document.querySelectorAll('#pageFengshui [data-fs-tab]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  var tab = btn.dataset.fsTab;
+  var p8 = document.getElementById('fsPane8zhai');
+  var pxk = document.getElementById('fsPaneXuankong');
+  if (p8) p8.style.display = (tab === '8zhai') ? 'block' : 'none';
+  if (pxk) pxk.style.display = (tab === 'xuankong') ? 'block' : 'none';
 }
-// ========== 风水罗盘（八宅） ==========
-let fsHouse = 'zhai', fsGender = 'male';
-function selFsHouse(btn) { document.querySelectorAll('#pageFengshui [data-house]').forEach(b => b.classList.remove('active')); btn.classList.add('active'); fsHouse = btn.dataset.house; }
-function selFsGender(btn) { document.querySelectorAll('#pageFengshui [data-gender]').forEach(b => b.classList.remove('active')); btn.classList.add('active'); fsGender = btn.dataset.gender; }
-window.selFsHouse = selFsHouse; window.selFsGender = selFsGender;
+window.selFsTab = selFsTab;
 
-// currentFs已在上方声明
-// let currentFs = null, currentFsPrompt = '';
-
-// 八宅命卦：命卦算法流派众多
-// 此函数只输出"年干+年支+性别"作为事实，命卦由AI按传统公式（最主流版）判断。
-function mingGua(year, gender) {
-  const TG = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
-  const DZ = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
-  const zhiIdx = ((year - 4) % 12 + 12) % 12;
-  const ganIdx = ((year - 4) % 10 + 10) % 10;
-  return {
-    yearGanZhi: TG[ganIdx] + DZ[zhiIdx],
-    yangYear: ganIdx % 2 === 0,  // 阳干：甲丙戊庚壬
-    gender,
-    zhiIdx
-  };
+function selFsHouse(btn) {
+  document.querySelectorAll('#pageFengshui [data-house]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.fengshui.houseType = btn.dataset.house;
 }
+window.selFsHouse = selFsHouse;
 
-// 宅卦（大门朝向决定）：东南西北+四隅 → 后天八卦
-var MEN_GUA = { '东':'震', '南':'离', '西':'兑', '北':'坎', '东南':'巽', '西南':'坤', '西北':'乾', '东北':'艮' };
-
-// 八宅"伏位轨迹"按后天八卦顺行（坎→坤→震→巽→中→乾→兑→艮→离→坎）
-// 但更标准的"八宅"流派是按"大游年"或"小游年"轨迹
-// 主流算法：以大门朝向为"伏位"起点，沿后天八卦顺行
-//   伏位=大门朝向卦, 延年=伏位对宫, 天医=伏位顺1, 生气=天医顺1
-//   绝命=延年对宫, 祸害=伏位对宫, 五鬼=生气对宫, 六煞=天医对宫
-// 注：此简化算法在大门朝向东四卦（震巽坎离）和西四卦（乾坤兑艮）时吉凶方位有差异
-function eightZhai(doorDir) {
-  const houseGong = MEN_GUA[doorDir];
-  if (!houseGong) return null;
-  // 后天八卦顺行序
-  const HOUTIAN = ['坎','坤','震','巽','中','乾','兑','艮','离'];
-  const startIdx = HOUTIAN.indexOf(houseGong);
-
-  // 吉方规则（"大游年"法）：伏位→延年→生气→天医（4个吉位）
-  // 凶方：祸害→六煞→五鬼→绝命
-  // 大游年：每个卦宫有"4吉4凶"固定位
-  const GONG_8ZHAI = {
-    '坎': { 吉: { 伏位:'北', 生气:'东南', 天医:'东', 延年:'南' }, 凶: { 祸害:'西南', 六煞:'西北', 五鬼:'西', 绝命:'东北' } },
-    '坤': { 吉: { 伏位:'西南', 生气:'北', 天医:'东', 延年:'东南' }, 凶: { 祸害:'南', 六煞:'西', 五鬼:'西北', 绝命:'东北' } },
-    '震': { 吉: { 伏位:'东', 生气:'南', 天医:'东南', 延年:'北' }, 凶: { 祸害:'西南', 六煞:'西', 五鬼:'东北', 绝命:'西北' } },
-    '巽': { 吉: { 伏位:'东南', 生气:'东', 天医:'北', 延年:'南' }, 凶: { 祸害:'西', 六煞:'东北', 五鬼:'西南', 绝命:'西北' } },
-    '中': { 吉: { 伏位:'中', 生气:'南', 天医:'东', 延年:'北' }, 凶: { 祸害:'西南', 六煞:'西', 五鬼:'西北', 绝命:'东北' } },
-    '乾': { 吉: { 伏位:'西北', 生气:'西南', 天医:'东', 延年:'北' }, 凶: { 祸害:'南', 六煞:'西', 五鬼:'东北', 绝命:'东南' } },
-    '兑': { 吉: { 伏位:'西', 生气:'西北', 天医:'东南', 延年:'南' }, 凶: { 祸害:'北', 六煞:'东北', 五鬼:'西南', 绝命:'东' } },
-    '艮': { 吉: { 伏位:'东北', 生气:'西', 天医:'北', 延年:'西南' }, 凶: { 祸害:'东', 六煞:'南', 五鬼:'西北', 绝命:'东南' } },
-    '离': { 吉: { 伏位:'南', 生气:'北', 天医:'东', 延年:'东南' }, 凶: { 祸害:'西南', 六煞:'西北', 五鬼:'西', 绝命:'东北' } }
-  };
-  return GONG_8ZHAI[houseGong];
+function selFsGender(btn) {
+  document.querySelectorAll('#pageFengshui [data-gender]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.fengshui.gender = btn.dataset.gender;
 }
+window.selFsGender = selFsGender;
+
+// v3.0.10:历法切换(阳/阴)
+function selFsCal(btn) {
+  document.querySelectorAll('#pageFengshui [data-fs-cal]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.fengshui.cal = btn.dataset.fsCal;
+  var solarRow = document.getElementById('fsSolarRow');
+  var lunarRow = document.getElementById('fsLunarRow');
+  if (solarRow) solarRow.style.display = btn.dataset.fsCal === 'solar' ? 'grid' : 'none';
+  if (lunarRow) lunarRow.style.display = btn.dataset.fsCal === 'lunar' ? 'grid' : 'none';
+}
+window.selFsCal = selFsCal;
+
+// v3.0.10:主卧朝向
+function selFsMainRoom(btn) {
+  document.querySelectorAll('#pageFengshui [data-main-room]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.fengshui.mainRoomDir = btn.dataset.mainRoom;
+}
+window.selFsMainRoom = selFsMainRoom;
 
 function doFengshui() {
-  const door = document.getElementById('fsDoor').value;
-  const year = +document.getElementById('fsBirthYear').value;
-  if (!year || year < 1900 || year > 2030) { showToast('请输入有效出生年（1900-2030）', 'error'); return; }
+  var errEl = document.getElementById('fsError');
+  if (errEl) errEl.style.display = 'none';
+  var cal = (state.fengshui && state.fengshui.cal) || 'solar';
+  var year;
+  try {
+    if (cal === 'lunar') {
+      // 农历路径:yearGZ + 干支纪年转公历 → mingGua 仍按公历算(命卦不分公农)
+      var yearGZ = document.getElementById('fsYearGZ').value;
+      // 简化: 用年支取年(1900-2099),例如 "甲子" → 60甲子表里找最近的甲子年
+      year = fsGZToYear(yearGZ);
+    } else {
+      year = +document.getElementById('fsBirthYear').value;
+    }
+    if (!year || year < 1900 || year > 2030) {
+      throw new Error('请输入有效出生年份(1900-2030),当前: ' + year);
+    }
+    var door = document.getElementById('fsDoor').value;
+    var mainRoom = (state.fengshui && state.fengshui.mainRoomDir) || document.getElementById('fsMainRoomDir').value;
+    var gender = (state.fengshui && state.fengshui.gender) || 'male';
 
-  const ming = mingGua(year, fsGender);
-  const house = MEN_GUA[door];
-  const eightHouse = eightZhai(door);
-  const ji = eightHouse ? eightHouse.吉 : null;
-  const xiong = eightHouse ? eightHouse.凶 : null;
+    var ming = window.fengshui.mingGua(year, gender);
+    var house = window.fengshui.eightZhai(door);
+    if (!house) throw new Error('未知大门朝向: ' + door);
+    var he = window.fengshui.zhaiMingHe(ming, house);
+    var mainRoomAssess = window.fengshui.mainRoomAssess(door, mainRoom);
 
-  const result = document.getElementById('fsResult');
-  result.style.display = 'block';
-  result.innerHTML = `
-    <h3 style="color:var(--accent-gold);">🧭 八宅风水分析</h3>
-    <div style="background:var(--bg-inner);padding:0.8rem;border-radius:8px;margin-top:0.5rem;">
-      <div style="font-size:0.95rem;">命主生辰：<strong style="color:var(--accent-gold);">${ming.yearGanZhi}年 性别${fsGender === 'male' ? '男' : '女'}（${ming.yangYear ? '阳年' : '阴年'}生）</strong></div>
-      <div style="font-size:0.85rem;color:var(--text-muted);margin-top:0.3rem;">命卦：交由AI按传统公式（<code>男11-年支、女4+年支</code>）查定；常见算法流派不一，AI会注明所采用流派</div>
-      <div style="font-size:0.95rem;margin-top:0.3rem;">宅卦（大门朝向决定）：<strong style="color:var(--accent-gold);">${house}（大门朝${door}）</strong></div>
-    </div>
-    <table style="width:100%;border-collapse:collapse;margin-top:0.8rem;font-size:0.85rem;">
-      <thead>
-        <tr style="background:var(--bg-inner);">
-          <th style="padding:0.4rem;">星位</th><th>方位</th><th>吉凶</th><th>用途建议</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>伏位（伏）</td><td><strong>${ji.伏位}</strong></td><td style="color:var(--accent-gold);">小吉</td><td>书房、子女房</td></tr>
-        <tr><td>生气（最吉）</td><td><strong>${ji.生气}</strong></td><td style="color:var(--accent-green);">大吉</td><td>主房、客厅、开门纳气</td></tr>
-        <tr><td>延年（大吉）</td><td><strong>${ji.延年}</strong></td><td style="color:var(--accent-green);">大吉</td><td>夫妻房、长辈房</td></tr>
-        <tr><td>天医（大吉）</td><td><strong>${ji.天医}</strong></td><td style="color:var(--accent-green);">大吉</td><td>卧室、财位、厨房</td></tr>
-        <tr><td>祸害（小凶）</td><td><strong>${xiong.祸害}</strong></td><td style="color:var(--accent-red);">小凶</td><td>避免主用，宜放杂物</td></tr>
-        <tr><td>六煞（中凶）</td><td><strong>${xiong.六煞}</strong></td><td style="color:var(--accent-red);">中凶</td><td>避免睡房、宜空置或放植物</td></tr>
-        <tr><td>五鬼（大凶）</td><td><strong>${xiong.五鬼}</strong></td><td style="color:var(--accent-red);">大凶</td><td>不可作主门，宜储藏</td></tr>
-        <tr><td>绝命（至凶）</td><td><strong>${xiong.绝命}</strong></td><td style="color:var(--accent-red);">至凶</td><td>绝对避免主用，宜化煞</td></tr>
-      </tbody>
-    </table>
-    <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">⚠️ 八宅吉凶方仅按大门朝向（宅卦）排布；命卦的"东四/西四"分类用于判断宅卦是否适合命主（由AI解读时综合判定）</div>
-  `;
-  currentFs = { ming, door, house, ji, xiong, gender: fsGender, houseType: fsHouse };
-  currentFsPrompt = `=== 八宅风水排盘 ===\n出生年：${year}年（${ming.yearGanZhi}年） 性别：${fsGender === 'male' ? '男' : '女'}（${ming.yangYear ? '阳年生' : '阴年生'}）\n大门朝向：${door}（宅卦${house}）\n户型：${fsHouse === 'zhai' ? '住宅' : '办公室'}\n\n【请按以下步骤推理】\n1. 根据年干支+性别，按传统命卦公式（男命11-年支/女命4+年支→模9）算出命卦\n2. 判断东四命/西四命（坎震巽离=东四；乾坤兑艮=西四）\n3. 与宅卦${house}对比，告知是否"宅命相合"\n4. 给出四吉方具体布置建议、四凶方如何化煞\n\n四吉方（按大门朝${door}，宅卦${house}）：\n  伏位${ji.伏位} · 生气${ji.生气} · 延年${ji.延年} · 天医${ji.天医}\n\n四凶方：\n  祸害${xiong.祸害} · 六煞${xiong.六煞} · 五鬼${xiong.五鬼} · 绝命${xiong.绝命}\n\n请结合以上信息给出专业的风水建议。`;
-  document.getElementById('fsAI').style.display = 'block';
-  document.getElementById('fsAIBtn').style.display = 'inline-block';
-  document.getElementById('fsAILoading').style.display = 'none';
-  document.getElementById('fsAIText').style.display = 'none';
+    var result = document.getElementById('fsResult');
+    result.style.display = 'block';
+    var heColor = he.he ? 'var(--accent-green)' : 'var(--accent-red)';
+    var heBg = he.he ? 'rgba(120,180,120,0.1)' : 'rgba(220,80,80,0.1)';
+    var heLabel = he.he ? '✅ 宅命相合' : '⚠️ 宅命不合';
+    var ji = house.ji, xiong = house.xiong;
+    var jiArr = ['伏位','生气','延年','天医'];
+    var xiongArr = ['祸害','六煞','五鬼','绝命'];
+    var jiLevel = { '伏位':'小吉', '生气':'大吉', '延年':'大吉', '天医':'大吉' };
+    var xiongLevel = { '祸害':'小凶', '六煞':'中凶', '五鬼':'大凶', '绝命':'至凶' };
+
+    var html = `
+      <h3 style="color:var(--accent-gold);">🧭 八宅风水分析</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin:0.5rem 0;">
+        <div style="background:var(--bg-inner);padding:0.4rem;border-radius:6px;">
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.3rem;text-align:center;">🧭 罗盘 24 山向</div>
+          ${window.fengshuiVisual.drawLuopan24(door)}
+        </div>
+        <div style="background:var(--bg-inner);padding:0.4rem;border-radius:6px;">
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.3rem;text-align:center;">🏠 户型方位</div>
+          ${window.fengshuiVisual.drawHouseLayout({ doorDir: door, mainRoomDir: mainRoom, ji: ji, xiong: xiong })}
+        </div>
+      </div>
+      <div style="background:var(--bg-inner);padding:0.8rem;border-radius:8px;margin-top:0.5rem;">
+        <div style="font-size:0.95rem;">命主生辰：<strong style="color:var(--accent-gold);">${ming.yearGanZhi}年 性别${gender === 'male' ? '男' : '女'}（${ming.yangYear ? '阳年' : '阴年'}生）</strong></div>
+        <div style="font-size:0.95rem;margin-top:0.3rem;">命卦：<strong style="color:var(--accent-gold);">${ming.guaName}（${ming.nature}·${ming.group === 'east' ? '东四命' : '西四命'}）</strong></div>
+        <div style="font-size:0.95rem;margin-top:0.3rem;">宅卦：<strong style="color:var(--accent-gold);">${house.guaName}（大门朝${door}）</strong></div>
+        <div style="font-size:0.95rem;margin-top:0.4rem;padding:0.4rem 0.6rem;background:${heBg};border-left:3px solid ${heColor};border-radius:4px;">
+          <strong style="color:${heColor};">${heLabel}</strong> — ${he.summary}
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin-top:0.8rem;font-size:0.85rem;">
+        <thead>
+          <tr style="background:var(--bg-inner);">
+            <th style="padding:0.4rem;">星位</th><th>方位</th><th>吉凶</th><th>用途建议</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${jiArr.map(function(k){ return `
+            <tr>
+              <td>${k}${k==='伏位'?'(伏)':(k==='生气'?'(最吉)':'(大吉)')}</td>
+              <td><strong>${ji[k]}</strong></td>
+              <td style="color:${k==='伏位'?'var(--accent-gold)':'var(--accent-green)'};">${jiLevel[k]}</td>
+              <td>${k==='伏位'?'书房/子女房':(k==='生气'?'主房/客厅/开门纳气':(k==='延年'?'夫妻房/长辈房':'卧室/财位/厨房'))}</td>
+            </tr>`; }).join('')}
+          ${xiongArr.map(function(k){ return `
+            <tr>
+              <td>${k}</td>
+              <td><strong>${xiong[k]}</strong></td>
+              <td style="color:var(--accent-red);">${xiongLevel[k]}</td>
+              <td>${k==='祸害'?'避免主用,宜放杂物':(k==='六煞'?'避免睡房,空置或植物':(k==='五鬼'?'不可主门,宜储藏':'绝对避免,宜化煞'))}</td>
+            </tr>`; }).join('')}
+        </tbody>
+      </table>
+
+      <div style="background:var(--bg-inner);padding:0.8rem;border-radius:8px;margin-top:0.8rem;border-left:3px solid var(--accent-blue);">
+        <div style="font-size:0.85rem;color:var(--text-muted);">主卧朝向评估（大门朝${door}，主卧朝${mainRoom}）</div>
+        <div style="font-size:1rem;margin-top:0.3rem;">
+          主卧位 <strong style="color:var(--accent-gold);">${mainRoom}</strong>，落 <strong>${mainRoomAssess.star || '未知位'}</strong>
+          ${mainRoomAssess.type === 'ji'
+            ? '(<span style="color:var(--accent-green);">' + mainRoomAssess.level + '</span>)'
+            : mainRoomAssess.type === 'xiong'
+            ? '(<span style="color:var(--accent-red);">' + mainRoomAssess.level + '</span>)'
+            : '(未知位)'}
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;">
+          💡 ${mainRoomAssess.star === '生气' || mainRoomAssess.star === '延年' || mainRoomAssess.star === '天医'
+            ? '主卧位置极佳,有助于主人健康/夫妻和睦/事业提升'
+            : mainRoomAssess.star === '伏位'
+            ? '主卧适合书房/子女房,但用作主卧略欠火候'
+            : mainRoomAssess.star === '绝命'
+            ? '主卧位置严重不利,建议调整床位朝向或化煞'
+            : '建议结合 AI 解读判断主卧是否需要调整'}
+        </div>
+      </div>
+
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">⚠️ 八宅吉凶方按大门朝向(宅卦)排布;命卦与宅卦是否相合已标注;跨东四/西四的化解方案由 AI 给出。</div>
+    `;
+    result.innerHTML = html;
+
+    currentFs = {
+      ming: ming, door: door, house: { name: house.guaName, num: house.guaNum },
+      ji: ji, xiong: xiong, gender: gender, houseType: state.fengshui.houseType || 'zhai',
+      mainRoom: mainRoom, mainRoomAssess: mainRoomAssess,
+      he: he, cal: cal
+    };
+
+    currentFsPrompt = `=== 八宅风水排盘(v3.0.10) ===\n`
+      + `出生年:${year}年(${ming.yearGanZhi}年) 性别:${gender === 'male' ? '男' : '女'}(${ming.yangYear ? '阳年生' : '阴年生'})\n`
+      + `命卦:${ming.guaName}(${ming.nature}·${ming.group === 'east' ? '东四命' : '西四命'}) — 由代码按"男11-支序模9/女4+支序模9"算得(0 视作 9)\n`
+      + `大门朝向:${door}(宅卦${house.guaName}) 户型:${state.fengshui.houseType === 'zhai' ? '住宅' : '办公室'}\n`
+      + `主卧朝向:${mainRoom}(落 ${mainRoomAssess.star || '未知位'} — ${mainRoomAssess.type === 'ji' ? mainRoomAssess.level : mainRoomAssess.type === 'xiong' ? mainRoomAssess.level : '未知'})\n`
+      + `历法输入:${cal === 'lunar' ? '阴历' : '阳历'}\n\n`
+      + `宅命相合判定:${he.he ? '✅ 相合' : '⚠️ 不合'} — ${he.summary}\n\n`
+      + `【请按以下步骤推理】\n`
+      + `1. 命卦与宅卦是否相合(${he.he ? '同属' + (ming.group === 'east' ? '东四' : '西四') : '跨 ' + ming.group + '/' + (house.guaNum === 1||house.guaNum===3||house.guaNum===4||house.guaNum===9 ? 'east' : 'west')})\n`
+      + `2. 若不合,给出化解方案(五行通关/颜色/物品/方位调整)\n`
+      + `3. 主卧落在 ${mainRoomAssess.star || '未知'},给出卧室布局建议(床位/床头朝向/灯具/装饰)\n`
+      + `4. 四吉方具体布置建议(主卧/客厅/厨房/书房/大门开向)\n`
+      + `5. 四凶方如何化煞(避免/化煞物品/储藏/植物)\n\n`
+      + `四吉方(大门朝${door},宅卦${house.guaName}):\n`
+      + `  伏位${ji.伏位} · 生气${ji.生气} · 延年${ji.延年} · 天医${ji.天医}\n\n`
+      + `四凶方:\n`
+      + `  祸害${xiong.祸害} · 六煞${xiong.六煞} · 五鬼${xiong.五鬼} · 绝命${xiong.绝命}\n\n`
+      + `请结合以上信息给出专业的风水建议(总字数不少于 2000 字,分章节、条理清晰、actionable,给出具体可执行方案)。`;
+
+    document.getElementById('fsAI').style.display = 'block';
+    document.getElementById('fsAIBtn').style.display = 'inline-block';
+    document.getElementById('fsAILoading').style.display = 'none';
+    document.getElementById('fsAIText').style.display = 'none';
+  } catch (e) {
+    if (errEl) {
+      errEl.textContent = '⚠️ ' + e.message;
+      errEl.style.display = 'block';
+    }
+    showToast(e.message, 'error');
+    console.error(e);
+  }
 }
 window.doFengshui = doFengshui;
+
+// 60甲子 → 公历年(1900-2099),取最近的甲子/乙丑/...年
+function fsGZToYear(gz) {
+  if (!gz) return null;
+  // 简单查找:遍历 1900-2099 找年干支匹配
+  var TG = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+  var DZ = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  for (var y = 1900; y <= 2099; y++) {
+    var ganIdx = ((y - 4) % 10 + 10) % 10;
+    var zhiIdx = ((y - 4) % 12 + 12) % 12;
+    if (TG[ganIdx] + DZ[zhiIdx] === gz) return y;
+  }
+  return null;
+}
 
 async function doAIFengshui() {
   if (!currentFsPrompt) return;
@@ -127,14 +227,11 @@ async function doAIFengshui() {
   const separator = prefix ? '\n\n─────────────────\n📌 追问\n─────────────────\n\n' : '';
   if (!prefix) text.textContent = '';
 
-  let fullText = '';
   try {
-    // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
-    const sys = Core.AI.buildSystemPrompt({
+    const sys = await Core.AI.buildSystemPrompt({
       domain: 'fengshui', pan: currentFs, question: '',
-      extraSystem: '你是一位精通八宅风水的大师，请根据命卦、宅卦、户型进行详细分析。重点说明：1.命卦与宅卦是否相合 2.四吉方如何利用 3.四凶方如何化解 4.卧室/客厅/厨房/书房的最佳布局建议。'
+      extraSystem: '你是一位精通八宅风水的大师,请根据命卦、宅卦、户型、主卧朝向进行详细深入分析。命卦(${currentFs.ming.guaName})、宅卦(${currentFs.house.name})、宅命相合(${currentFs.he.he ? "相合" : "不合"})、主卧落位(${currentFs.mainRoomAssess.star || "未知"}) 都是代码定论事实,不可更改。重点说明:1. 命卦与宅卦关系及化解 2. 主卧位置评估与建议 3. 四吉方如何利用 4. 四凶方如何化解 5. 卧室/客厅/厨房/书房的最佳布局建议。输出要求:总字数不少于 2000 字,分章节、条理清晰、actionable,给出具体可执行的风水调整方案。'
     });
-    // v3.0.5: 统一 AI 入口(任务 #19)
     await Core.AI.interpret({
       domain: 'fengshui',
       prompt: currentFsPrompt,
@@ -157,14 +254,256 @@ async function doAIFengshui() {
 }
 window.doAIFengshui = doAIFengshui;
 
+// ============ v3.0.11 玄空飞星 ============
+function selXkSit(btn) {
+  document.querySelectorAll('#pageFengshui [data-xk-sit]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.xuankong.sitDir = btn.dataset.xkSit;
+}
+window.selXkSit = selXkSit;
+
+function selXkFace(btn) {
+  document.querySelectorAll('#pageFengshui [data-xk-face]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.xuankong.faceDir = btn.dataset.xkFace;
+}
+window.selXkFace = selXkFace;
+
+// v3.0.16:替卦 toggle
+function selXkTiGua(btn) {
+  document.querySelectorAll('#pageFengshui [data-xk-tigua]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.xuankong.tiGua = btn.dataset.xkTiGua === 'true';
+}
+window.selXkTiGua = selXkTiGua;
+
+function doXuankong() {
+  var errEl = document.getElementById('xkError');
+  if (errEl) errEl.style.display = 'none';
+  try {
+    var year = +document.getElementById('xkYear').value;
+    if (!year || year < 1864 || year > 2099) {
+      throw new Error('玄空飞星仅支持 1864-2099 年,当前: ' + year);
+    }
+    var sitDir = (state.xuankong && state.xuankong.sitDir) || '南';
+    var faceDir = (state.xuankong && state.xuankong.faceDir) || '北';
+
+    var yun = window.xuankong.currentYun(year);
+    var yp = window.xuankong.yunPan(year);
+    // v3.0.16:替卦 toggle(state.xuankong.tiGua=true 用替卦,否则用元旦盘)
+    var useTiGua = state.xuankong && state.xuankong.tiGua;
+    var mp = useTiGua
+      ? window.xuankong.tiGuaMountainPan(year, sitDir)
+      : window.xuankong.mountainPan(year, sitDir);
+    var fp = useTiGua
+      ? window.xuankong.tiGuaFacePan(year, faceDir)
+      : window.xuankong.facePan(year, faceDir);
+    var ws = window.xuankong.wangShanWangXiang(yp, mp, fp, sitDir, faceDir);
+    var wh = window.xuankong.wuhuangAndErhei(yp);
+    // v3.0.14/15:流年/流月飞星(按当前日期自动算)
+    var now = new Date();
+    var curYear = now.getFullYear();
+    var liunian = window.xuankong.liunianPan(curYear);
+    // v3.0.15: 用 lunar 引擎精确化流月(干支纪月 → 地支),不用阳历月数简化版
+    var lunarInfo = null;
+    var dayInfo = null;  // v3.0.17
+    var shiInfo = null;  // v3.0.18
+    var curMonthCN = '';
+    var liuyue = null;
+    var liuri = null;  // v3.0.17
+    var tiGuaLiuri = null;
+    var liushi = null;  // v3.0.18
+    var tiGuaLiushi = null;
+    try {
+      lunarInfo = window.xuankong.lunarMonthGZ(now);
+      curMonthCN = lunarInfo.monthGZ + '月';
+      liuyue = window.xuankong.liuyuePan(curYear, lunarInfo.monthGZ);
+      // v3.0.17: 流日飞星(同日干支入中)
+      dayInfo = window.xuankong.lunarDayGZ(now);
+      liuri = window.xuankong.liuriPan(curYear, dayInfo.dayGZ);
+      tiGuaLiuri = window.xuankong.tiGuaLiuriPan(curYear, dayInfo.dayGZ);
+      // v3.0.18: 流时飞星(同时辰地支入中)
+      shiInfo = window.xuankong.lunarShiGZ(now);
+      liushi = window.xuankong.liushiPan(curYear, shiInfo.shiGZ);
+      tiGuaLiushi = window.xuankong.tiGuaLiushiPan(curYear, shiInfo.shiGZ);
+    } catch (e) {
+      console.warn('[fengshui] lunar 引擎未加载,流月/流日回退:', e.message);
+      var curMonthIdx = now.getMonth() + 1;
+      curMonthCN = window.xuankong.MONTH_CN[curMonthIdx - 1] + '(' + curMonthIdx + '月)';
+      liuyue = window.xuankong.liuyuePan(curYear, curMonthIdx);
+    }
+    var lw = window.xuankong.liunianAndLiuyueWuhuang(curYear, lunarInfo ? lunarInfo.monthNum : (now.getMonth() + 1));
+
+    var result = document.getElementById('xkResult');
+    result.style.display = 'block';
+
+    // 9 宫 SVG 渲染(替代原 renderPan)
+    // 3 个并排:运盘/山盘/向盘
+    var html = `
+      <h3 style="color:var(--accent-gold);">🌌 玄空飞星排盘</h3>
+      <div style="background:var(--bg-inner);padding:0.8rem;border-radius:8px;margin-top:0.5rem;">
+        <div style="font-size:0.95rem;">年份：<strong>${year}年</strong>(本运：<strong style="color:var(--accent-gold);">${yun.yun}运 ${yun.yunName}</strong>,${yun.period},${yun.startYear}-${yun.endYear},已过 ${yun.yearsFromStart + 1} 年)</div>
+        <div style="font-size:0.95rem;margin-top:0.3rem;">坐方：<strong style="color:var(--accent-gold);">${sitDir}</strong>　向方：<strong style="color:var(--accent-gold);">${faceDir}</strong></div>
+        <div style="font-size:0.95rem;margin-top:0.4rem;padding:0.4rem 0.6rem;background:rgba(201,168,76,0.1);border-left:3px solid var(--accent-gold);border-radius:4px;">
+          <strong>旺山旺向：</strong>${ws.verdict}
+        </div>
+        <div style="font-size:0.85rem;margin-top:0.3rem;color:var(--text-secondary);">
+          山星到坐 = <strong>${ws.mountainStarAtSit}</strong>(${ws.wangShan ? '旺' : '不旺'})；向星到向 = <strong>${ws.faceStarAtFace}</strong>(${ws.wangXiang ? '旺' : '不旺'})
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-top:1rem;">
+        <div>
+          <div style="font-size:0.8rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【运盘】${yun.yunName}入中</div>
+          ${window.fengshuiVisual.drawJiugong(yp.panByGong, yun.yunName)}
+        </div>
+        <div>
+          <div style="font-size:0.8rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【山盘】坐 ${sitDir}</div>
+          ${window.fengshuiVisual.drawJiugong(mp.panByGong, '坐' + sitDir + '入中')}
+        </div>
+        <div>
+          <div style="font-size:0.8rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【向盘】向 ${faceDir}</div>
+          ${window.fengshuiVisual.drawJiugong(fp.panByGong, '向' + faceDir + '入中')}
+        </div>
+      </div>
+
+      <div style="margin-top:0.8rem;background:rgba(220,80,80,0.08);padding:0.6rem;border-radius:6px;border-left:3px solid var(--accent-red);font-size:0.85rem;">
+        <strong>五黄煞</strong>在 <strong>${wh.wuhuangAt}宫</strong>(最凶,宜静不宜动);<br>
+        <strong>二黑病符</strong>在 <strong>${wh.erheiAt}宫</strong>(主病,化解:铜器/灰色地毯/避免红色)
+      </div>
+
+      <div style="margin-top:1rem;font-size:0.85rem;color:var(--accent-gold);border-top:1px solid var(--border);padding-top:0.6rem;">📅 v3.0.14 流年飞星 (按当前日期自动计算)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.5rem;">
+        <div>
+          <div style="font-size:0.75rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【流年盘】${year}年 (${liunian.yearZhi}年)</div>
+          ${window.fengshuiVisual.drawJiugong(liunian.panByGong, year + '年' + liunian.yearZhi + '年')}
+        </div>
+        <div>
+          <div style="font-size:0.75rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【流月盘】${liuyue.monthCN}(${liuyue.monthZhi}月)${lunarInfo ? ' · 农历干支纪月' : ''}</div>
+          ${window.fengshuiVisual.drawJiugong(liuyue.panByGong, liuyue.monthCN + liuyue.monthZhi)}
+        </div>
+      </div>
+
+      ${liuri ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.5rem;">
+        <div>
+          <div style="font-size:0.75rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【流日盘】${liuri.dayGZ}日(子=${liuri.dayZhi}支)</div>
+          ${window.fengshuiVisual.drawJiugong(liuri.panByGong, liuri.dayGZ + '日' + liuri.dayZhi)}
+        </div>
+        <div>
+          <div style="font-size:0.75rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【替卦流日】${tiGuaLiuri.dayGZ}日(替星 ${tiGuaLiuri.tiStar})</div>
+          ${window.fengshuiVisual.drawJiugong(tiGuaLiuri.panByGong, tiGuaLiuri.dayGZ + '日替' + tiGuaLiuri.tiStar)}
+        </div>
+      </div>` : ''}
+
+      ${liushi ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.5rem;">
+        <div>
+          <div style="font-size:0.75rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【流时盘】${liushi.shiZhi}时(子=${liushi.lastZhi}支)</div>
+          ${window.fengshuiVisual.drawJiugong(liushi.panByGong, liushi.shiZhi + '时' + liushi.lastZhi)}
+        </div>
+        <div>
+          <div style="font-size:0.75rem;color:var(--accent-gold);margin-bottom:0.3rem;text-align:center;">【替卦流时】${tiGuaLiushi.shiZhi}时(替星 ${tiGuaLiushi.tiStar})</div>
+          ${window.fengshuiVisual.drawJiugong(tiGuaLiushi.panByGong, tiGuaLiushi.shiZhi + '时替' + tiGuaLiushi.tiStar)}
+        </div>
+      </div>` : ''}
+
+      <div style="margin-top:0.6rem;background:rgba(220,80,80,0.08);padding:0.6rem;border-radius:6px;border-left:3px solid var(--accent-red);font-size:0.85rem;">
+        <strong>流年五黄</strong>在 <strong>${lw.liunianWuhuang}宫</strong>，<strong>流年二黑</strong>在 <strong>${lw.liunianErhei}宫</strong>;<br>
+        <strong>流月五黄</strong>在 <strong>${lw.liuyueWuhuang}宫</strong>，<strong>流月二黑</strong>在 <strong>${lw.liuyueErhei}宫</strong>;
+        ${lw.doubleWu ? '<br><strong style="color:var(--accent-red);">⚠️ 双五黄叠加(' + lw.liunianWuhuang + '宫) — 当月最凶,避免动土装修!</strong>' : ''}
+      </div>
+
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">⚠️ 本盘山向飞星使用 <strong>${useTiGua ? '替卦' : '元旦盘(基础)'}</strong>起星;${useTiGua ? '替卦为商业风水标准做法(主流派)' : '替卦请切换为替卦模式查看完整结果'}。零神等进阶操作由 AI 在解读中说明。</div>
+    `;
+    result.innerHTML = html;
+
+    currentFs = {
+      domain: 'fengshui_xuankong',
+      year: year,
+      sitDir: sitDir,
+      faceDir: faceDir,
+      yun: yun,
+      yp: { panByGong: yp.panByGong },
+      mp: { panByGong: mp.panByGong },
+      fp: { panByGong: fp.panByGong },
+      ws: ws,
+      wh: wh,
+      question: ''
+    };
+    currentFsPrompt = window.xuankong.formatPrompt(year, sitDir, faceDir)
+      + '\n\n【玄空飞星解读要点】运盘/山盘/向盘为代码定论,不可更改。重点说明:\n'
+      + '1. 当前运(${yun.yunName})旺衰及五行(${yun.nature})与宅主/户主八字是否相合\n'
+      + '2. 旺山旺向判定: ${ws.verdict}\n'
+      + '3. 五黄(${wh.wuhuangAt}宫)/ 二黑(${wh.erheiAt}宫)化解方案(具体物品/方位/颜色)\n'
+      + '4. 山盘到坐宫、向盘到向宫的吉星(如一白/六白/八白/九紫)催旺建议\n'
+      + '5. 卧室/客厅/厨房/书房的飞星布局(参考 KB 玄空飞星条目)\n\n'
+      + '本盘为基础版(山向用元旦盘起星);若需替卦/零神等进阶操作,请用户线下咨询专业风水师。';
+
+    document.getElementById('xkAI').style.display = 'block';
+    document.getElementById('xkAIBtn').style.display = 'inline-block';
+    document.getElementById('xkAILoading').style.display = 'none';
+    document.getElementById('xkAIText').style.display = 'none';
+  } catch (e) {
+    if (errEl) {
+      errEl.textContent = '⚠️ ' + e.message;
+      errEl.style.display = 'block';
+    }
+    showToast(e.message, 'error');
+    console.error(e);
+  }
+}
+window.doXuankong = doXuankong;
+
+async function doAIXuankong() {
+  if (!currentFsPrompt) return;
+  await ensureKB();
+  await loadKBGroup('fengshui');
+  const btn = document.getElementById('xkAIBtn');
+  const loading = document.getElementById('xkAILoading');
+  const text = document.getElementById('xkAIText');
+  btn.disabled = true; btn.textContent = '解读中...';
+  loading.style.display = 'none';
+  text.style.display = 'block';
+
+  const prefix = _followUpPrefix;
+  _followUpPrefix = '';
+  const separator = prefix ? '\n\n─────────────────\n📌 追问\n─────────────────\n\n' : '';
+  if (!prefix) text.textContent = '';
+
+  try {
+    const sys = await Core.AI.buildSystemPrompt({
+      domain: 'fengshui', pan: currentFs, question: '',
+      extraSystem: '你是一位精通玄空飞星的风水大师。运盘/山盘/向盘的星位排布是代码定论事实,不可更改。当前 ${currentFs.yun.yun}运(${currentFs.yun.yunName}),${currentFs.ws.verdict}。请结合五黄(${currentFs.wh.wuhuangAt}宫)、二黑(${currentFs.wh.erheiAt}宫)位置,给出客厅/卧室/厨房/书房的飞星布局建议与化解方案。输出要求:总字数不少于 1500 字,分章节、条理清晰、actionable。'
+    });
+    await Core.AI.interpret({
+      domain: 'fengshui',
+      prompt: currentFsPrompt,
+      system: sys,
+      pan: currentFs,
+      question: '',
+      contentEl: text,
+      prefix,
+      separator,
+    });
+    showResultActions('xkAIText', 'xkAIActions');
+  } catch (e) {
+    text.innerHTML = prefix + separator + '<div class="error">解读失败: ' + escapeHtml(e.message) + '</div>';
+    text.style.display = 'block';
+    loading.style.display = 'none';
+  } finally {
+    btn.disabled = false; btn.textContent = 'AI 解读';
+    if (window.Core?.Stream?.hideStreamIndicator) window.Core.Stream.hideStreamIndicator();
+  }
+}
+window.doAIXuankong = doAIXuankong;
+
 function kbFengshui() {
   return '\n\n【知识库参考】八宅风水要点：\n'
-    + '· 八宅由"伏位"起，沿洛书轨迹分四吉四凶星位\n'
-    + '· 东四命（坎/震/巽/离）吉位：东、南、北、东南\n'
-    + '· 西四命（坤/兑/乾/艮）吉位：西、西南、西北、东北\n'
-    + '· 大门（气口）宜在生气方或延年方\n'
-    + '· 主卧宜在延年或天医方，厨房灶位宜压五鬼祸害方\n'
-    + '· 书房宜在伏位，文昌位则需结合流年飞星另定\n'
+    + '· 八宅由"伏位"起,沿洛书轨迹分四吉四凶星位\n'
+    + '· 东四命(坎/震/巽/离) 吉位:东、南、北、东南\n'
+    + '· 西四命(坤/兑/乾/艮) 吉位:西、西南、西北、东北\n'
+    + '· 大门(气口)宜在生气方或延年方\n'
+    + '· 主卧宜在延年或天医方,厨房灶位宜压五鬼祸害方\n'
+    + '· 书房宜在伏位,文昌位则需结合流年飞星另定\n'
     + kbFengshuiBase()
     + kbFengshuiLuopan();
 }

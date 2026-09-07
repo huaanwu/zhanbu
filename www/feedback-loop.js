@@ -92,11 +92,11 @@ const FeedbackLoop = {
   },
 
   // ===== 针对具体问题的风险提醒 =====
-  getRiskPrompt(domain, question) {
+  async getRiskPrompt(domain, question) {
     if (!window.History || !question) return '';
 
-    // 查找相似问题的反馈历史
-    const similar = window.History.findSimilar(domain, '', question, 5);
+    // 查找相似问题的反馈历史(异步解密)
+    const similar = await window.History.findSimilar(domain, '', question, 5);
     const badOnes = similar.filter(s => s.item.feedback === 'bad');
     const partialOnes = similar.filter(s => s.item.feedback === 'partial');
 

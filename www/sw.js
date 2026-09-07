@@ -9,7 +9,8 @@
  * 版本: 通过 CACHE_NAME 升级,旧缓存自动清空
  */
 
-const CACHE_NAME = 'zhanbu-v1';
+const SW_VERSION = '3.1.5'; // fix:修真识图统一走 DeepSeek 视觉模型
+const CACHE_NAME = 'zhanbu-' + SW_VERSION;
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -19,6 +20,11 @@ const STATIC_ASSETS = [
   './expert.js',
   './rag.js',
   './liuyao.js',
+  './xiaoliuren.js',
+  './meihua.js',
+  './daliuren.js',
+  './chenggu.js',
+  './lingqian.js',
   './qimen.js',
   './xingshi.js',
   './visual.js',

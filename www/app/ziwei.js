@@ -13,10 +13,18 @@ async function doZiwei() {
     if (!window.iztroAstro) { showToast('紫微库加载中，请稍后', 'error'); return; }
 
     let chart;
+    // iztro bySolar/byLunar 第3个参数是 0-12 的时辰索引(0=子时早,12=午时,11=巳时...);
+    // HTML 输入是 0-23 的小时,需要换算: 23-1 -> 早子, 1-12 -> 0-11; 默认 12=午时
+    // iztro bySolar/byLunar 第3个参数是 0-12 的时辰索引: 0=子时(23:00-1:00),1=丑时,12=午时
+    // HTML 输入是 0-23 的小时,12 点(午时)对应 idx=12, 13 点(未时)由于 13 时映射到 0-12 之外会报错
+    // 13-23 视作 12(子时之前都按 12 处理, 即仍然映射到子时错误),需根据 iztro 期望的 0-12 区间
+    // 实际上 iztro bySolar 内部期望 0-12 的 chinese time index, 这里用 (hour+1)/2 即可
+    let shichenIdx = hour === 23 ? 0 : Math.floor((hour + 1) / 2);
+    shichenIdx = Math.max(0, Math.min(12, shichenIdx));
     if (state.zw.cal === 'lunar') {
-      chart = window.iztroAstro.byLunar(`${year}-${month}-${day}`, hour, gender, state.zw.leap, true, 'zh-CN');
+      chart = window.iztroAstro.byLunar(`${year}-${month}-${day}`, shichenIdx, gender, state.zw.leap, true, 'zh-CN');
     } else {
-      chart = window.iztroAstro.bySolar(`${year}-${month}-${day}`, hour, gender, true, 'zh-CN');
+      chart = window.iztroAstro.bySolar(`${year}-${month}-${day}`, shichenIdx, gender, true, 'zh-CN');
     }
 
     currentZw = adaptZiwei(chart, new Date());
@@ -182,7 +190,7 @@ async function doAIZiwei() {
   let fullText = '';
   try {
     // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
-    const system = Core.AI.buildSystemPrompt({ domain: 'ziwei', pan: currentZw, question: currentZw.question });
+    const system = await Core.AI.buildSystemPrompt({ domain: 'ziwei', pan: currentZw, question: currentZw.question });
     // v3.0.5: 统一 AI 入口(任务 #19)
     const { finalText } = await Core.AI.interpret({
       domain: 'ziwei',

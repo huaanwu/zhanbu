@@ -21,13 +21,8 @@ function doXingshi() {
     const result = document.getElementById('xsResult');
     result.style.display = 'block';
 
-    const wuxingMap = { 1:'木', 2:'木', 3:'火', 4:'火', 5:'土', 6:'土', 7:'金', 8:'金', 9:'火' };
-    const dotGe = (n) => {
-      const last = n % 10;
-      return [1, 3, 5, 7, 8, 11, 13, 15, 16, 17, 18, 21, 23, 24, 25, 31, 32, 33, 35, 37, 39, 41, 45, 47, 48, 52, 57, 61, 63, 65, 67, 68, 77, 78, 81].includes(last) ? '大吉'
-           : [29, 38, 49, 53, 73, 80].includes(last) ? '中吉'
-           : '凶';
-    };
+    const wuxingMap = { 1:'木', 2:'木', 3:'火', 4:'火', 5:'土', 6:'土', 7:'金', 8:'金', 9:'水', 10:'水' };
+    const dotGe = (n) => window.Xingshi.judgeNumberLuck(n);
     const clr = (s) => s === '大吉' ? 'var(--accent-green)' : s === '中吉' ? 'var(--accent-gold)' : 'var(--accent-red)';
 
     result.innerHTML = `
@@ -90,7 +85,7 @@ async function doAIXingshi() {
   let fullText = '';
   try {
     // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
-    const sys = Core.AI.buildSystemPrompt({
+    const sys = await Core.AI.buildSystemPrompt({
       domain: 'xingshi', pan: currentXs, question: currentXs.birth || '',
       extraSystem: '你是一位精通姓名学的命理大师，请根据五格剖象进行专业解读。重点说明人格（主运）、地格（基础）、总格（后运）的吉凶含义，并结合三才配置分析。注意：吉数并非绝对好，需要配合三才平衡。'
     });
@@ -118,9 +113,9 @@ async function doAIXingshi() {
 window.doAIXingshi = doAIXingshi;
 
 function kbXingshi() {
-  return '\n\n【知识库参考】五格数理吉凶简表：\n'
-    + '大吉数：1, 3, 5, 7, 8, 11, 13, 15, 16, 17, 18, 21, 23, 24, 25, 31, 32, 33, 35, 37, 39, 41, 45, 47, 48, 52, 57, 61, 63, 65, 67, 68, 77, 78, 81\n'
-    + '中吉数：29, 38, 49, 53, 73, 80\n'
+  return '\n\n【知识库参考】五格数理吉凶简表（按全数值，非尾数）：\n'
+    + '大吉数：1, 3, 5, 6, 7, 8, 11, 13, 15, 16, 17, 18, 21, 23, 24, 25, 29, 31, 32, 33, 35, 37, 39, 41, 45, 47, 48, 52, 57, 61, 63, 65, 67, 68, 77, 78, 81\n'
+    + '中吉数：38, 49, 53, 73, 80\n'
     + '三才配置要点：人格地格五行相生或比和最吉；相克则主波折。三才配合五格主次分明、人格吉利、总格不凶者为上佳姓名。'
     + kbXingshiCases()
     + kbXingshiExt();

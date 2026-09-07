@@ -1,9 +1,24 @@
-/**
+﻿/**
  * 知识库加载与注入 — 从 app.js 拆出 (v3.0.6)
  * 负责: KB bundle 索引、按需加载、按领域/问题注入知识库文本
  */
 (function () {
   if (typeof window === 'undefined') return;
+
+// v3.0.6: fetch 带超时保护，防止 Capacitor WebView 中网络挂起
+async function fetchWithTimeout(url, opts = {}, timeoutMs = 10000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...opts, signal: ctrl.signal });
+    clearTimeout(timer);
+    return res;
+  } catch (e) {
+    clearTimeout(timer);
+    throw e;
+  }
+}
+
 
 const KB_PATHS = {
   bazi: 'kb_data/bazi_kb.json',
@@ -72,7 +87,11 @@ const KB_PATHS = {
   // v1.3.2 交叉模块 KB
   bazi_ziwei_hecan: 'kb_data/bazi_ziwei_hecan_kb.json',
   qimen_fengshui_jiehe: 'kb_data/qimen_fengshui_jiehe_kb.json',
-  liuyao_meihua_hucan: 'kb_data/liuyao_meihua_hucan_kb.json'
+  liuyao_meihua_hucan: 'kb_data/liuyao_meihua_hucan_kb.json',
+  xiaoliuren: 'kb_data/xiaoliuren_kb.json',
+  daliuren: 'kb_data/daliuren_kb.json',
+  chenggu: 'kb_data/chenggu_kb.json',
+  guandi_qian: 'kb_data/guandi_qian_kb.json'
 };
 
 // KB 分组：core 必加载，其余按页面/AI 调用按需加载
@@ -84,7 +103,19 @@ const KB_GROUPS = {
   qimen: ['qimen', 'qimen_ext', 'qimen_geju', 'qimen_xingmen', 'qimen_zhanji', 'qimen_paipan', 'qimen_yongshen', 'wannianli'],
   fengshui: ['fengshui_ext', 'fengshui_base', 'fengshui_luopan', 'zeri_ext', 'zeri_jixiong', 'meihua_ext', 'meihua_lei_xiang', 'mianxiang_ext', 'mianxiang_qise', 'mianxiang_qise2'],
   xingshi: ['xingshi', 'xingshi_ext', 'xingshi_cases'],
-  daofobuddhism: ['daoism_fuzhou', 'daoism_zhoushu', 'daoism_shoujue', 'daoism_zhaijiao', 'buddhism_mantra', 'buddhism_divine', 'daoism_jiuhuo']
+  // v3.0.5 修回归 (finding P0-4): shouxiang 之前漏写在 KB_GROUPS,导致 loadKBGroup('shouxiang') early-return,
+  // KB 数据只在 _bundleCache 里出现、从未进入 prompt。KB_TIERS.primary.shouxiang 早就声明了 ['shouxiang','guxiang'],
+  // KB_TIERS.extended.shouxiang 声明了 ['shengxiang','qise','shouxiang_wenli'],这里把这些一起包进来
+  shouxiang: ['shouxiang', 'guxiang', 'shengxiang', 'qise', 'shouxiang_wenli'],
+  // v3.0.8:手相 + 面相合并 nav 后,KB 仍按各自独立 group 走 cache,renxiang 复合 group 兜底
+  renxiang: ['shouxiang', 'guxiang', 'shengxiang', 'qise', 'shouxiang_wenli', 'mianxiang_ext', 'mianxiang_qise', 'mianxiang_qise2'],
+  daofobuddhism: ['daoism_fuzhou', 'daoism_zhoushu', 'daoism_shoujue', 'daoism_zhaijiao', 'buddhism_mantra', 'buddhism_divine', 'daoism_jiuhuo'],
+  xiaoliuren: ['xiaoliuren', 'wannianli'],
+  meihua: ['meihua_ext', 'meihua_lei_xiang', 'wannianli'],
+  daliuren: ['daliuren', 'wannianli'],
+  chenggu: ['chenggu', 'wannianli'],
+  lingqian: ['buddhism_divine', 'guandi_qian'],
+  mianxiang: ['mianxiang_ext', 'mianxiang_qise', 'mianxiang_qise2']  // v3.0.8:面相组
 };
 
 // v1.3.0 KB 3 级权重（核心/主/扩）
@@ -100,6 +131,13 @@ const KB_TIERS = {
     shouxiang: ['shouxiang', 'guxiang'],
     xingshi: ['xingshi', 'xingshi_ext'],
     daofobuddhism: ['daoism_fuzhou', 'daoism_zhoushu', 'daoism_shoujue', 'buddhism_mantra', 'buddhism_divine'],
+    xiaoliuren: ['xiaoliuren'],
+  meihua: ['meihua'],
+    meihua: ['meihua_ext'],
+    daliuren: ['daliuren'],
+    chenggu: ['chenggu'],
+    lingqian: ['guandi_qian'],
+    mianxiang: ['mianxiang_ext', 'mianxiang_qise'],  // v3.0.8 面相 primary
     cross: ['bazi', 'ziwei', 'liuyao', 'qimen', 'nihai_xia']
   },
   extended: {
@@ -110,7 +148,13 @@ const KB_TIERS = {
     fengshui: ['fengshui_luopan', 'zeri_ext', 'zeri_jixiong', 'meihua_ext', 'meihua_lei_xiang', 'mianxiang_ext', 'mianxiang_qise', 'mianxiang_qise2', 'qimen_fengshui_jiehe'],
     shouxiang: ['shengxiang', 'qise', 'shouxiang_wenli'],
     xingshi: ['xingshi_cases'],
-    daofobuddhism: ['daoism_zhaijiao', 'daoism_jiuhuo']
+    daofobuddhism: ['daoism_zhaijiao', 'daoism_jiuhuo'],
+    xiaoliuren: ['wannianli'],
+    meihua: ['meihua_lei_xiang', 'wannianli'],
+    daliuren: ['wannianli'],
+    chenggu: ['wannianli'],
+    lingqian: ['buddhism_divine'],
+    mianxiang: ['mianxiang_qise2']  // v3.0.8 面相 extended
   }
 };
 
@@ -164,6 +208,9 @@ const KB_TRIGGER_RULES = {
   daofobuddhism: [
     { re: /科仪|斋醮|道场|法事|超度|开光|/, libs: ['daoism_zhaijiao'] },
     { re: /化解|噩梦|失眠|破财|太岁|压床|场景/, libs: ['daoism_jiuhuo'] }
+  ],
+  meihua: [
+    { re: /类象|万物|取象|方位|人物|物色/, libs: ['meihua_lei_xiang'] }
   ]
 };
 
@@ -172,8 +219,12 @@ const PAGE_KB_GROUPS = {
   bazi: ['bazi'],
   ziwei: ['ziwei'],
   liuyao: ['liuyao'],
+  xiaoliuren: ['xiaoliuren'],
   qimen: ['qimen'],
-  shouxiang: ['shouxiang'],
+  daliuren: ['daliuren'],
+  chenggu: ['chenggu'],
+  lingqian: ['lingqian'],
+  shouxiang: ['shouxiang', 'mianxiang'],  // v3.0.8 人相复合页同时加载两组 KB(手相+面相)
   xingshi: ['xingshi'],
   fengshui: ['fengshui'],
   daofobuddhism: ['daofobuddhism'],  // v1.2.17 化解页
@@ -192,7 +243,7 @@ function _loadBundleIndex() {
   if (_bundleIndexPromise) return _bundleIndexPromise;
   _bundleIndexPromise = (async () => {
     try {
-      const r = await fetch('kb_data/_bundles/_index.json');
+      const r = await fetchWithTimeout('kb_data/_bundles/_index.json');
       if (!r.ok) {
         console.warn('[KB] bundle index 加载失败,降级逐个 fetch');
         _bundleIndex = {};
@@ -238,17 +289,22 @@ async function _loadKBByKeys(keys) {
         // 单文件 fallback
         const k = kList[0];
         try {
-          const r = await fetch(KB_PATHS[k]);
+          const r = await fetchWithTimeout(KB_PATHS[k]);
           if (r.ok) return [k, await r.json()];
-        } catch {}
+        } catch (e) {
+          console.warn('[KB] 单文件加载异常:', e.message);
+        }
         return [k, {}];
       }
       if (!_bundleCache[bundle]) {
         try {
-          const r = await fetch(`kb_data/_bundles/${bundle}`);
+          const r = await fetchWithTimeout(`kb_data/_bundles/${bundle}`);
           if (r.ok) _bundleCache[bundle] = await r.json();
           else _bundleCache[bundle] = {};
-        } catch { _bundleCache[bundle] = {}; }
+        } catch (e) {
+          console.warn('[KB] bundle 加载异常:', e.message);
+          _bundleCache[bundle] = {};
+        }
       }
       const data = _bundleCache[bundle];
       const out = {};
@@ -324,6 +380,25 @@ async function loadKbsForQuestion(domain, question) {
 }
 
 // 返回 domain primary KB 的注入字符串（自动含倪海厦学派基础）
+// v3.0.6: 通用 KB 文本化 fallback，当领域专用的 kbXxx 函数不存在或返回空时自动从 _kb[key] 提取
+function _kbFallback(key) {
+  const k = _kb[key];
+  if (!k) return '';
+  let s = '';
+  if (Array.isArray(k.entries)) {
+    s += '\n\n【' + (k.name || key) + '】';
+    for (const e of k.entries.slice(0, 30)) {
+      s += '\n· ' + (e.title || e.id || e.name || '') + '：' + (e.content || e.description || '').slice(0, 250);
+    }
+  } else if (typeof k === 'object' && k !== null) {
+    s += '\n\n【' + (k.name || key) + '】';
+    for (const [name, desc] of Object.entries(k).slice(0, 30)) {
+      if (['name','version','description','id'].includes(name)) continue;
+      s += '\n· ' + name + '：' + String(desc).slice(0, 250);
+    }
+  }
+  return s;
+}
 function kbPrimary(domain) {
   let s = '';
   // 倪海厦学派是所有模块的理论基础
@@ -331,8 +406,14 @@ function kbPrimary(domain) {
   // domain 专属 primary KB
   const keys = KB_TIERS.primary[domain] || [];
   for (const k of keys) {
-    const fn = window['kb_' + k.charAt(0).toUpperCase() + k.slice(1).replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase())];
-    if (typeof fn === 'function') s += fn();
+    const fnName = 'kb' + k.charAt(0).toUpperCase() + k.slice(1).replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
+    const fn = window[fnName];
+    let part = '';
+    if (typeof fn === 'function') {
+      try { part = fn({}); } catch (e) { console.warn('[KB] 调用 ' + fnName + ' 失败:', e); }
+    }
+    if (!part || part.length < 10) part = _kbFallback(k);
+    s += part;
   }
   return s;
 }
@@ -350,8 +431,41 @@ function kbExtended(domain, question) {
   if (libs.size === 0) return '';
   let s = '\n\n【扩展知识库·按问题关键词加载】';
   for (const k of libs) {
-    const fn = window['kb_' + k.charAt(0).toUpperCase() + k.slice(1).replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase())];
-    if (typeof fn === 'function') s += fn();
+    const fnName = 'kb' + k.charAt(0).toUpperCase() + k.slice(1).replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
+    const fn = window[fnName];
+    let part = '';
+    if (typeof fn === 'function') {
+      try { part = fn({}); } catch (e) { console.warn('[KB] 调用 ' + fnName + ' 失败:', e); }
+    }
+    if (!part || part.length < 10) part = _kbFallback(k);
+    s += part;
+  }
+  return s;
+}
+
+// 姓名学扩展 KB 文本化
+function kbXingshiExt() {
+  const k = _kb?.xingshi_ext || {};
+  if (!k || Object.keys(k).length === 0) return '';
+  let s = '\n\n【扩展知识库·姓名学】';
+  const keys = ['五格','音律','姓名学','天格','地格','人格','外格','总格','三才','笔画','姓名案例','名人姓名案例'];
+  for (const key of keys) {
+    if (k[key]) {
+      if (typeof k[key] === 'string') {
+        s += `\n· ${key}：${k[key].slice(0, 400)}`;
+      } else if (Array.isArray(k[key])) {
+        s += `\n· ${key}：`;
+        for (const item of k[key].slice(0, 10)) {
+          if (typeof item === 'string') s += `\n  ${item}`;
+          else s += `\n  ${JSON.stringify(item).slice(0, 200)}`;
+        }
+      } else if (typeof k[key] === 'object') {
+        s += `\n· ${key}：`;
+        for (const [sk, sv] of Object.entries(k[key]).slice(0, 20)) {
+          s += `\n  ${sk}: ${typeof sv === 'string' ? sv.slice(0, 200) : JSON.stringify(sv).slice(0, 200)}`;
+        }
+      }
+    }
   }
   return s;
 }
@@ -366,8 +480,9 @@ function kbBazi(pan) {
   const k = _kb?.bazi || {};
   const dayGan = pan.gz?.day?.[0];
   if (!dayGan) return '';
-  const wxMap = {'甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水'};
-  const dmKey = dayGan + wxMap[dayGan];
+  // 日主五行 — 来自 Expert.TG_WX 单一来源
+  const dayWx = (window.Expert && window.Expert.TG_WX && window.Expert.TG_WX[dayGan]) || '';
+  const dmKey = dayGan + dayWx;
   let s = '\n\n【知识库参考】';
   if (k.day_master?.[dmKey]) s += `\n· 日主${dmKey}：${k.day_master[dmKey]}`;
   const tenGodNames = ['比肩','劫财','食神','伤官','偏财','正财','七杀','正官','偏印','正印'];
@@ -378,7 +493,7 @@ function kbBazi(pan) {
   }
   for (const god of godSet) { if (k.ten_gods?.[god]) s += `\n· ${god}：${k.ten_gods[god]}`; }
   const wangShuai = judgeWangShuai(dayGan, pan.gz);
-  const wsKey = wangShuai + wxMap[dayGan];
+  const wsKey = wangShuai + dayWx;
   if (k.useful_god?.[wsKey]) s += `\n· ${wsKey}用神喜忌：${k.useful_god[wsKey]}`;
   s += kbBaziDayun();
   s += kbWannianli();
@@ -1333,8 +1448,66 @@ function kbDaoismBuddhismOnDemand(question) {
   // 兼容层:router.js / ai-service.js 仍通过 window.* 访问
   window.PAGE_KB_GROUPS = PAGE_KB_GROUPS;
   window.ensureCoreKB = ensureCoreKB;
+  window.ensureKB = ensureKB;
   window.loadKBGroups = loadKBGroups;
   window.kbPrimary = kbPrimary;
   window.kbExtended = kbExtended;
   window.kbDaoismBuddhismOnDemand = kbDaoismBuddhismOnDemand;
+
+  // v3.0.6: 把领域 KB 注入函数暴露到 window，供 kbPrimary/kbExtended 动态调用
+  window.kbBazi = kbBazi;
+  window.kbLiuyao = kbLiuyao;
+  window.kbQimen = kbQimen;
+  window.kbShouxiang = kbShouxiang;
+  window.kbZiwei = kbZiwei;
+  window.kbZiweiExt = kbZiweiExt;
+  window.kbZiweiFuxing = kbZiweiFuxing;
+  window.kbZiweiDaxian = kbZiweiDaxian;
+  window.kbZiweiGeju = kbZiweiGeju;
+  window.kbQimenXingmen = kbQimenXingmen;
+  window.kbQimenGeju = kbQimenGeju;
+  window.kbQimenZhanji = kbQimenZhanji;
+  window.kbLiuyaoLiushen = kbLiuyaoLiushen;
+  window.kbLiuyaoXunkong = kbLiuyaoXunkong;
+  window.kbLiuyaoJintui = kbLiuyaoJintui;
+  window.kbBaziExt = kbBaziExt;
+  window.kbLiuyaoExt = kbLiuyaoExt;
+  window.kbQimenExt = kbQimenExt;
+  window.kbNihaiXia = kbNihaiXia;
+  window.kbGuxiang = kbGuxiang;
+  window.kbShengxiang = kbShengxiang;
+  window.kbQise = kbQise;
+  window.kbBuddhismMantra = kbBuddhismMantra;
+  window.kbBuddhismDivine = kbBuddhismDivine;
+  window.kbDaoismFuzhou = kbDaoismFuzhou;
+  window.kbDaoismZhoushu = kbDaoismZhoushu;
+  window.kbDaoismShoujue = kbDaoismShoujue;
+  window.kbDaoismJiuhuo = kbDaoismJiuhuo;
+  window.kbBaziDayun = kbBaziDayun;
+  window.kbZiweiGongwei = kbZiweiGongwei;
+  window.kbShouxiangWenli = kbShouxiangWenli;
+  window.kbWannianli = kbWannianli;
+  window.kbLiuyaoNajia = kbLiuyaoNajia;
+  window.kbFengshuiBase = kbFengshuiBase;
+  window.kbXingshiCases = kbXingshiCases;
+  window.kbMianxiangQise = kbMianxiangQise;
+  window.kbMeihuaLeiXiang = kbMeihuaLeiXiang;
+  window.kbDaoismZhaijiao = kbDaoismZhaijiao;
+  window.kbZiweiDaxian2 = kbZiweiDaxian2;
+  window.kbBaziShensha2 = kbBaziShensha2;
+  window.kbQimenPaipan = kbQimenPaipan;
+  window.kbLiuyaoCases = kbLiuyaoCases;
+  window.kbZiweiZuhe = kbZiweiZuhe;
+  window.kbBaziShishen = kbBaziShishen;
+  window.kbFengshuiLuopan = kbFengshuiLuopan;
+  window.kbZeriJixiong = kbZeriJixiong;
+  window.kbMianxiangQise2 = kbMianxiangQise2;
+  window.kbXingshiCases = kbXingshiCases;
+  window.kbLiuyaoLiuqin = kbLiuyaoLiuqin;
+  window.kbQimenYongshen = kbQimenYongshen;
+  window.kbZiweiSihua = kbZiweiSihua;
+  window.kbBaziHehun = kbBaziHehun;
+  window.kbXingshiExt = kbXingshiExt;
+  window._kb = _kb;
 })();
+

@@ -32,10 +32,18 @@ const Cache = {
     this._accessOrder = JSON.parse(localStorage.getItem(this.CONFIG.ACCESS_ORDER_KEY)) || [];
   },
 
+  // ===== 工具函数 =====
+  // (round-2 fix) 抽到 object 上做 sibling method,避免 case 内 function declaration 的 hoisting / strict-mode 风险
+  _imgFingerprint(s) {
+    return s ? s.slice(0, 96) + '|' + s.slice(s.length >> 1, (s.length >> 1) + 80) + '|' + s.slice(-80) : '∅';
+  },
+
   // ===== 生成缓存 Key =====
   makeKey(domain, params) {
     // params 是各模块的特征对象
     const parts = [domain];
+    // 区分本地/云端模型结果，避免切换模型后仍返回旧缓存
+    parts.push(localStorage.getItem('use_local_model') === '1' ? 'model:local' : 'model:cloud');
     switch (domain) {
       case 'bazi':
         parts.push(params.gz?.year, params.gz?.month, params.gz?.day, params.gz?.hour);
@@ -46,10 +54,38 @@ const Cache = {
         parts.push(params.gender);
         break;
       case 'liuyao':
+        // v2: 六爻线序/纳甲/卦宫算法已纠正，隔离旧算法生成的错误解读缓存。
+        parts.push('jingfang-v2');
         parts.push(params.gua?.name);
         parts.push((params.gua?.dongYaoList || []).join('-'));
         break;
+      case 'xiaoliuren':
+        parts.push(params.yueGong?.name, params.riGong?.name, params.shiGong?.name);
+        break;
+      case 'meihua':
+        parts.push(params.gua?.name);
+        parts.push(String(params.dong));
+        break;
+      case 'daliuren':
+        // daliuren-v1: 九宗门算法首版,隔离未来算法修订的旧缓存
+        parts.push('daliuren-v1');
+        parts.push([params.dayGZ, params.yueJiang?.zhi, params.hourZhi].join('_'));
+        parts.push((params.sanChuan || []).map(c => c.shen).join(''));
+        break;
+      case 'chenggu':
+        // chenggu-v1: 称骨首版,隔离未来算法/数据表修订的旧缓存
+        parts.push('chenggu-v1');
+        parts.push([params.lunar?.yearGZ, params.lunar?.month, params.lunar?.day, params.lunar?.hourZhi].join('_'));
+        // v3.0.9: 性别影响断语,需独立缓存
+        if (params.gender) parts.push('gender:' + params.gender);
+        break;
+      case 'lingqian':
+        // lingqian-v1: 灵签首版,隔离未来签文数据修订的旧缓存
+        parts.push('lingqian-v1', params.kind, String(params.num));
+        break;
       case 'qimen':
+        // chaibu-v1: 定局改为拆补法符头定元,隔离旧'天数/5'算法的错误局数缓存。
+        parts.push('chaibu-v1');
         parts.push(params.jushu_text);
         parts.push(params.bazi?.join('_'));
         break;
@@ -57,17 +93,75 @@ const Cache = {
         parts.push(params.name);
         break;
       case 'fengshui':
+        // v3.0.10:加 mainRoomDir(主卧朝向)/ cal(历法)/ doorDir/ houseType
+        parts.push('fs-v3.0.10');
         parts.push(params.address);
+        if (params.doorDir) parts.push('door:' + params.doorDir);
+        if (params.mainRoomDir) parts.push('mainroom:' + params.mainRoomDir);
+        if (params.houseType) parts.push('house:' + params.houseType);
+        if (params.cal) parts.push('cal:' + params.cal);
         break;
-      case 'shouxiang':
-        // 手相用图片 base64 的前 100 个字符作为指纹
-        parts.push(params.leftBase64?.slice(0, 100) || 'no-left');
-        parts.push(params.rightBase64?.slice(0, 100) || 'no-right');
+      case 'fengshui_xuankong':
+        // v3.0.11:玄空飞星独立 cache(避免与八宅相互污染)
+        parts.push('xk-v3.0.11');
+        parts.push('year:' + (params.year || 'na'));
+        parts.push('sit:' + (params.sitDir || 'na'));
+        parts.push('face:' + (params.faceDir || 'na'));
         break;
+      case 'shouxiang': {
+        // v3.0.5 + cleanup: _imgFingerprint 与 sxGender + keypoints 组合,
+        // 4 图指纹用 forEach 去掉复制粘贴,linkPan 指纹用 lookup 对象遍历
+        if (params.sxGender) parts.push('gender:' + params.sxGender);
+        ['leftPalm', 'leftBack', 'rightPalm', 'rightBack'].forEach(function (k) {
+          parts.push(this._imgFingerprint(params.images?.[k]));
+        }, this);
+        parts.push('kp:' + (params.keypoints ? 'yes' : 'no'));
+        if (params.linkPan) {
+          var lp = params.linkPan;
+          // 按命盘类型→提取器 遍历:命中第一个真值就 push,否则 push 空 flag
+          var lpKeys = [
+            ['bazi-day', function () { return lp.bazi?.gz?.day; }],
+            ['bazi',     function () { return lp.bazi; }],
+            ['zw',       function () { var gz = lp.ziwei?.mingGong?.ganzhi; if (gz) return 'zw:' + gz; else if (lp.ziwei) return 'zw'; }],
+            ['ly',       function () { if (lp.liuyao?.gua?.name) return 'ly:' + lp.liuyao.gua.name; else if (lp.liuyao) return 'ly'; }],
+            ['qm',       function () { if (lp.qimen?.jushu_text) return 'qm:' + lp.qimen.jushu_text; else if (lp.qimen) return 'qm'; }],
+          ];
+          lpKeys.forEach(function (_a) {
+            var key = _a[0], fn = _a[1];
+            var v = fn();
+            if (v) parts.push(key.startsWith('bazi') || key === 'zw' || key === 'ly' || key === 'qm' ? v : key);
+          });
+        }
+        parts.push('sx-v3.0.5-fix');
+        break;
+      }
+      case 'mianxiang': {
+        // v3.0.8 面相首版:性别 + 3 张图(front/left45/right45)指纹 + 年龄段 + linkPan
+        if (params.mxGender) parts.push('gender:' + params.mxGender);
+        ['front', 'left45', 'right45'].forEach(function (k) {
+          parts.push(this._imgFingerprint(params.images?.[k]));
+        }, this);
+        parts.push('age:' + (params.ageBucket || 'na'));
+        if (params.linkPan) {
+          var lp = params.linkPan;
+          if (lp.bazi?.gz?.day) parts.push('bazi-day:' + lp.bazi.gz.day);
+          else if (lp.bazi) parts.push('bazi');
+          var zwGz = lp.ziwei?.mingGong?.ganzhi;
+          if (zwGz) parts.push('zw:' + zwGz);
+          else if (lp.ziwei) parts.push('zw');
+        }
+        parts.push('mx-v1');
+        break;
+      }
       case 'cross':
+        // 三术同参包含六爻，同样不能复用旧六爻算法缓存。
+        parts.push('jingfang-v2');
         parts.push(params.bazi?.gz?.day);
         parts.push(params.liuyao?.gua?.name);
         parts.push(params.ziwei?.mingGong?.ganzhi);
+        break;
+      case 'daofobuddhism':
+        parts.push(params.question?.slice(0, 50) || 'no-question');
         break;
       default:
         parts.push(JSON.stringify(params));

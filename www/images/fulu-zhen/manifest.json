@@ -1,0 +1,56 @@
+[
+ {
+  "file": "images/fulu-zhen/baijie.png",
+  "name": "百解符",
+  "desc": "解百厄。道法会元卷之一百·道藏第30册 p280",
+  "page": 280
+ },
+ {
+  "file": "images/fulu-zhen/zhiwanbing.png",
+  "name": "治万病符",
+  "desc": "圆星符+云头符复合,治万病。道藏第30册 p280",
+  "page": 280
+ },
+ {
+  "file": "images/fulu-zhen/jieyuan.png",
+  "name": "解縳解冤厄符",
+  "desc": "解冤释结、化食降怨。道藏第30册 p280",
+  "page": 280
+ },
+ {
+  "file": "images/fulu-zhen/sanhun.png",
+  "name": "三魂符",
+  "desc": "追魂复魄法用。道藏第30册 p400",
+  "page": 400
+ },
+ {
+  "file": "images/fulu-zhen/duanhou.png",
+  "name": "断后鬼门符(人形)",
+  "desc": "拟形人符,断后鬼门。道藏第30册 p400",
+  "page": 400
+ },
+ {
+  "file": "images/fulu-zhen/beidou.png",
+  "name": "北斗七星符",
+  "desc": "摄境咒配北斗星图。道藏第30册 p200",
+  "page": 200
+ },
+ {
+  "file": "images/fulu-zhen/yunzhuan1.png",
+  "name": "云篆天书·召九天上帝廿四字",
+  "desc": "元始自然之书,上召九天上帝授神仙图。道藏第30册 p800",
+  "page": 800
+ },
+ {
+  "file": "images/fulu-zhen/yunzhuan2.png",
+  "name": "云篆天书·召星官分度卅二字",
+  "desc": "召星官正天分度、辟除鬼邪。道藏第30册 p800",
+  "page": 800
+ },
+ {
+  "file": "images/fulu-zhen/yunzhuan3.png",
+  "name": "云篆天书·制水神召蛟龙卅二字",
+  "desc": "制东海水晶、召蛟龙、禳洪灾救火。道藏第30册 p800",
+  "page": 800
+ }
+]

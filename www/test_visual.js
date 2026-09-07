@@ -43,7 +43,7 @@ runner.test("drawLiuyao 混合卦", () => {
 runner.test("drawQimen 生成九宫格SVG", () => {
   const pan = {
     gong9: Array.from({length: 9}, (_, i) => ({
-      number: i + 1, name: "宫" + (i+1),
+      number: i + 1, gong: i + 1, name: "宫" + (i+1),
       tianpan: "甲", dipan: "子", renpan: "休门",
       jiuxing: "天蓬", shenpan: "直符",
       is_dipan_zhifu: i === 0, is_renpan_zhishi: i === 1

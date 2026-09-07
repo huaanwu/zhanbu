@@ -8,12 +8,24 @@
   window.state = {
     bazi: { cal: 'solar', leap: false, gender: 'male' },
     zw:   { cal: 'solar', leap: false, gender: 'male' },
-    liuyao: { method: 'time', mode: 'normal' },
+    liuyao: { method: 'coin', mode: 'normal' },
+    xiaoliuren: { method: 'time' },
+    meihua: { method: 'time' },
+    daliuren: {},
+    chenggu: { cal: 'solar', gender: 'male' },
+    lingqian: { kind: 'guanyin' },
+    fengshui: { cal: 'solar', gender: 'male', houseType: 'zhai', doorDir: '南', mainRoomDir: '北' },
+    xuankong: { year: 2026, sitDir: '南', faceDir: '北', tiGua: true },  // v3.0.11 玄空飞星, v3.0.16 加替卦开关
   };
 
   window.currentBazi = null; window.currentBaziPrompt = '';
   window.currentZw = null; window.currentZwPrompt = '';
   window.currentLy = null; window.currentLyPrompt = '';
+  window.currentXlr = null; window.currentXlrPrompt = '';
+  window.currentMh = null; window.currentMhPrompt = '';
+  window.currentDlr = null; window.currentDlrPrompt = '';
+  window.currentCg = null; window.currentCgPrompt = '';
+  window.currentLq = null; window.currentLqPrompt = '';
   window.currentQm = null; window.currentQmPrompt = '';
   window.currentXs = null; window.currentXsPrompt = '';
   window.currentCross = null; window.currentCrossPrompt = '';
@@ -26,7 +38,6 @@
 
   // v1.3.1: API Key 必须运行时由用户输入,禁止硬编码
   window.DEFAULT_API_KEY = '';
-  window.DEFAULT_VISION_KEY = '';
 
   window.Core = window.Core || {};
   window.Core.State = { get: () => window.state, set: (s) => { window.state = s; } };

@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" width="240">
+  <defs>
+    <filter id="paper3"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="n"/><feDiffuseLighting in="n" lighting-color="#f4e4bc" surfaceScale="1.2"><feDistantLight azimuth="45" elevation="60"/></feDiffuseLighting></filter>
+    <linearGradient id="qing" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2a5a3a"/>
+      <stop offset="100%" stop-color="#1a3a2a"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="384" height="584" fill="#f4e4bc" stroke="#8b5a2b" stroke-width="3" filter="url(#paper3)"/>
+  <rect x="16" y="16" width="368" height="568" fill="none" stroke="#8b5a2b" stroke-width="1"/>
+
+  <!-- 敕令头(青色,对应东方青龙) -->
+  <g fill="url(#qing)">
+    <rect x="120" y="28" width="160" height="48" rx="3"/>
+    <!-- 雷纹 -->
+    <path d="M110,32 L120,40 L110,48 L120,56 L110,64" stroke="#2a5a3a" stroke-width="1.5" fill="none" opacity="0.6"/>
+    <path d="M290,32 L280,40 L290,48 L280,56 L290,64" stroke="#2a5a3a" stroke-width="1.5" fill="none" opacity="0.6"/>
+  </g>
+  <text x="200" y="60" text-anchor="middle" fill="#f4e4bc" font-size="30" font-family="'Noto Serif SC',serif" font-weight="bold" letter-spacing="4">敕令</text>
+
+  <!-- 九宫格 -->
+  <g transform="translate(200, 240)" fill="none" stroke="#2a5a3a" stroke-width="2">
+    <rect x="-90" y="-90" width="180" height="180" rx="3"/>
+    <line x1="-30" y1="-90" x2="-30" y2="90"/>
+    <line x1="30" y1="-90" x2="30" y2="90"/>
+    <line x1="-90" y1="-30" x2="90" y2="-30"/>
+    <line x1="-90" y1="30" x2="90" y2="30"/>
+    <!-- 五数字 -->
+    <text x="-60" y="-50" text-anchor="middle" fill="#2a5a3a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">四</text>
+    <text x="0" y="-50" text-anchor="middle" fill="#2a5a3a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">九</text>
+    <text x="60" y="-50" text-anchor="middle" fill="#2a5a3a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">二</text>
+    <text x="-60" y="0" text-anchor="middle" fill="#2a5a3a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">三</text>
+    <text x="0" y="0" text-anchor="middle" fill="#c0392b" font-size="22" font-family="'Noto Serif SC',serif" font-weight="bold">五</text>
+    <text x="60" y="0" text-anchor="middle" fill="#2a5a3a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">七</text>
+    <text x="-60" y="55" text-anchor="middle" fill="#2a5a3a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">八</text>
+    <text x="0" y="55" text-anchor="middle" fill="#2a5a3a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">一</text>
+    <text x="60" y="55" text-anchor="middle" fill="#2a5a3a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">六</text>
+  </g>
+
+  <!-- 青龙(上,主文) -->
+  <g transform="translate(200, 390)" fill="#2a5a3a" font-family="'Noto Serif SC',serif" font-weight="bold" text-anchor="middle">
+    <text x="0" y="0" font-size="24">青龙启圣</text>
+    <text x="0" y="35" font-size="20">东方木德</text>
+    <text x="0" y="70" font-size="20">生发万物</text>
+  </g>
+
+  <!-- 东方青龙 -->
+  <g transform="translate(200, 480)" fill="none" stroke="#2a5a3a" stroke-width="2" opacity="0.5">
+    <path d="M-80,0 Q-60,-10 -40,0 Q-20,10 0,0 Q20,-10 40,0 Q60,10 80,0"/>
+    <path d="M-80,10 Q-60,0 -40,10 Q-20,20 0,10 Q20,0 40,10 Q60,20 80,10"/>
+  </g>
+
+  <!-- 青龙印章 -->
+  <rect x="160" y="500" width="80" height="80" fill="none" stroke="#2a5a3a" stroke-width="3"/>
+  <text x="200" y="535" text-anchor="middle" fill="#2a5a3a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">东方</text>
+  <text x="200" y="565" text-anchor="middle" fill="#2a5a3a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">青龙</text>
+
+  <!-- 符脚 -->
+  <g fill="none" stroke="#2a5a3a" stroke-width="1.5" opacity="0.4">
+    <path d="M25,25 L35,35 L25,45 L35,55"/>
+    <path d="M375,25 L365,35 L375,45 L365,55"/>
+    <path d="M25,575 L35,565 L25,555 L35,545"/>
+    <path d="M375,575 L365,565 L375,555 L365,545"/>
+  </g>
+</svg>

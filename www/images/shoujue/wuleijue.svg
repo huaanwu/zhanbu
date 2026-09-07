@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" width="180">
+  <rect x="10" y="10" width="220" height="260" fill="#fffaf0" stroke="#c9a84c" stroke-width="2" rx="8"/>
+
+  <!-- 手掌 -->
+  <path d="M 65 160 Q 60 155 60 165 L 60 210 Q 60 220 70 220 L 170 220 Q 180 220 180 210 L 180 165 Q 180 155 175 160 L 170 165 L 70 165 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/>
+  <path d="M 70 175 Q 120 180 170 175" fill="none" stroke="#dba77e" stroke-width="0.6"/>
+  <path d="M 75 195 Q 120 200 165 195" fill="none" stroke="#dba77e" stroke-width="0.6"/>
+  <path d="M 80 210 Q 120 215 160 210" fill="none" stroke="#dba77e" stroke-width="0.6"/>
+
+  <path d="M 71 60 Q 71 57 73 55 L 73 165 Q 73 170 71 172 L 89 172 Q 87 170 87 165 L 87 55 Q 87 57 89 60 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5"/>
+    <line x1="73" y1="102" x2="87" y2="102" stroke="#dba77e" stroke-width="0.8"/>
+    <line x1="73" y1="133.5" x2="87" y2="133.5" stroke="#dba77e" stroke-width="0.8"/>
+    <ellipse cx="80" cy="68" rx="6" ry="7" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/><path d="M 96 50 Q 96 47 98 45 L 98 165 Q 98 170 96 172 L 114 172 Q 112 170 112 165 L 112 45 Q 112 47 114 50 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5"/>
+    <line x1="98" y1="96" x2="112" y2="96" stroke="#dba77e" stroke-width="0.8"/>
+    <line x1="98" y1="130.5" x2="112" y2="130.5" stroke="#dba77e" stroke-width="0.8"/>
+    <ellipse cx="105" cy="58" rx="6" ry="7" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/><path d="M 120 55 Q 120 52 122 50 L 122 165 Q 122 170 120 172 L 140 172 Q 138 170 138 165 L 138 50 Q 138 52 140 55 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5"/>
+    <line x1="122" y1="99" x2="138" y2="99" stroke="#dba77e" stroke-width="0.8"/>
+    <line x1="122" y1="132" x2="138" y2="132" stroke="#dba77e" stroke-width="0.8"/>
+    <ellipse cx="130" cy="63" rx="7" ry="7" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/><path d="M 149 70 Q 149 67 151 65 L 151 165 Q 151 170 149 172 L 165 172 Q 163 170 163 165 L 163 65 Q 163 67 165 70 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5"/>
+    <line x1="151" y1="108" x2="163" y2="108" stroke="#dba77e" stroke-width="0.8"/>
+    <line x1="151" y1="136.5" x2="163" y2="136.5" stroke="#dba77e" stroke-width="0.8"/>
+    <ellipse cx="157" cy="78" rx="5" ry="7" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/>
+  <path d="M 42 60 Q 40 55 44 53 L 52 140 Q 54 148 60 149 L 70 150 Q 76 150 75 143 L 66 57 Q 65 51 60 52 L 52 53 Q 46 54 46 60 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5" transform="translate(-8,0)"/>
+    <ellipse cx="50" cy="63" rx="6" ry="8" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5" transform="translate(-2,0)"/>
+
+  <text x="120" y="250" text-anchor="middle" font-size="16" font-family="'Noto Serif SC',serif" font-weight="bold" fill="#5a3a2a">五雷诀</text>
+  <text x="120" y="268" text-anchor="middle" font-size="9" font-family="'Noto Serif SC',serif" fill="#8b6f2a">五指张开如雷掌,掌心向外</text>
+</svg>

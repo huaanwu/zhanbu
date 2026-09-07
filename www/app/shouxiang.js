@@ -1,7 +1,17 @@
-// ========== 看手相 ==========
-let sxLeftBase64 = '', sxRightBase64 = '', sxGender = 'male';
+// ========== 看手相 (Tier 1: 双手掌心+手背 4 张图 + 结构化提示词) ==========
+// sxImages[hand][side] = base64  hand: 'left'|'right'  side: 'palm'|'back'
+// sxKeypoints[hand][side] = MediaPipe 量化结果 (可选, 启用 MediaPipe 后填充)
+// shouxiang-mp.js 通过 type=module script 标签加载,挂到 window.ShouXiangMP
+const sxImages = { left: { palm: '', back: '' }, right: { palm: '', back: '' } };
+const sxKeypoints = { left: { palm: null, back: null }, right: { palm: null, back: null } };
+let sxGender = 'male';
+let sxMPEnabled = false;  // 用户是否启用 MediaPipe 关键点检测
 
-function compressImage(base64, maxWidth = 800, quality = 0.7) {
+function sxGet(hand, side) { return sxImages[hand][side] || ''; }
+function sxHasAll() { return sxGet('left','palm') && sxGet('left','back') && sxGet('right','palm') && sxGet('right','back'); }
+function sxHasAny() { return sxGet('left','palm') || sxGet('left','back') || sxGet('right','palm') || sxGet('right','back'); }
+
+function compressImage(base64, maxWidth = 1200, quality = 0.85) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -16,6 +26,8 @@ function compressImage(base64, maxWidth = 800, quality = 0.7) {
     img.src = base64;
   });
 }
+// v3.0.8:挂到 window 供 mianxiang.js 复用
+if (typeof window.compressImage === 'undefined') window.compressImage = compressImage;
 
 function setSxGender(gender) {
   sxGender = gender;
@@ -36,7 +48,7 @@ function setSxGender(gender) {
     maleBtn.style.color = 'var(--text-secondary)';
     maleBtn.style.background = 'var(--bg-primary)';
   }
-  // 更新左右手标签
+  // 更新左右手标签 (先天/后天)
   if (gender === 'male') {
     document.getElementById('sxLeftLabel').textContent = '先天命格';
     document.getElementById('sxRightLabel').textContent = '后天运势';
@@ -47,233 +59,489 @@ function setSxGender(gender) {
 }
 window.setSxGender = setSxGender;
 
-async function onSxFileSelect(e, hand) {
+async function onSxFileSelect(e, hand, side) {
   const file = e.target.files?.[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = async ev => {
-    const compressed = await compressImage(ev.target.result);
-    if (hand === 'left') {
-      sxLeftBase64 = compressed;
-      document.getElementById('sxPreviewLeft').src = sxLeftBase64;
-      document.getElementById('sxPreviewWrapLeft').style.display = 'block';
-      document.getElementById('sxUploadAreaLeft').style.display = 'none';
-    } else {
-      sxRightBase64 = compressed;
-      document.getElementById('sxPreviewRight').src = sxRightBase64;
-      document.getElementById('sxPreviewWrapRight').style.display = 'block';
-      document.getElementById('sxUploadAreaRight').style.display = 'none';
-    }
-    document.getElementById('sxResult').style.display = 'none';
-    // 两只手都上传后显示解读按钮
-    if (sxLeftBase64 && sxRightBase64) {
-      document.getElementById('sxActionArea').style.display = 'block';
-    }
+  reader.onload = ev => {
+    (async () => {
+      const compressed = await compressImage(ev.target.result);
+      sxImages[hand][side] = compressed;
+      const previewId = `sxPreview${hand.charAt(0).toUpperCase() + hand.slice(1)}${side.charAt(0).toUpperCase() + side.slice(1)}`;
+      const wrapId = `sxPreviewWrap${hand.charAt(0).toUpperCase() + hand.slice(1)}${side.charAt(0).toUpperCase() + side.slice(1)}`;
+      const uploadId = `sxUploadArea${hand.charAt(0).toUpperCase() + hand.slice(1)}${side.charAt(0).toUpperCase() + side.slice(1)}`;
+      document.getElementById(previewId).src = compressed;
+      document.getElementById(wrapId).style.display = 'block';
+      document.getElementById(uploadId).style.display = 'none';
+      document.getElementById('sxResult').style.display = 'none';
+      if (sxHasAll()) {
+        document.getElementById('sxActionArea').style.display = 'block';
+      }
+
+      // Tier 3 关键点: fire-and-forget (后台跑,不阻塞上传流程)
+      // 之前临时屏蔽验证主流程通过,现在恢复
+      if (sxMPEnabled && window.ShouXiangMP?.isReady?.()) {
+        const imgEl = document.getElementById(previewId);
+        Promise.race([
+          window.ShouXiangMP.detectHand(imgEl, sxGender),
+          new Promise((resolve) => setTimeout(() => resolve(null), 3000))
+        ]).then((detection) => {
+          if (detection) {
+            const quant = window.ShouXiangMP.quantifyHand(detection);
+            sxKeypoints[hand][side] = quant;
+            drawKeypointsOverlay(imgEl, detection);
+            updateSxMPStatus();
+            showToast(`✓ ${hand === 'left' ? '左' : '右'}手·${side === 'palm' ? '掌心' : '手背'} 21 关键点检测完成`, 'success');
+          } else {
+            sxKeypoints[hand][side] = null;
+            updateSxMPStatus();
+            showToast('⚠️ ' + (hand === 'left' ? '左' : '右') + '手·' + side + ' 未检测到手,请重新拍照(手指展开、掌心清晰)', 'warning');
+          }
+        }).catch((err) => {
+          console.warn('[sx] keypoint detect fail:', err.message);
+          sxKeypoints[hand][side] = null;
+        });
+      }
+    })();
   };
   reader.readAsDataURL(file);
+}
+
+// 在 img 上叠加 canvas 显示关键点骨架
+function drawKeypointsOverlay(imgEl, detection) {
+  if (!window.ShouXiangMP?.drawKeypoints) return;
+  let canvas = imgEl.nextElementSibling;
+  // 每次新上传都把旧 canvas 删了重建,避免 offsetTop/offsetLeft 漂移
+  // 修复 finding #5:旧实现 cache 了第一次的 offset,后续重绘还在老位置
+  if (canvas && canvas.classList?.contains('sx-kp-overlay')) {
+    canvas.remove();
+    canvas = null;
+  }
+  canvas = document.createElement('canvas');
+  canvas.className = 'sx-kp-overlay';
+  canvas.style.position = 'absolute';
+  canvas.style.top = '0';
+  canvas.style.left = '0';
+  canvas.style.width = '100%';
+  canvas.style.height = '100%';
+  canvas.style.pointerEvents = 'none';
+  if (getComputedStyle(imgEl.parentElement).position === 'static') {
+    imgEl.parentElement.style.position = 'relative';
+  }
+  imgEl.parentElement.appendChild(canvas);
+  window.ShouXiangMP.drawKeypoints(canvas, detection);
 }
 window.onSxFileSelect = onSxFileSelect;
 
 function clearShouxiang() {
-  sxLeftBase64 = ''; sxRightBase64 = '';
-  document.getElementById('sxFileInputLeft').value = '';
-  document.getElementById('sxFileInputRight').value = '';
-  document.getElementById('sxPreviewWrapLeft').style.display = 'none';
-  document.getElementById('sxPreviewWrapRight').style.display = 'none';
-  document.getElementById('sxUploadAreaLeft').style.display = 'block';
-  document.getElementById('sxUploadAreaRight').style.display = 'block';
+  sxImages.left = { palm: '', back: '' };
+  sxImages.right = { palm: '', back: '' };
+  sxKeypoints.left = { palm: null, back: null };
+  sxKeypoints.right = { palm: null, back: null };
+  [['left','palm'], ['left','back'], ['right','palm'], ['right','back']].forEach(function(p) {
+    var hand = p[0], side = p[1];
+    var cap = hand.charAt(0).toUpperCase() + hand.slice(1);
+    var sCap = side.charAt(0).toUpperCase() + side.slice(1);
+    var input = document.getElementById('sxFileInput' + cap + sCap);
+    if (input) input.value = '';
+    var wrap = document.getElementById('sxPreviewWrap' + cap + sCap);
+    if (wrap) wrap.style.display = 'none';
+    var upload = document.getElementById('sxUploadArea' + cap + sCap);
+    if (upload) upload.style.display = 'block';
+    // 同时把上一个 drawKeypointsOverlay 留下的 .sx-kp-overlay canvas 也清掉
+    // 修复 finding #5:clearShouxiang 之前只 display:none wrap,canvas 残留在 DOM 里
+    var preview = document.getElementById('sxPreview' + cap + sCap);
+    if (preview) {
+      var next = preview.nextElementSibling;
+      if (next && next.classList?.contains('sx-kp-overlay')) next.remove();
+    }
+  });
   document.getElementById('sxActionArea').style.display = 'none';
   document.getElementById('sxResult').style.display = 'none';
+  updateSxMPStatus();
 }
 window.clearShouxiang = clearShouxiang;
 
-function sxFlipImage(hand) {
-  const base64 = hand === 'left' ? sxLeftBase64 : sxRightBase64;
+// MediaPipe 关键点开关 + 状态显示
+function updateSxMPStatus() {
+  var statusEl = document.getElementById('sxMPStatus');
+  var btn = document.getElementById('sxMPToggleBtn');
+  if (!statusEl || !btn) return;
+  if (!sxMPEnabled) {
+    statusEl.textContent = '未启用';
+    statusEl.style.color = 'var(--text-muted)';
+    btn.textContent = '启用关键点';
+    btn.style.background = 'var(--accent-gold)';
+    return;
+  }
+  var ready = window.ShouXiangMP?.isReady?.();
+  if (ready) {
+    var done = sxKeypoints.left.palm || sxKeypoints.left.back || sxKeypoints.right.palm || sxKeypoints.right.back;
+    statusEl.textContent = done ? '✓ 已检测' : '就绪';
+    statusEl.style.color = done ? 'var(--accent-green)' : 'var(--accent-gold)';
+    btn.textContent = '已启用';
+    btn.style.background = 'var(--bg-inner)';
+  } else {
+    statusEl.textContent = '加载中...';
+    statusEl.style.color = 'var(--accent-gold)';
+  }
+}
+
+async function sxToggleMediaPipe() {
+  if (sxMPEnabled && window.ShouXiangMP?.isReady?.()) {
+    // 关闭:卸载模型释放 GPU 张量 (finding #13) + 清掉用户数据
+    sxMPEnabled = false;
+    sxKeypoints.left = { palm: null, back: null };
+    sxKeypoints.right = { palm: null, back: null };
+    // 把 .sx-kp-overlay 残 canvas 也清掉
+    document.querySelectorAll('.sx-kp-overlay').forEach(n => n.remove());
+    try { await window.ShouXiangMP.disposeHandpose?.(); } catch (e) { console.warn('[sx] handpose dispose warn:', e.message); }
+    updateSxMPStatus();
+    showToast('已关闭 AI 关键点检测', 'info');
+    return;
+  }
+  // 启用:加载 TF.js handpose
+  sxMPEnabled = true;
+  updateSxMPStatus();
+  try {
+    showToast('正在加载 MediaPipe Hands 模型...', 'info');
+    await window.ShouXiangMP.loadMediaPipe();
+    updateSxMPStatus();
+    showToast('MediaPipe 加载完成,上传图时自动检测', 'success');
+  } catch (e) {
+    sxMPEnabled = false;
+    // 加载失败也要 dispose 掉半加载的 model (finding #2 risk)
+    try { await window.ShouXiangMP.disposeHandpose?.(); } catch (disposeErr) { console.warn('[sx] handpose dispose warn:', disposeErr.message); }
+    updateSxMPStatus();
+    showToast('MediaPipe 加载失败,降级为纯 AI 解读: ' + e.message, 'error');
+  }
+}
+window.sxToggleMediaPipe = sxToggleMediaPipe;
+
+function sxFlipImage(hand, side) {
+  var base64 = sxGet(hand, side);
   if (!base64) return;
-  const img = new Image();
+  var img = new Image();
   img.onload = () => {
-    const canvas = document.createElement('canvas');
+    var canvas = document.createElement('canvas');
     canvas.width = img.width;
     canvas.height = img.height;
-    const ctx = canvas.getContext('2d');
+    var ctx = canvas.getContext('2d');
     ctx.translate(img.width, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(img, 0, 0);
-    const flipped = canvas.toDataURL('image/jpeg', 0.9);
-    if (hand === 'left') {
-      sxLeftBase64 = flipped;
-      document.getElementById('sxPreviewLeft').src = flipped;
-    } else {
-      sxRightBase64 = flipped;
-      document.getElementById('sxPreviewRight').src = flipped;
+    var flipped = canvas.toDataURL('image/jpeg', 0.9);
+    sxImages[hand][side] = flipped;
+    // 翻转后关键点坐标是镜像前的,必须清掉避免把 stale keypoints 发给 AI
+    // 修复 finding #2:sxFlipImage 不清 sxKeypoints
+    sxKeypoints[hand][side] = null;
+    updateSxMPStatus();
+    var cap = hand.charAt(0).toUpperCase() + hand.slice(1);
+    var sCap = side.charAt(0).toUpperCase() + side.slice(1);
+    var preview = document.getElementById('sxPreview' + cap + sCap);
+    if (preview) {
+      preview.src = flipped;
+      // 同一张图残 canvas 也清掉
+      var next = preview.nextElementSibling;
+      if (next && next.classList?.contains('sx-kp-overlay')) next.remove();
     }
   };
   img.src = base64;
 }
 window.sxFlipImage = sxFlipImage;
 
+// 构建 4 张图的 Vision prompt (双手 + 掌心/手背)
+function buildShouxiangPrompt(先天Hand, 后天Hand, isMale) {
+  return `你是一位精通手相学的命理大师。用户性别为${isMale ? '男' : '女'}，传统手相学中${isMale ? '男看左先天右后天' : '女看右先天左后天'}。
+
+【四张图片对应关系】
+1️⃣ = ${先天Hand}·掌心 · 先天命格 (主线/纹路/丘位)
+2️⃣ = ${先天Hand}·手背 · 先天体征 (指甲/关节/皮肤)
+3️⃣ = ${后天Hand}·掌心 · 后天运势 (实际人生轨迹)
+4️⃣ = ${后天Hand}·手背 · 后天体征
+
+【关键观察要求 (先观察再推理)】
+- 掌心照优先看主线: 生命线(拇指球侧弧)、智慧线(掌心横)、感情线(小指下弧)
+- 手背照看: 指甲颜色/形状/半月痕(健康)、关节灵活度、青筋(气血)
+- 每只手分两图交叉看,避免单图光线/角度误差
+
+【分析维度 · 每只手按以下8项输出】
+1. 掌型 (火/水/木/金/土型 + 理由)
+2. 生命线 (长短/深浅/有无断裂/岛纹/分叉/链状)
+3. 智慧线 (长短/弧度/分叉/末端朝向)
+4. 感情线 (长短/弧度/分叉/有无断裂)
+5. 事业线 + 财运线 + 婚姻线 (有无 + 特征)
+6. 掌丘丰满度 (木丘/火星丘/土丘等)
+7. 手指特征 (长短/指节/指纹)
+8. 特殊标记 (三角纹/十字纹/星纹/链状纹/断裂)
+
+【输出格式】
+=== ${先天Hand}·先天命格 (掌+背) ===
+1-8 项逐项分析...
+=== ${后天Hand}·后天运势 (掌+背) ===
+1-8 项逐项分析...
+=== 双手对比 ===
+- 先天到后天哪些纹路变化 (深/浅/新增/消失)
+- 反映的运势转变 (事业/感情/健康等)
+=== 综合解读 ===
+健康、事业、财运、感情、性格、6-12个月运势、具体建议
+
+【语言约束】纯中文输出,禁止英文/思考过程/分析步骤。`;
+}
+
+// ===== doShouxiang 帮助函数 (v3.0.6 cleanup) =====
+// 统一渲染调用结果 — 避免 pre-wrap + escapeHtml 在 3 处重复(cache-hit / streaming / final)
+function renderSx(label, text) {
+  resultEl.innerHTML = '<div style="white-space:pre-wrap;">[' + label + ' · ' + imageUrls.length + ' 张图]\n\n' + escapeHtml(text) + '</div>';
+}
+// 从 window.current* 全局中取第一个有效命盘,返回 {pan, src} 或 null
+function pickLinkPan() {
+  if (window.currentCross && (window.currentCross.bazi || window.currentCross.ziwei || window.currentCross.liuyao || window.currentCross.qimen)) {
+    return { pan: window.currentCross, src: '三术同参' };
+  }
+  if (window.currentBazi) return { pan: { bazi: window.currentBazi }, src: '八字' };
+  if (window.currentZw)  return { pan: { ziwei: window.currentZw }, src: '紫微' };
+  if (window.currentLy)  return { pan: { liuyao: window.currentLy }, src: '六爻' };
+  if (window.currentQm)  return { pan: { qimen: window.currentQm }, src: '奇门' };
+  return null;
+}
+
 async function doShouxiang() {
-  if (!sxLeftBase64 || !sxRightBase64) {
-    showToast('请上传左右两只手的手掌照片', 'error');
+  console.log("[sx] doShouxiang 入口, images:", JSON.stringify(Object.keys(sxImages).map(function(h){return [h,Object.keys(sxImages[h]).filter(function(s){return !!sxImages[h][s]}).join(",")];})), "localPort:", getLocalServerPort(), "localUrl:", getLocalServerUrl());
+  if (!sxHasAny()) {
+    showToast('请至少上传一只手的一张手相照片', 'error');
     return;
   }
   const resultEl = document.getElementById('sxResult');
   resultEl.style.display = 'block';
-  resultEl.innerHTML = '<div class="loading">AI 正在分析双手手相...</div>';
+  resultEl.innerHTML = '<div class="loading">AI 正在分析手相(4 张图)...</div>';
   await ensureKB();
   await loadKBGroup('shouxiang');
 
   const isMale = sxGender === 'male';
+  // 男左先天/右后天; 女右先天/左后天(传统手相学)
   const 先天Hand = isMale ? '左手' : '右手';
   const 后天Hand = isMale ? '右手' : '左手';
+  // 物理手映射: sxImages[sxImagesKey] 存文件, 左 = 'left'
+  const 先天Side = isMale ? 'left' : 'right';
+  const 后天Side = isMale ? 'right' : 'left';
 
-  const visionPrompt = `请仔细观察以下两张手相照片。
+  // Tier 3: MediaPipe 量化事实 (如果有)
+  // 去掉之前的 3 行 truncated back-of-hand 截断 —— 要么全输出要么不输出
+  // (finding #2:formatQuantifiedForPrompt(back).slice(0,3) 是信息损失的 hack)
+  var quantFacts = '';
+  [[先天Side, 先天Hand], [后天Side, 后天Hand]].forEach(function(p) {
+    var sideKey = p[0], handName = p[1];
+    var palm = sxKeypoints[sideKey].palm, back = sxKeypoints[sideKey].back;
+    if (palm || back) {
+      quantFacts += '\n【' + handName + '·Tier-3 量化】\n';
+      if (palm) quantFacts += window.ShouXiangMP.formatQuantifiedForPrompt(palm) + '\n';
+      if (back) quantFacts += window.ShouXiangMP.formatQuantifiedForPrompt(back) + '\n';
+    }
+  });
+  if (quantFacts) quantFacts = '\n\n【量化锚点 (TF.js Handpose 21 关键点 · 相对量,占原图宽 %)】\n' + quantFacts;
 
-【重要规则：左右手已由用户上传时明确标注，严格按以下顺序分析，不要自行判断方向】
-第一张图片 = ${先天Hand}（${先天Hand === '左手' ? '用户上传的左边照片' : '用户上传的右边照片'}）· 先天命格
-第二张图片 = ${后天Hand}（${后天Hand === '右手' ? '用户上传的右边照片' : '用户上传的左边照片'}）· 后天运势
-用户性别：${isMale ? '男' : '女'}
+  // visionPrompt 是 user-side 的内容,绝不进 system (避免双发 / 同时丢)
+  // 之前 quantFacts 既塞 extraSystem 又塞 user,这条 PR 已经合并
+  var visionPrompt = buildShouxiangPrompt(先天Hand, 后天Hand, isMale) + quantFacts;
 
-【性别与左右手分工】
-${isMale ? '男性手相：左手代表先天命格（天生底子），右手代表后天运势（实际人生经历）。' : '女性手相：右手代表先天命格（天生底子），左手代表后天运势（实际人生经历）。'}
+  // 构造图片数组 (按提示词对应顺序: 先天掌心→先天手背→后天掌心→后天手背)
+  const imageUrls = [];
+  const missingSlots = [];
+  // 同时构造 cache key 用的 images 字典 (修复 Cache.makeKey 4图字段)
+  const imagesForCache = {};
+  [[先天Side, 先天Hand], [后天Side, 后天Hand]].forEach(function(p) {
+    var sideKey = p[0], handName = p[1];
+    ['palm', 'back'].forEach(function(side) {
+      var data = sxGet(sideKey, side);
+      const cacheKey4 = sideKey + (side === 'palm' ? 'Palm' : 'Back');
+      if (data) {
+        imagesForCache[cacheKey4] = data;
+        imageUrls.push({ type: 'image_url', image_url: { url: data } });
+      } else {
+        missingSlots.push(`${handName}·${side === 'palm' ? '掌心' : '手背'}`);
+      }
+    });
+  });
+  if (missingSlots.length) {
+    visionPrompt += `\n\n【缺失照片】以下位置用户未上传,解读时不要瞎编:${missingSlots.join('、')}`;
+  }
 
-请对每张照片分别提取结构化信息，并做双手对比：
+  // Tier 2 联动: pickLinkPan() 遍历全局命盘,返回命盘对象 + 来源标签
+  const link = pickLinkPan();
+  const linkPan = link ? link.pan : null;
+  const linkSrc = link ? link.src : '';
+  var linkHint = '';
+  if (linkPan) {
+    const Expert = window.Expert;
+    var linkFacts = '';
+    if (Expert) {
+      try {
+        if (linkPan.bazi && typeof Expert.bazi === 'function') linkFacts += '【八字事实·100%准确】\n' + Expert.bazi(linkPan.bazi) + '\n';
+        if (linkPan.ziwei && typeof Expert.ziwei === 'function') linkFacts += '【紫微事实·100%准确】\n' + Expert.ziwei(linkPan.ziwei) + '\n';
+        if (linkPan.liuyao && typeof Expert.liuyao === 'function') linkFacts += '【六爻事实·100%准确】\n' + Expert.liuyao(linkPan.liuyao) + '\n';
+        if (linkPan.qimen && typeof Expert.qimen === 'function') linkFacts += '【奇门事实·100%准确】\n' + Expert.qimen(linkPan.qimen) + '\n';
+      } catch (e) { console.warn('[sx] Expert 联动事实生成失败:', e); }
+    }
+    linkHint = '\n\n【已联动】本次手相解读结合用户最新一次' + linkSrc + '排盘做交叉印证。\n' + linkFacts;
+  }
+  const system = await Core.AI.buildSystemPrompt({
+    domain: 'shouxiang',
+    pan: linkPan,
+    question: '',
+    extraSystem: linkHint
+  });
 
-【${先天Hand} · 先天命格】（第一张图片）
-1. 掌型判断（火/水/木/金/土型及理由）
-2. 生命线特征（长短、深浅、断裂/岛纹/分叉/链状纹）
-3. 智慧线特征
-4. 感情线特征
-5. 事业线/财运线/婚姻线有无及特征
-6. 掌丘丰满度
-7. 手指特征
-8. 特殊标记（三角纹、十字纹、星纹等）
-
-【${后天Hand} · 后天运势】（第二张图片）
-（同上8项）
-
-【双手对比】
-9. 两只手纹路的相似度与差异
-10. 从先天手到后天手，哪些纹路变深/变浅/新增/消失
-11. 这种变化反映的运势转变
-
-请用中文输出结构化观察结果。`;
-
-  // ========== 检测本地模型是否可用 ==========
-  async function checkLocalModel(port) {
-    try {
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 15000);
-      const res = await fetch(`http://${getLocalServerIp()}:${port}/v1/models`, {
-        method: 'GET',
-        signal: ctrl.signal
-      });
-      clearTimeout(t);
-      return res.ok;
-    } catch (e) {
-      console.log('检测端口' + port + '失败:', e.message);
-      return false;
+  // v3.0.6:Cache 命中先返回 (避免重复付费 + 重复等待)
+  const Cache = window.Cache;
+  const hasAnyKPs = sxKeypoints.left.palm || sxKeypoints.left.back || sxKeypoints.right.palm || sxKeypoints.right.back;
+  const cacheParams = {
+    linkPan: linkPan || null,
+    images: imagesForCache,
+    keypoints: hasAnyKPs ? 1 : 0,
+    sxGender: sxGender,
+    question: '',
+  };
+  const sxCacheKey = Cache ? Cache.makeKey('shouxiang', cacheParams) : null;
+  if (sxCacheKey) {
+    const cached = Cache.get('shouxiang', cacheParams);
+    if (cached) {
+      renderSx('缓存命中', cached);
+      finalizeShouxiang(resultEl, cached);
+      return;
     }
   }
+
+  // ========== VL 调用已迁到 Core.AI.callMultimodalVision (v3.0.8) ==========
+  // 本地→云端 fallback + 流式 + abort 的封装现在统一在 core/ai-service.js,
+  // shouxiang / mianxiang 共享同一个实现,调用方传 targetEl 即可。
+  // 检测本地模型 (Core.AI.pingLocalModel 已在 core/ai-service.js export)
+  async function checkLocalModel(port) { return await Core.AI.pingLocalModel(port); }
+
+  // messages 构造:system → role=system message;user → 文本 + image_url 内容块列表
+  // (修复 finding P1-5:OpenAI/DashScope 不认顶层 system 字段,会被静默丢弃)
+  // (修复 finding P1-7:visionPrompt 只发 user 一份,不再双发)
+  const messages = [
+    { role: 'system', content: system || '' },
+    { role: 'user', content: [{ type: 'text', text: visionPrompt }].concat(imageUrls) }
+  ];
 
   const localPort = getLocalServerPort();
-  const hasVL   = await checkLocalModel(localPort);  // 识图模型
-  const hasText = await checkLocalModel(localPort);  // 文本模型
+  let fullText = '';
+  let usedSource = '';
 
   // ========== 本地 VL 一把搞定 ==========
-  if (hasVL) {
+  // getLocalServerUrl = http://{local_server_ip}:{local_server_port}
+  // 手机上 IP 默认是 127.0.0.1 → 手机自己的 IP,不是电脑!
+
+  // ping: 探测 /v1/models
+  const localAlive = await checkLocalModel(localPort);
+  // (诊断):把 endpoint 显示给用户,看实际发了哪
+  resultEl.innerHTML = `<div class="loading">ping ${getLocalServerUrl()}/v1/models ...</div>`;
+  if (localAlive) {
+    usedSource = `本地 VL (${localPort})`;
     try {
-      resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在深度思考（最长8分钟）...</div>`;
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 600000); // 10分钟，深度思考慢模型需要足够时间，深度思考慢模型需要足够时间
-      const feedbackCalib = window.FeedbackLoop ? window.FeedbackLoop.getCalibrationPrompt('shouxiang') : '';
-      const fullPrompt = `你是一位精通手相学的命理大师。用户性别为${isMale ? '男' : '女'}，传统手相学中${isMale ? '男看左先天右后天' : '女看右先天左后天'}。
+      const localModelName = (typeof Core.AI === 'object' && typeof Core.AI.getLocalModelName === 'function'
+        ? await Core.AI.getLocalModelName()
+        : (localStorage.getItem('local_model_name') || 'local'));
 
-【重要规则】
-第一张图片 = ${先天Hand} · 先天命格
-第二张图片 = ${后天Hand} · 后天运势
-
-请直接观察这两张手相照片，给出完整的命理解读：
-1. ${先天Hand}先天命格分析
-2. ${后天Hand}后天运势分析
-3. 先天到后天的运势变化
-4. 健康、事业、财运、感情等方面
-5. 两只手差异的含义
-6. 改善建议与趋吉避凶
-
-知识库参考：
-` + kbPrimary('shouxiang') + kbExtended('shouxiang', '') + (feedbackCalib ? '\n\n' + feedbackCalib : '') + `
-
-【语言约束】所有输出必须使用纯中文，禁止输出任何英文单词、句子或混合中英文内容。禁止输出思考过程、分析步骤、"thinking process"等元内容。`;
-      const res = await fetch(`${getLocalServerUrl()}/v1/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'local',
-          messages: [{ role: 'user', content: [
-            { type: 'text', text: fullPrompt },
-            { type: 'image_url', image_url: { url: sxLeftBase64 } },
-            { type: 'image_url', image_url: { url: sxRightBase64 } }
-          ] }],
-          temperature: 0.15, max_tokens: 4096
-        }),
-        signal: ctrl.signal
-      });
-      clearTimeout(timer);
-      if (!res.ok) throw new Error('VL HTTP ' + res.status);
-      const data = await res.json();
-      const text = data.choices?.[0]?.message?.content?.trim() || '未返回内容';
-      const cleanText = stripThinking(text);
-      resultEl.innerHTML = '<div style="white-space:pre-wrap;">[本地 VL 模型 · 一把搞定]\n\n' + escapeHtml(cleanText) + '</div>';
-      return;
+      // 一次发4张图 + 流式: 正确的手相解读方式
+      // 之前拆4张独立请求导致每张只能看1张图,模型没全局观
+      // 改回4张一起发,但用 SSE 流式输出逐步显示
+      resultEl.innerHTML = `<div class="loading">本地模型(${localPort})正在分析${imageUrls.length}张图片...<br><small>当前模型: ${localModelName} | endpoint: ${getLocalServerUrl()}</small></div>`;
+      fullText = await Core.AI.callMultimodalVision(
+        `${getLocalServerUrl()}/v1/chat/completions`,
+        { 'Content-Type': 'application/json' },
+        { model: localModelName, messages, temperature: 0.15, max_tokens: 4096, stream: true },
+        usedSource,
+        600000,
+        { targetEl: resultEl }
+      );
     } catch (e) {
-      console.log('本地 VL 失败:', e.message);
-      resultEl.innerHTML = `<div class="loading">本地 模型(${localPort})失败: ` + escapeHtml(e.message) + '，准备切换云端...</div>';
+      const isTimeoutAbort = e?.name === 'AbortError' && (
+        e.message?.includes('timeout') ||
+        e.message?.includes('exceeded') ||
+        String(e?.cause || '').includes('sx-timeout')
+      );
+      if (e?.name === 'AbortError' && !isTimeoutAbort) {
+        resultEl.innerHTML = '<div class="info">已停止生成。</div>';
+        return;
+      }
+      const reasonLabel = isTimeoutAbort ? '本地模型超时' : '本地模型失败';
+      console.warn(`[sx] ${reasonLabel},降级云端:`, e.message);
+      resultEl.innerHTML = `<div class="loading">${reasonLabel}: ${escapeHtml(e.message)} — 切云端...</div>`;
+      fullText = '';
+    }
+  } else {
+    // 模型不可达 → 直接进入云端 fallback (页面保持 loading)
+    console.warn('[sx] 本地模型 ' + getLocalServerUrl() + ' 不可达');
+  }
+
+  // ========== 云端 VL fallback (DeepSeek,任务 #42 统一 DeepSeek) ==========
+  if (!fullText) {
+    const vKey = localStorage.getItem('ds_api_key') || '';
+    if (!vKey) {
+      resultEl.innerHTML = `<div class="error">本地识图服务未启动(${localPort})，且未配置 DeepSeek API Key。<br>请在设置页填写 DeepSeek API Key，或启动本地 VL 模型。</div>`;
+      return;
+    }
+    usedSource = '云端 DeepSeek (VL)';
+    resultEl.innerHTML = '<div class="loading">调用云端识图(' + imageUrls.length + ' 张图分析)...</div>';
+    try {
+      // v3.1.2: 统一云端走 DeepSeek 视觉模型
+      // 强制使用 deepseek-v4-flash-vision-exp;清理 qwen-vl 残留值(用户若存过 qwen-vl-plus,直接覆盖)
+      const savedVisionModel = localStorage.getItem('vision_model') || '';
+      const model = (savedVisionModel.startsWith('deepseek')) ? savedVisionModel : 'deepseek-v4-flash-vision-exp';
+      fullText = await Core.AI.callMultimodalVision(
+        (localStorage.getItem('ds_base_url') || 'https://api.deepseek.com/v1').replace(/\/v1\/?$/, '') + '/v1/chat/completions',
+        { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + vKey },
+        { model, messages, temperature: 0.6, max_tokens: 4096, stream: true },
+        usedSource,
+        120000,
+        { targetEl: resultEl }
+      );
+    } catch (e) {
+      if (e?.name === 'AbortError') {
+        resultEl.innerHTML = '<div class="info">已停止生成。</div>';
+        return;
+      }
+      resultEl.innerHTML = `<div class="error"><strong>分析失败</strong><br>本地模型无法连接，云端模型也未配置或不可用。<br><br><strong>解决步骤：</strong><br>1. 确认手机和电脑在同一WiFi下<br>2. 检查本地模型是否已启动（${localPort}端口）<br>3. 或在设置页配置 DeepSeek API Key<br><br>错误详情: ` + escapeHtml(e.message) + '</div>';
+      return;
     }
   }
 
-  // ========== Fallback: 云端 VL 一把搞定 ==========
-  const vKey = localStorage.getItem('vision_api_key') || DEFAULT_VISION_KEY;
-  if (!vKey) {
-    resultEl.innerHTML = `<div class="error">本地识图服务未启动(${localPort})，且未配置识图 API Key。<br>请在设置页填写阿里云百炼 API Key，或启动本地 VL 模型。</div>`;
+  fullText = Core.AI.stripThinking(fullText || '');
+  if (!fullText) {
+    resultEl.innerHTML = '<div class="error">模型返回空内容,请重试</div>';
     return;
   }
 
-  resultEl.innerHTML = '<div class="loading">本地不可用，调用云端识图（双手分析）...</div>';
-  try {
-    const model = localStorage.getItem('vision_model') || 'qwen-vl-plus';
-    const promptText = `你是一位精通手相学的命理大师。用户性别为${isMale ? '男' : '女'}，传统手相学中${isMale ? '男看左先天右后天' : '女看右先天左后天'}。\n\n【重要规则：左右手已由用户上传时明确标注，严格按以下顺序分析】\n第一张图片 = ${先天Hand} · 先天命格\n第二张图片 = ${后天Hand} · 后天运势\n\n请仔细观察这两张手相照片（${先天Hand}和${后天Hand}），从以下维度进行详细分析：\n\n【${先天Hand}分析】（第一张图片）\n1. 掌型（火型、水型、木型、金型、土型）\n2. 三大主线（生命线、智慧线、感情线）\n3. 事业线、财运线、婚姻线等辅助纹路\n4. 掌丘与手指特征\n\n【${后天Hand}分析】（第二张图片）\n（同上）\n\n【双手对比】\n5. 先天到后天的运势变化\n6. 两只手差异的含义\n\n请用通俗易懂的语言给出详细解读。` + kbPrimary('shouxiang') + kbExtended('shouxiang', '') + (window.FeedbackLoop ? window.FeedbackLoop.getCalibrationPrompt('shouxiang') : '') + `
+  renderSx(usedSource, fullText);
 
-【语言约束】所有输出必须使用纯中文，禁止输出任何英文单词、句子或混合中英文内容。禁止输出思考过程、分析步骤、"thinking process"等元内容。`;
-    const ctrl3 = new AbortController();
-    const t3 = setTimeout(() => ctrl3.abort(), 90000);
-    const res = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + vKey },
-      body: JSON.stringify({
-        model: model,
-        messages: [{ role: 'user', content: [
-          { type: 'text', text: promptText },
-          { type: 'image_url', image_url: { url: sxLeftBase64 } },
-          { type: 'image_url', image_url: { url: sxRightBase64 } }
-        ] }],
-        temperature: 0.6, max_tokens: 4096
-      }),
-      signal: ctrl3.signal
-    });
-    clearTimeout(t3);
-    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || 'HTTP ' + res.status); }
-    const data = await res.json();
-    const text = data.choices?.[0]?.message?.content?.trim() || '未返回内容';
-    const cleanText = stripThinking(text);
-    resultEl.innerHTML = '<div style="white-space:pre-wrap;">[云端模型]\n\n' + escapeHtml(cleanText) + '</div>';
-  } catch (e) {
-    resultEl.innerHTML = `<div class="error"><strong>分析失败</strong><br>本地模型无法连接，云端模型也未配置或不可用。<br><br><strong>解决步骤：</strong><br>1. 确认手机和电脑在同一WiFi下<br>2. 检查本地模型是否已启动（${localPort}端口）<br>3. 或在设置页配置阿里云百炼API Key<br><br>错误详情: ` + escapeHtml(e.message) + '</div>';
+  // 写缓存
+  if (sxCacheKey && fullText) {
+    try { Cache.set('shouxiang', cacheParams, fullText); }
+    catch (e) { console.warn('[sx] cache set fail:', e); }
   }
+
+  // v3.0.6 v3.0.5 收尾:历史 + 反馈 + 工具栏 + 事件派发
+  finalizeShouxiang(resultEl, fullText);
+}
+
+// 把手相解读结果"完整收尾"——保存历史、加反馈 UI、显示工具栏、派发 AI_COMPLETE 事件
+// 抽出来让 cache-hit 与正常完成路径共用
+function finalizeShouxiang(resultEl, fullText) {
+  try { window.saveHistory?.('shouxiang', 'shouxiang-' + Date.now(), '手相解读', fullText); } catch (e) { console.warn('[sx] saveHistory:', e); }
+  try { window.addFeedbackUI?.('shouxiang', resultEl, fullText, '', ''); } catch (e) { console.warn('[sx] addFeedbackUI:', e); }
+  try { window.showResultActions?.('sxResult', 'sxResultActions'); } catch (e) { console.warn('[sx] showResultActions:', e); }
+  try {
+    const bus = window.EventBus; const evName = window.CoreEvents?.AI_COMPLETE;
+    if (bus && evName) bus.dispatchEvent(new CustomEvent(evName, { detail: { domain: 'shouxiang', outputText: fullText, contentEl: resultEl } }));
+  } catch (e) { console.warn('[sx] AI_COMPLETE dispatch:', e); }
 }
 window.doShouxiang = doShouxiang;
-// 拖拽上传
-function setupSxDragDrop(areaId, inputId, hand) {
+
+// 拖拽上传 (适配 4 张图, 每个上传区独立)
+function setupSxDragDrop(areaId, inputId, hand, side) {
   const area = document.getElementById(areaId);
   const input = document.getElementById(inputId);
   if (!area || !input) return;
@@ -287,7 +555,7 @@ function setupSxDragDrop(areaId, inputId, hand) {
       const dt = new DataTransfer();
       dt.items.add(file);
       input.files = dt.files;
-      onSxFileSelect({ target: { files: [file] } }, hand);
+      onSxFileSelect({ target: { files: [file] } }, hand, side);
     }
   });
 }

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" width="180">
+  <rect x="10" y="10" width="220" height="260" fill="#fffaf0" stroke="#c9a84c" stroke-width="2" rx="8"/>
+
+  <!-- 手掌 -->
+  <path d="M 65 160 Q 60 155 60 165 L 60 210 Q 60 220 70 220 L 170 220 Q 180 220 180 210 L 180 165 Q 180 155 175 160 L 170 165 L 70 165 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/>
+  <path d="M 70 175 Q 120 180 170 175" fill="none" stroke="#dba77e" stroke-width="0.6"/>
+  <path d="M 75 195 Q 120 200 165 195" fill="none" stroke="#dba77e" stroke-width="0.6"/>
+  <path d="M 80 210 Q 120 215 160 210" fill="none" stroke="#dba77e" stroke-width="0.6"/>
+
+  <!-- 食指 伸直斜指天 -->
+  <path d="M 71 55 Q 70 50 74 48 L 76 145 Q 76 150 73 152 L 91 152 Q 88 150 88 145 L 86 52 Q 86 48 82 50 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5"/>
+  <line x1="74" y1="95" x2="87" y2="93" stroke="#dba77e" stroke-width="0.8"/>
+  <line x1="75" y1="125" x2="88" y2="123" stroke="#dba77e" stroke-width="0.8"/>
+  <ellipse cx="80" cy="58" rx="5" ry="7" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/>
+
+  <!-- 中指 微屈 -->
+  <path d="M 95 85 Q 95 70 103 65 Q 111 60 113 72 L 115 145 Q 115 150 113 152 L 97 152 Q 95 150 95 145 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5"/>
+  <line x1="97" y1="110" x2="112" y2="108" stroke="#dba77e" stroke-width="0.8"/>
+  <ellipse cx="106" cy="68" rx="5" ry="6" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/>
+
+  <!-- 无名指 微屈(与中指平行成七星) -->
+  <path d="M 121 88 Q 121 74 129 69 Q 137 64 139 76 L 141 145 Q 141 150 139 152 L 123 152 Q 121 150 121 145 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5"/>
+  <line x1="123" y1="112" x2="138" y2="110" stroke="#dba77e" stroke-width="0.8"/>
+  <ellipse cx="132" cy="72" rx="5" ry="6" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/>
+
+  <!-- 小指 伸直斜出 -->
+  <path d="M 149 75 Q 148 70 152 68 L 154 148 Q 154 153 151 155 L 167 155 Q 164 153 164 148 L 162 72 Q 162 68 158 70 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5"/>
+  <line x1="152" y1="108" x2="163" y2="107" stroke="#dba77e" stroke-width="0.8"/>
+  <ellipse cx="157" cy="78" rx="4.5" ry="7" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/>
+
+  <!-- 拇指 横托(斗魁之形) -->
+  <path d="M 55 135 Q 48 131 44 137 L 40 155 Q 38 163 46 165 L 120 168 Q 128 168 128 160 L 128 156 Q 128 148 118 148 L 66 145 Q 60 141 55 135 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5" opacity="0.92"/>
+  <ellipse cx="50" cy="148" rx="6" ry="5" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/>
+
+  <!-- 北斗七星点缀(指间) -->
+  <g fill="#c9a84c">
+    <circle cx="80" cy="38" r="2"/>
+    <circle cx="96" cy="48" r="2"/>
+    <circle cx="112" cy="42" r="2"/>
+    <circle cx="128" cy="50" r="2"/>
+    <circle cx="144" cy="44" r="2"/>
+    <circle cx="156" cy="54" r="2"/>
+    <circle cx="120" cy="28" r="2.5"/>
+  </g>
+  <path d="M 80 38 L 96 48 L 112 42 L 128 50 L 144 44 L 156 54" fill="none" stroke="#c9a84c" stroke-width="0.8" stroke-dasharray="3,2" opacity="0.6"/>
+
+  <text x="120" y="250" text-anchor="middle" font-size="16" font-family="'Noto Serif SC',serif" font-weight="bold" fill="#5a3a2a">北斗诀</text>
+  <text x="120" y="268" text-anchor="middle" font-size="9" font-family="'Noto Serif SC',serif" fill="#8b6f2a">四指伸展如斗魁，拇指横托斗柄，召请北斗星君</text>
+</svg>

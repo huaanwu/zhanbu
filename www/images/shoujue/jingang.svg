@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 280" width="180">
+  <rect x="10" y="10" width="220" height="260" fill="#fffaf0" stroke="#c9a84c" stroke-width="2" rx="8"/>
+
+  <!-- 手掌 -->
+  <path d="M 65 160 Q 60 155 60 165 L 60 210 Q 60 220 70 220 L 170 220 Q 180 220 180 210 L 180 165 Q 180 155 175 160 L 170 165 L 70 165 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="2"/>
+  <path d="M 70 175 Q 120 180 170 175" fill="none" stroke="#dba77e" stroke-width="0.6"/>
+  <path d="M 75 195 Q 120 200 165 195" fill="none" stroke="#dba77e" stroke-width="0.6"/>
+  <path d="M 80 210 Q 120 215 160 210" fill="none" stroke="#dba77e" stroke-width="0.6"/>
+
+  <path d="M 71 150 Q 71 160 74 165 L 74 170 Q 74 172 71 173 L 89 173 Q 86 172 86 170 L 86 165 Q 86 160 89 150 Z" fill="#dba77e" stroke="#5a3a2a" stroke-width="1.5"/><path d="M 96 150 Q 96 160 99 165 L 99 170 Q 99 172 96 173 L 114 173 Q 111 172 111 170 L 111 165 Q 111 160 114 150 Z" fill="#dba77e" stroke="#5a3a2a" stroke-width="1.5"/><path d="M 120 150 Q 120 160 123 165 L 123 170 Q 123 172 120 173 L 140 173 Q 137 172 137 170 L 137 165 Q 137 160 140 150 Z" fill="#dba77e" stroke="#5a3a2a" stroke-width="1.5"/><path d="M 149 150 Q 149 160 152 165 L 152 170 Q 152 172 149 173 L 165 173 Q 162 172 162 170 L 162 165 Q 162 160 165 150 Z" fill="#dba77e" stroke="#5a3a2a" stroke-width="1.5"/>
+  <path d="M 55 140 Q 48 136 44 142 L 40 160 Q 38 168 46 170 L 120 173 Q 128 173 128 165 L 128 161 Q 128 153 118 153 L 66 150 Q 60 146 55 140 Z" fill="#f4c7a1" stroke="#5a3a2a" stroke-width="1.5" opacity="0.92"/>
+    <ellipse cx="50" cy="153" rx="6" ry="5" fill="#fce4d0" stroke="#dba77e" stroke-width="0.5"/>
+
+  <text x="120" y="250" text-anchor="middle" font-size="16" font-family="'Noto Serif SC',serif" font-weight="bold" fill="#5a3a2a">金刚拳</text>
+  <text x="120" y="268" text-anchor="middle" font-size="9" font-family="'Noto Serif SC',serif" fill="#8b6f2a">四指握拳,拇指压食指外侧</text>
+</svg>

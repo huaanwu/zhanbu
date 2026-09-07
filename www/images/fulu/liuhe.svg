@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" width="240">
+  <defs>
+    <filter id="paper9"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="n"/><feDiffuseLighting in="n" lighting-color="#f4e4bc" surfaceScale="1.2"><feDistantLight azimuth="45" elevation="60"/></feDiffuseLighting></filter>
+  </defs>
+  <rect x="8" y="8" width="384" height="584" fill="#f4e4bc" stroke="#8b5a2b" stroke-width="3" filter="url(#paper9)"/>
+  <rect x="16" y="16" width="368" height="568" fill="none" stroke="#8b5a2b" stroke-width="1"/>
+
+  <g fill="#7a3a1a">
+    <rect x="120" y="28" width="160" height="48" rx="3"/>
+  </g>
+  <text x="200" y="60" text-anchor="middle" fill="#f4e4bc" font-size="30" font-family="'Noto Serif SC',serif" font-weight="bold" letter-spacing="4">敕令</text>
+
+  <!-- 六合(两仪相交) -->
+  <g transform="translate(200, 130)" fill="none" stroke="#7a3a1a" stroke-width="2.5" opacity="0.7">
+    <!-- 两个相交圆 -->
+    <circle cx="-15" cy="0" r="22" stroke-width="2.5" fill="none"/>
+    <circle cx="15" cy="0" r="22" stroke-width="2.5" fill="none"/>
+    <!-- 中心点 -->
+    <circle cx="0" cy="0" r="4" fill="#7a3a1a"/>
+    <!-- 上下连接线 -->
+    <path d="M0,-30 L0,-50 M0,30 L0,50" stroke-width="2" stroke-dasharray="4,3"/>
+    <!-- 左右连接 -->
+    <path d="M-45,0 L-70,0 M45,0 L70,0" stroke-width="2" stroke-dasharray="4,3"/>
+    <!-- 四正方位标记 -->
+    <text x="0" y="-55" text-anchor="middle" fill="#7a3a1a" font-size="14" font-family="'Noto Serif SC',serif" font-weight="bold">乾</text>
+    <text x="0" y="65" text-anchor="middle" fill="#7a3a1a" font-size="14" font-family="'Noto Serif SC',serif" font-weight="bold">坤</text>
+    <text x="-75" y="5" text-anchor="middle" fill="#7a3a1a" font-size="14" font-family="'Noto Serif SC',serif" font-weight="bold">坎</text>
+    <text x="75" y="5" text-anchor="middle" fill="#7a3a1a" font-size="14" font-family="'Noto Serif SC',serif" font-weight="bold">离</text>
+  </g>
+
+  <g fill="#7a3a1a" font-family="'Noto Serif SC',serif" font-weight="bold" text-anchor="middle">
+    <text x="200" y="240" font-size="26">六合和合</text>
+    <text x="200" y="280" font-size="22">姻缘和合</text>
+    <text x="200" y="320" font-size="22">人际圆满</text>
+    <text x="200" y="360" font-size="22">六合贵人</text>
+    <text x="200" y="400" font-size="20">急急如律令</text>
+  </g>
+
+  <!-- 和合符纹 -->
+  <g transform="translate(200, 460)" fill="none" stroke="#7a3a1a" stroke-width="2" opacity="0.6">
+    <path d="M-70,-15 Q-50,-5 -70,5 Q-90,15 -70,25" stroke-dasharray="4,2"/>
+    <path d="M70,-15 Q50,-5 70,5 Q90,15 70,25" stroke-dasharray="4,2"/>
+    <path d="M-40,-25 Q-20,-15 -40,-5 M40,-25 Q20,-15 40,-5" stroke-width="1.5" opacity="0.5"/>
+  </g>
+
+  <rect x="160" y="510" width="80" height="80" fill="none" stroke="#7a3a1a" stroke-width="3"/>
+  <text x="200" y="545" text-anchor="middle" fill="#7a3a1a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">六合</text>
+  <text x="200" y="575" text-anchor="middle" fill="#7a3a1a" font-size="20" font-family="'Noto Serif SC',serif" font-weight="bold">贵人</text>
+
+  <g fill="none" stroke="#7a3a1a" stroke-width="1.5" opacity="0.4">
+    <path d="M25,25 L35,35 L25,45 L35,55"/>
+    <path d="M375,25 L365,35 L375,45 L365,55"/>
+    <path d="M25,575 L35,565 L25,555 L35,545"/>
+    <path d="M375,575 L365,565 L375,555 L365,545"/>
+  </g>
+</svg>

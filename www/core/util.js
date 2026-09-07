@@ -17,15 +17,32 @@
       .replace(/'/g, '&#39;');
   }
 
+  // tagged template: auto-escape all interpolated values
+  function safeHTML(strings, ...values) {
+    return strings.reduce((acc, s, i) => {
+      let v = values[i];
+      if (v == null) v = '';
+      else if (typeof v === 'object' && v && v.__safeHTML) v = v.html;
+      else if (typeof v !== 'string') v = String(v);
+      else v = escapeHtml(v);
+      return acc + s + v;
+    }, '');
+  }
+
+  // mark a pre-rendered HTML string as safe for safeHTML composition
+  safeHTML.raw = function(html) {
+    return { __safeHTML: true, html: String(html) };
+  };
+
+
   // 五行映射:10 天干 + 12 地支
   const WX = {
     '甲': '木', '乙': '木', '丙': '火', '丁': '火', '戊': '土', '己': '土', '庚': '金', '辛': '金', '壬': '水', '癸': '水',
     '子': '水', '丑': '土', '寅': '木', '卯': '木', '辰': '土', '巳': '火', '午': '火', '未': '土', '申': '金', '酉': '金', '戌': '土', '亥': '水',
   };
 
-  // 五行生克
-  const SHENG = { 木: '火', 火: '土', 土: '金', 金: '水', 水: '木' };
-  const KE = { 木: '土', 土: '水', 水: '火', 火: '金', 金: '木' };
+  // 五行生克/天干五行/地支五行 — 来自 Expert 单一来源 (expert/tables.js)
+  // 注: util.js 在 Expert 之前加载,函数内调用时 Expert.SHENG/WX 已有值
 
   // v1.2.x 12 令旺衰判断:基于月令 + 根 + 比劫
   function judgeWangShuai(dayGan, gz) {
@@ -37,24 +54,29 @@
       '木': ['寅', '卯'], '火': ['巳', '午'], '土': ['辰', '戌', '丑', '未'],
       '金': ['申', '酉'], '水': ['亥', '子'],
     };
+    // 相 = 生我者之月令; 休 = 我生者; 囚 = 我克者; 死 = 克我者
     const lingXiang = {
       '木': ['亥', '子'], '火': ['寅', '卯'], '土': ['巳', '午'],
       '金': ['辰', '戌', '丑', '未'], '水': ['申', '酉'],
     };
     const lingXiu = {
-      '木': ['巳', '午'], '火': ['辰', '戌', '丑', '未'], '土': ['申', '酉'],
-      '金': ['亥', '子'], '水': ['寅', '卯'],
+      '木': ['巳', '午'], '火': ['申', '酉'], '土': ['寅', '卯'],
+      '金': ['亥', '子'], '水': ['辰', '戌', '丑', '未'],
+    };
+    const lingQiu = {
+      '木': ['辰', '戌', '丑', '未'], '火': ['亥', '子'], '土': ['申', '酉'],
+      '金': ['巳', '午'], '水': ['寅', '卯'],
     };
     const lingJue = {
-      '木': ['申', '酉'], '火': ['亥', '子'], '土': ['寅', '卯'],
-      '金': ['巳', '午'], '水': ['辰', '戌', '丑', '未'],
+      '木': ['申', '酉'], '火': ['辰', '戌', '丑', '未'], '土': ['亥', '子'],
+      '金': ['寅', '卯'], '水': ['巳', '午'],
     };
     let score = 0;
     if (lingWang[wuXing].includes(monthZhi)) score += 3;
     else if (lingXiang[wuXing].includes(monthZhi)) score += 2;
     else if (lingXiu[wuXing].includes(monthZhi)) score += 0;
+    else if (lingQiu[wuXing].includes(monthZhi)) score -= 1;
     else if (lingJue[wuXing].includes(monthZhi)) score -= 2;
-    else score -= 1;
 
     const roots = {
       '木': ['寅', '卯'], '火': ['巳', '午'], '土': ['辰', '戌', '丑', '未'],
@@ -135,5 +157,35 @@
   }
 
   window.Core = window.Core || {};
-  window.Core.Util = { escapeHtml, WX, SHENG, KE, judgeWangShuai, initDateInputs, selCal, selLeap, selGender };
+  window.Core.Util = { escapeHtml, safeHTML, WX, judgeWangShuai, initDateInputs, selCal, selLeap, selGender,
+    // v3.0.6: 通用 CDN <script> 加载器 (从 shouxiang-mp.js 提升)
+    // 支持已加载/加载中/失败状态的去重,30s 超时 + 失败后自动删 tag
+    loadCDNScript: function(url, timeoutMs) {
+      if (typeof timeoutMs !== 'number') timeoutMs = 30000;
+      return new Promise((resolve, reject) => {
+        var existing = document.querySelector('script[data-src="' + url + '"]');
+        if (existing && existing.dataset.loaded === '1') return resolve();
+        // 上次失败 → 删 tag 重新来
+        if (existing && existing.dataset.error === '1') existing.remove();
+        if (existing && existing.dataset.loading === '1') {
+          existing.addEventListener('load', function() { resolve(); }, { once: true });
+          existing.addEventListener('error', function() { reject(new Error('CDN load fail: ' + url)); }, { once: true });
+          return;
+        }
+        var script = existing || document.createElement('script');
+        script.src = url;
+        script.dataset.src = url;
+        script.dataset.loading = '1';
+        var timer = setTimeout(function() {
+          script.dataset.loading = '';
+          script.dataset.error = '1';
+          script.remove();
+          reject(new Error('CDN timeout after ' + timeoutMs + 'ms: ' + url));
+        }, timeoutMs);
+        script.onload = function() { clearTimeout(timer); script.dataset.loaded = '1'; script.dataset.loading = ''; resolve(); };
+        script.onerror = function() { clearTimeout(timer); script.dataset.loading = ''; script.dataset.error = '1'; script.remove(); reject(new Error('CDN load fail: ' + url)); };
+        if (!existing || !existing.parentNode) document.head.appendChild(script);
+      });
+    }
+  };
 })();

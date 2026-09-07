@@ -1,7 +1,7 @@
 {
   "name": "道教手诀知识库",
-  "version": "1.2.0",
-  "description": "道教常用掐诀 15 种：基础 6 / 护身 4 / 占卜 4 / 收功 1，每诀附 SVG 手势图 + 配伍建议 + 详细步骤",
+  "version": "2.0.0.0",
+  "description": "道教手诀 20 种：基础 6 / 护身 4 / 占卜 4 / 攻击 3 / 收功 1，每诀附 SVG 手势图 + 配伍建议 + 详细步骤",
   "entries": [
     {
       "id": "shoujue_001",
@@ -30,7 +30,8 @@
         1,
         1
       ],
-      "handType": "single"
+      "handType": "single",
+      "image": "daozhi"
     },
     {
       "id": "shoujue_002",
@@ -59,7 +60,8 @@
         1,
         1
       ],
-      "handType": "single"
+      "handType": "single",
+      "image": "jianjue"
     },
     {
       "id": "shoujue_003",
@@ -89,7 +91,8 @@
         0,
         0
       ],
-      "handType": "single"
+      "handType": "single",
+      "image": "leijue"
     },
     {
       "id": "shoujue_004",
@@ -118,7 +121,8 @@
         0,
         1
       ],
-      "handType": "single"
+      "handType": "single",
+      "image": "sanshan"
     },
     {
       "id": "shoujue_005",
@@ -146,7 +150,8 @@
         1,
         1
       ],
-      "handType": "double"
+      "handType": "double",
+      "image": "taiji"
     },
     {
       "id": "shoujue_006",
@@ -169,7 +174,8 @@
         "奇门"
       ],
       "fingers": [],
-      "handType": "palmpair"
+      "handType": "palmpair",
+      "image": "bagua"
     },
     {
       "id": "shoujue_007",
@@ -198,7 +204,8 @@
         2,
         2
       ],
-      "handType": "single"
+      "handType": "single",
+      "image": "jingang"
     },
     {
       "id": "shoujue_008",
@@ -227,7 +234,8 @@
         2,
         2
       ],
-      "handType": "single"
+      "handType": "single",
+      "image": "rijun"
     },
     {
       "id": "shoujue_009",
@@ -256,7 +264,8 @@
         2,
         0
       ],
-      "handType": "single"
+      "handType": "single",
+      "image": "yuejun"
     },
     {
       "id": "shoujue_010",
@@ -285,7 +294,8 @@
         0,
         1
       ],
-      "handType": "single"
+      "handType": "single",
+      "image": "tianshi"
     },
     {
       "id": "shoujue_011",
@@ -308,7 +318,8 @@
         "寻物"
       ],
       "fingers": [],
-      "handType": "flow"
+      "handType": "flow",
+      "image": "liujia"
     },
     {
       "id": "shoujue_012",
@@ -331,7 +342,8 @@
         "隐秘"
       ],
       "fingers": [],
-      "handType": "flow"
+      "handType": "flow",
+      "image": "liuding"
     },
     {
       "id": "shoujue_013",
@@ -354,7 +366,8 @@
         "生死"
       ],
       "fingers": [],
-      "handType": "flow"
+      "handType": "flow",
+      "image": "ziwu"
     },
     {
       "id": "shoujue_014",
@@ -383,7 +396,8 @@
         1,
         1
       ],
-      "handType": "double"
+      "handType": "double",
+      "image": "taijiyinyang"
     },
     {
       "id": "shoujue_015",
@@ -405,7 +419,252 @@
         "护体"
       ],
       "fingers": [],
-      "handType": "pair"
+      "handType": "pair",
+      "image": "baoyuan"
+    },
+    {
+      "id": "shoujue_016",
+      "category": "护身手诀",
+      "title": "老君诀",
+      "content": "右手拇指按住中指，食指伸直，无名指和小指弯曲。此诀象征太上老君，用于请神、护身。占卜前掐老君诀，可接通太上老君神力。",
+      "shape": "拇指按中指，食指伸，无名小指弯",
+      "diagram": "  ┌─┐\n  │ │ ← 食指伸出\n┌─┘ │\n│●●● │ ← 中无名小指+拇指握拳\n│ ●● │\n└────┘",
+      "pair_with": [
+        "太上老君咒",
+        "护身符"
+      ],
+      "usage": "请神、护身、接通老君神力",
+      "keywords": [
+        "老君诀",
+        "太上老君",
+        "请神",
+        "护身"
+      ],
+      "fingers": [
+        2,
+        0,
+        1,
+        2,
+        2
+      ],
+      "handType": "single",
+      "image": "laojun"
+    },
+    {
+      "id": "shoujue_017",
+      "category": "攻击手诀",
+      "title": "五雷诀",
+      "content": "右手拇指按住无名指根部，其余四指握拳。此诀召请五雷之力，威力极大。非遇强邪不轻易使用。",
+      "shape": "拇指按无名指根，四指握拳",
+      "diagram": "  ┌──┐\n  │  │ ← 握拳\n  │ ●│ ← 拇指按无名指根\n  │  │\n  └──┘",
+      "pair_with": [
+        "五雷符",
+        "天蓬咒"
+      ],
+      "usage": "召雷、驱强邪",
+      "warnings": "威力极大，非急重不用",
+      "keywords": [
+        "五雷诀",
+        "五雷",
+        "召雷",
+        "驱邪"
+      ],
+      "fingers": [
+        2,
+        2,
+        2,
+        0,
+        2
+      ],
+      "handType": "single",
+      "image": "wuleijue"
+    },
+    {
+      "id": "shoujue_018",
+      "category": "占卜专用",
+      "title": "北斗诀",
+      "content": "右手拇指依次点按四指的七个特定位置，对应北斗七星。此诀用于推算方位、召请北斗星君。",
+      "shape": "拇指依次点四指七个位",
+      "diagram": "拇指点按：食根→食尖→中根→中尖→无根→无尖→小根\n共7点，对应北斗七星",
+      "pair_with": [
+        "北斗经",
+        "寻物符"
+      ],
+      "usage": "推算方位、召北斗",
+      "keywords": [
+        "北斗诀",
+        "北斗七星",
+        "方位",
+        "推算"
+      ],
+      "fingers": [],
+      "handType": "flow",
+      "image": "beidou"
+    },
+    {
+      "id": "shoujue_019",
+      "category": "护身手诀",
+      "title": "召功曹诀",
+      "content": "右手拇指、食指、中指成三角形，无名指和小指弯曲。此诀召请功曹使者，传递信息。",
+      "shape": "拇食中三指成三角，无名小指弯",
+      "diagram": "  △\n /|\\ \n● ● ● ← 拇食中三指成三角\n│ │ │\n● ● │ ← 无名小指弯",
+      "pair_with": [
+        "召功曹咒",
+        "传音符"
+      ],
+      "usage": "召功曹、传信息",
+      "keywords": [
+        "召功曹诀",
+        "功曹",
+        "使者",
+        "传信"
+      ],
+      "fingers": [
+        0,
+        0,
+        1,
+        2,
+        2
+      ],
+      "handType": "single",
+      "image": "zhaogongcao"
+    },
+    {
+      "id": "shoujue_020",
+      "category": "护身手诀",
+      "title": "玉皇诀",
+      "content": "右手中指直伸，其余手指环绕中指握拳。此诀象征玉皇大帝，用于拜章奏表。",
+      "shape": "中指直伸，余指环绕",
+      "diagram": "  ┌─┐\n  │ │ ← 中指直伸\n┌─┘ │\n│●●● │ ← 食无名小+拇指环绕\n│ ●● │\n└────┘",
+      "pair_with": [
+        "玉皇咒",
+        "拜章符"
+      ],
+      "usage": "拜章奏表、召玉皇",
+      "keywords": [
+        "玉皇诀",
+        "玉皇大帝",
+        "拜章",
+        "奏表"
+      ],
+      "fingers": [
+        2,
+        2,
+        0,
+        2,
+        2
+      ],
+      "handType": "single",
+      "image": "yuhuang"
+    },
+    {
+      "id": "shoujue_021",
+      "category": "基础手诀",
+      "title": "道指v2",
+      "subtype": "三清指",
+      "content": "食指中指伸直开分,无名指小指屈扣掌心,拇指横压食指。v2 版本强调食指与中指分开角度略大于传统道指,适合雷法、剑指等高频用法。",
+      "shape": "食中指分开伸直,无名小指扣掌心,拇指压食指",
+      "diagram": "  ┌──┐\n  ││ │ │ ← 食指+中指分开伸出\n┌─┘  └─┐\n│ ●●  ●●│ ← 无名指小指弯曲、拇指扣住\n└──────┘",
+      "usage": "持咒、行礼、雷法起手",
+      "keywords": ["道指", "三清", "开指"],
+      "fingers": [2, 0, 0, 1, 1],
+      "handType": "single",
+      "image": "daozhi2"
+    },
+    {
+      "id": "shoujue_022",
+      "category": "基础手诀",
+      "title": "雷诀v2",
+      "subtype": "五雷指",
+      "content": "中指无名指屈第一关节,指背凸起如雷,拇指压其二节。v2 版本强化'雷背凸起'造型,召请五雷之力。",
+      "shape": "中无名第一关节屈,指背凸起,拇指压其二节",
+      "diagram": "  ┌─┐ ┌─┐\n  │ │ │ │ ← 中指无名指第一关节屈\n┌─┘ │\n│  │ │\n│  ●● │ ← 拇指压中无名指第二关节\n└─────┘",
+      "usage": "召雷、驱强邪、破煞",
+      "warnings": "威力极大,非急重不用",
+      "keywords": ["雷诀", "五雷", "雷法"],
+      "fingers": [2, 1, 1, 1, 2],
+      "handType": "single",
+      "image": "leijue2"
+    },
+    {
+      "id": "shoujue_023",
+      "category": "基础手诀",
+      "title": "北斗诀v2",
+      "subtype": "北斗印",
+      "content": "四指伸展如斗魁,拇指横托斗柄,指间点北斗七星。v2 版本强调斗魁造型,拇指如斗柄横托,感通北斗星君更直接。",
+      "shape": "四指伸展,拇指横托,指间点七星",
+      "diagram": "  ┌─┐ ┌─┐ ┌─┐ ┌─┐\n  │ │ │ │ │ │ │ │ │ │ ← 食中无名小四指伸展\n┌─┘ └─┘ └─┘ └─┐\n│         ●         │ ← 拇指横托斗柄\n└─────────────────┘",
+      "usage": "推算方位、召北斗星君",
+      "keywords": ["北斗", "七星", "星君"],
+      "fingers": [0, 0, 0, 0, 0],
+      "handType": "single",
+      "image": "beidou2"
+    },
+    {
+      "id": "shoujue_024",
+      "category": "护身手诀",
+      "title": "五岳诀",
+      "subtype": "五岳印",
+      "content": "三指屈扣掌心,拇指小指矗立如峰,镇五岳之煞。拇指如嵩山、小指如泰山,镇守五方。",
+      "shape": "食中无名屈扣掌心,拇指小指矗立如峰",
+      "diagram": "  ┌─┐       ┌─┐\n  │ │       │ │ ← 拇指+小指矗立\n  │ │       │ │\n┌─┘  └────┘  └─┐\n│  ●  ●●  ●     │\n│ ●●●  ●●  ●●●│ ← 食中无名屈扣\n└─────────────────┘",
+      "usage": "镇五岳、压煞、护身",
+      "keywords": ["五岳", "山神", "镇压"],
+      "fingers": [0, 2, 2, 2, 0],
+      "handType": "single",
+      "image": "wuyue"
+    },
+    {
+      "id": "shoujue_025",
+      "category": "护身手诀",
+      "title": "天蓬诀",
+      "subtype": "天蓬印",
+      "content": "拇指扣中指根,食指伸直朝天,余指收拢,召请天蓬元帅。天蓬元帅为北斗破军星化身,驱邪护身威猛第一。占卜遇极强阴邪干扰,掐天蓬诀配合天蓬咒可保平安。",
+      "shape": "拇指扣中指根,食指朝天,余指收拢",
+      "diagram": "  ┌─┐\n  │ │ ← 食指伸直朝天\n┌─┘ │\n│●●  │ ← 中无名小指扣掌心\n│  ● │ ← 拇指扣中指根\n└────┘",
+      "usage": "召天蓬元帅、驱邪护身",
+      "keywords": ["天蓬", "元帅", "护身"],
+      "fingers": [2, 0, 1, 2, 2],
+      "handType": "single"
+    },
+    {
+      "id": "shoujue_026",
+      "category": "占卜专用",
+      "title": "玄坛诀",
+      "subtype": "玄坛印",
+      "content": "食指小指伸直,中指无名指弯扣,拇指压中,召赵公明玄坛。赵公明为武财神,掐此诀可召财、求财、避邪。占卜求财或防破财时用之。",
+      "shape": "食指小指伸直,中无名弯扣,拇指压中",
+      "diagram": "  ┌─┐       ┌─┐\n  │ │       │ │ ← 食指+小指伸直\n┌─┘  └────┘  └─┐\n│  ●●●  ●●   │\n│   ●●        │ ← 中无名弯扣+拇指压中\n└────────────────┘",
+      "usage": "召财神、求财、防破财",
+      "keywords": ["玄坛", "财神", "赵公明"],
+      "fingers": [2, 0, 2, 2, 0],
+      "handType": "single"
+    },
+    {
+      "id": "shoujue_027",
+      "category": "基础手诀",
+      "title": "三清诀",
+      "subtype": "三清印",
+      "content": "食指中指并直,无名指小指弯扣,拇指压无名指。此为道教最基础礼请手诀,象征三清道祖。日常持咒、行礼、请神均用此诀。",
+      "shape": "食中并直,无名小指弯扣,拇指压无名",
+      "diagram": "  ┌──┐\n  ││││ │ ← 食指+中指并拢伸直\n┌─┘  └─┐\n│ ●●  ●●│ ← 无名小指弯扣\n│  ●    │ ← 拇指压无名指\n└──────┘",
+      "usage": "持咒、行礼、请神",
+      "keywords": ["三清", "开指", "礼请"],
+      "fingers": [2, 0, 0, 1, 1],
+      "handType": "single"
+    },
+    {
+      "id": "shoujue_028",
+      "category": "占卜专用",
+      "title": "八卦诀",
+      "subtype": "八卦印",
+      "content": "拇指压掌心,四指微屈成八卦形,卦位对应干支。此诀用于召请八卦之力、布阵设坛。占卜奇门遁甲或六爻时掐此诀,可增强对卦象方位的感应。",
+      "shape": "拇指压掌心,四指微屈成八卦形",
+      "diagram": "    ╭───╮\n  ╭─┤ ● ├─╮ ← 拇指压掌心中央\n  │ │   │ │\n  │ ╰┬┬┬╯ │\n  │  │││  │\n  │  ╰┴╯  │\n  ╰────────╯",
+      "usage": "召八卦、布阵、奇门/六爻占卜",
+      "keywords": ["八卦", "周易", "卦位"],
+      "fingers": [1, 1, 1, 1, 1],
+      "handType": "single"
     }
   ]
 }

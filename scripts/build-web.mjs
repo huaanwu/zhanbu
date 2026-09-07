@@ -56,24 +56,31 @@ async function main() {
 
   console.log('▶ build-web: 把 Vite 产物合并回 www/');
 
-  // 1) 拷贝 dist/index.html → www/index.html (覆盖)
+  // 1) 拷贝 dist/index.html → www/index.html (覆盖,但保留 styles.css link)
   const distIndex = path.join(DIST, 'index.html');
+  const wwwIndex = path.join(WWW, 'index.html');
   if (await exists(distIndex)) {
-    await fs.copyFile(distIndex, path.join(WWW, 'index.html'));
-    console.log('  [cp] dist/index.html → www/index.html');
+    let distContent = await fs.readFile(distIndex, 'utf-8');
+    // 把 dist 里的 hashed CSS 引用替换成静态 /styles.css(开发友好,不依赖 build hash)
+    distContent = distContent.replace(
+      /<link\s+rel="stylesheet"\s+crossorigin\s+href="\/assets\/(?:index|style)-[A-Za-z0-9_-]+\.css"\s*\/?>/g,
+      '<link rel="stylesheet" crossorigin href="/styles.css">'
+    );
+    await fs.writeFile(wwwIndex, distContent);
+    console.log('  [cp] dist/index.html → www/index.html (styles.css link 替换)');
   } else {
     console.warn('  ⚠ dist/index.html 缺失,跳过');
   }
 
-  // 2) 合并 dist/assets/ → www/assets/
+  // 2) 合并 dist/assets/ → www/assets/(但跳过 hashed CSS,Vite 会重新生成)
   const distAssets = path.join(DIST, 'assets');
   if (await exists(distAssets)) {
-    await rimraf(ASSETS); // 清空旧 assets,避免遗留 stale 文件
+    await rimraf(ASSETS);
     await copyDir(distAssets, ASSETS);
     console.log('  [cp] dist/assets/* → www/assets/');
   }
 
-  // 3) 拷贝 dist/ 下其余 public 文件(如 manifest.webmanifest / icons / sw.js) → www/
+  // 3) 拷贝 dist/ 下其余 public 文件
   const distEntries = await fs.readdir(DIST, { withFileTypes: true });
   for (const e of distEntries) {
     if (e.name === 'index.html' || e.name === 'assets') continue;

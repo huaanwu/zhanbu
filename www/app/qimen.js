@@ -37,10 +37,12 @@ function renderQimen(pan) {
   html += `<div class="gua-info">`;
   html += `<span>节气：<strong>${pan.jieqi}</strong></span>`;
   html += `<span>局数：<strong>${pan.jushu_text}</strong></span>`;
+  if (pan.yuan) html += `<span>定局：<strong>${pan.dingju || '拆补法'} · ${pan.yuan}（符头${pan.futou}）</strong></span>`;
   html += `<span>旬首：<strong>${pan.xunshou}</strong></span>`;
   html += `</div>`;
 
   html += `<div style="text-align:center;margin-bottom:0.8rem;font-size:0.8rem;color:var(--text-secondary);">四柱：${pan.bazi.join(' ')}</div>`;
+  if (pan.lunarText) html += `<div style="text-align:center;margin-bottom:0.5rem;font-size:0.75rem;color:var(--text-muted);">农历：<strong>${pan.lunarText}</strong></div>`;
 
   // 九宫格按洛书顺序：4 9 2 / 3 5 7 / 8 1 6
   const luoshuOrder = [4, 9, 2, 3, 5, 7, 8, 1, 6];
@@ -91,7 +93,7 @@ async function doAIQimen() {
   let fullText = '';
   try {
     // v3.0.5: system prompt 统一由 Core.AI.buildSystemPrompt() 组装(任务 #23)
-    const system = Core.AI.buildSystemPrompt({ domain: 'qimen', pan: currentQm, question: currentQm.question });
+    const system = await Core.AI.buildSystemPrompt({ domain: 'qimen', pan: currentQm, question: currentQm.question });
     // v3.0.5: 统一 AI 入口(任务 #19)
     const { finalText } = await Core.AI.interpret({
       domain: 'qimen',
